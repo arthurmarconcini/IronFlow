@@ -10,5 +10,11 @@ export type AppStackParamList = {
   CreateWorkout: undefined
 }
 
+export type RootStackParamList = {
+  SplashScreen: undefined
+  AuthStack: undefined
+  AppStack: undefined
+}
+
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
 export type AppNavigationProp = StackNavigationProp<AppStackParamList>

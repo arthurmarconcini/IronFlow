@@ -4,10 +4,12 @@ import { auth } from '../config/firebaseConfig'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
+      setLoading(false)
     })
 
     return () => unsubscribe()
@@ -17,5 +19,5 @@ export function useAuth() {
     auth.signOut()
   }
 
-  return { user, logout }
+  return { user, logout, loading }
 }
