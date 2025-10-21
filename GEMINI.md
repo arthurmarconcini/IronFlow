@@ -20,7 +20,7 @@ Linguagem: TypeScript. Todo o código deve ser fortemente tipado.
 
 Banco de Dados Local: expo-sqlite. Não use WatermelonDB ou Realm, pois eles não são compatíveis com o Expo Go.
 
-Backend (BaaS): Firebase (usando o SDK Web v9, modular).
+Backend (BaaS): Firebase (usando o SDK Web v12, modular).
 
 Autenticação: Firebase Auth.
 
