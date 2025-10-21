@@ -1,11 +1,5 @@
-import React from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
 
@@ -18,6 +12,7 @@ type OptionItem = {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
+  const insets = useSafeAreaInsets()
 
   const options: OptionItem[] = [
     { icon: '✏️', label: 'Editar Perfil', onPress: () => {} },
@@ -26,7 +21,7 @@ export default function ProfileScreen() {
   ]
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* User Info Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
@@ -54,10 +49,16 @@ export default function ProfileScreen() {
       <View style={{ flex: 1 }} />
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+      <TouchableOpacity
+        style={[
+          styles.logoutButton,
+          { marginBottom: insets.bottom + theme.spacing.small },
+        ]}
+        onPress={logout}
+      >
         <Text style={styles.logoutButtonText}>Sair</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.spacing.small,
     alignItems: 'center',
     justifyContent: 'center',
-    margin: theme.spacing.medium,
+    marginHorizontal: theme.spacing.medium, // Changed from margin
   },
   logoutButtonText: {
     color: '#FFFFFF',
