@@ -6,7 +6,9 @@ export type AuthStackParamList = {
 }
 
 export type AppStackParamList = {
-  Home: undefined
+  Profile: undefined
+  CreateWorkout: undefined
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
+export type AppNavigationProp = StackNavigationProp<AppStackParamList>

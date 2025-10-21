@@ -13,5 +13,9 @@ export function useAuth() {
     return () => unsubscribe()
   }, [])
 
-  return { user }
+  const logout = () => {
+    auth.signOut()
+  }
+
+  return { user, logout }
 }
