@@ -6,8 +6,10 @@ export type AuthStackParamList = {
 }
 
 export type AppStackParamList = {
+  HomeScreen: undefined
   Profile: undefined
   CreateWorkout: undefined
+  WorkoutDetail: { workoutId: number }
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
