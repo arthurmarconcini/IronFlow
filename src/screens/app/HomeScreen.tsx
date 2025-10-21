@@ -5,11 +5,11 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
 import { useDatabase, Workout } from '../../db/useDatabase'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import WorkoutCard from '../../components/WorkoutCard'
@@ -19,16 +19,21 @@ export default function HomeScreen() {
   const { getWorkouts } = useDatabase()
   const navigation = useNavigation<AppNavigationProp>()
   const [workouts, setWorkouts] = useState<Workout[]>([])
+  const insets = useSafeAreaInsets()
 
-  const loadWorkouts = useCallback(async () => {
-    const data = await getWorkouts()
-    setWorkouts(data)
-  }, [getWorkouts])
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        const data = await getWorkouts()
+        setWorkouts(data)
+      }
 
-  useFocusEffect(loadWorkouts)
+      fetchData()
+    }, [getWorkouts]),
+  )
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.greeting}>Olá, {user?.email}!</Text>
@@ -71,12 +76,12 @@ export default function HomeScreen() {
 
       {/* FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: insets.bottom + 20 }]}
         onPress={() => navigation.navigate('CreateWorkout')}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   )
 }
 

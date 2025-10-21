@@ -17,15 +17,15 @@ export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>()
   const [workouts, setWorkouts] = useState<Workout[]>([])
 
-  const loadWorkouts = useCallback(async () => {
-    const data = await getWorkouts()
-    setWorkouts(data)
-  }, [getWorkouts])
-
   useFocusEffect(
     useCallback(() => {
-      loadWorkouts()
-    }, [loadWorkouts]),
+      const fetchData = async () => {
+        const data = await getWorkouts()
+        setWorkouts(data)
+      }
+
+      fetchData()
+    }, [getWorkouts]),
   )
 
   const renderItem = ({ item }: { item: Workout }) => (
