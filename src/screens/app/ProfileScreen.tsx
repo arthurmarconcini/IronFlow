@@ -1,99 +1,129 @@
-import React, { useCallback, useState } from 'react'
-import { View, Text, Button, FlatList, StyleSheet } from 'react-native'
+import React from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
-import { useDatabase, Workout } from '../../db/useDatabase'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { AppStackParamList } from '../../navigation/types'
-import { StackNavigationProp } from '@react-navigation/stack'
+import { theme } from '../../theme'
 
-type ProfileScreenNavigationProp = StackNavigationProp<
-  AppStackParamList,
-  'Profile'
->
+// Define a type for the option items for better type-checking
+type OptionItem = {
+  icon: string
+  label: string
+  onPress: () => void
+}
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
-  const { getWorkouts } = useDatabase()
-  const navigation = useNavigation<ProfileScreenNavigationProp>()
-  const [workouts, setWorkouts] = useState<Workout[]>([])
 
-  useFocusEffect(
-    useCallback(() => {
-      const fetchData = async () => {
-        const data = await getWorkouts()
-        setWorkouts(data)
-      }
-
-      fetchData()
-    }, [getWorkouts]),
-  )
-
-  const renderItem = ({ item }: { item: Workout }) => (
-    <View style={styles.workoutItem}>
-      <Text style={styles.workoutName}>{item.name}</Text>
-    </View>
-  )
+  const options: OptionItem[] = [
+    { icon: '✏️', label: 'Editar Perfil', onPress: () => {} },
+    { icon: '📊', label: 'Estatísticas', onPress: () => {} },
+    { icon: '⚙️', label: 'Configurações', onPress: () => {} },
+  ]
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Perfil</Text>
-      <Text style={styles.email}>{user?.email}</Text>
-      <Button title="Logout" onPress={logout} />
+    <SafeAreaView style={styles.container}>
+      {/* User Info Header */}
+      <View style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarIcon}>👤</Text>
+        </View>
+        <Text style={styles.email}>{user?.email}</Text>
+      </View>
 
-      <View style={styles.separator} />
+      {/* Options List */}
+      <View style={styles.optionsContainer}>
+        {options.map((option, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.optionButton}
+            onPress={option.onPress}
+          >
+            <Text style={styles.optionIcon}>{option.icon}</Text>
+            <Text style={styles.optionLabel}>{option.label}</Text>
+            <Text style={styles.optionArrow}>›</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      <Button
-        title="Criar Novo Treino"
-        onPress={() => navigation.navigate('CreateWorkout')}
-      />
+      {/* Spacer to push logout to the bottom */}
+      <View style={{ flex: 1 }} />
 
-      <Text style={styles.workoutsTitle}>Meus Treinos</Text>
-      <FlatList
-        data={workouts}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-      />
-    </View>
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        <Text style={styles.logoutButtonText}>Sair</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: theme.palette.background,
+    padding: theme.spacing.medium,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  header: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.large,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.palette.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
+  },
+  avatarIcon: {
+    fontSize: 50,
   },
   email: {
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: theme.fontSizes.large,
+    fontWeight: '600',
+    color: theme.palette.text,
   },
-  separator: {
-    marginVertical: 16,
-    height: 1,
-    width: '100%',
-    backgroundColor: '#ccc',
+  optionsContainer: {
+    marginTop: theme.spacing.medium,
   },
-  workoutsTitle: {
-    fontSize: 20,
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
+    borderRadius: theme.spacing.small,
+    marginBottom: theme.spacing.small,
+  },
+  optionIcon: {
+    fontSize: 24,
+    marginRight: theme.spacing.medium,
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: theme.fontSizes.medium,
+    color: theme.palette.text,
+  },
+  optionArrow: {
+    fontSize: 24,
+    color: theme.palette.secondary,
+  },
+  logoutButton: {
+    backgroundColor: '#FF4136', // A more prominent danger color
+    padding: theme.spacing.medium,
+    borderRadius: theme.spacing.small,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: theme.spacing.medium,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: theme.fontSizes.medium,
     fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  workoutItem: {
-    backgroundColor: '#f9f9f9',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  workoutName: {
-    fontSize: 16,
-  },
-  listContent: {
-    paddingBottom: 16,
   },
 })
