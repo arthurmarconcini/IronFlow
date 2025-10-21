@@ -1,7 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
+import AvatarInput from '../../components/AvatarInput'
 
 // Define a type for the option items for better type-checking
 type OptionItem = {
@@ -24,9 +23,7 @@ export default function ProfileScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* User Info Header */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarIcon}>👤</Text>
-        </View>
+        <AvatarInput />
         <Text style={styles.email}>{user?.email}</Text>
       </View>
 
