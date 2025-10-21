@@ -1,3 +1,6 @@
+import React from 'react'
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
 import AvatarInput from '../../components/AvatarInput'
