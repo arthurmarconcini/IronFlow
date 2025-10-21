@@ -18,10 +18,11 @@ export const styles = StyleSheet.create({
     color: theme.palette.primary,
   },
   title: {
-    fontSize: theme.fontSizes.large,
+    fontSize: 32, // Increased size
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: theme.spacing.large,
-    color: theme.palette.text,
+    color: theme.palette.primary, // Use primary color
   },
   errorText: {
     color: 'red',

@@ -81,7 +81,7 @@ export default function LoginScreen({
         placeholder="Senha"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        isPassword
       />
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
