@@ -44,6 +44,8 @@ Hooks de Git: O projeto utilizará Husky para executar linting e formatação an
 
 CI/CD: A automação será feita com GitHub Actions e os builds com EAS (Expo Application Services).
 
+Fluxo de Commit: Ao final de cada interação de desenvolvimento significativa (ex: criação de uma nova feature, correção de um bug, ou configuração de ambiente), um commit deve ser gerado. As mensagens de commit devem obrigatoriamente seguir o padrão Conventional Commits. Interações menores podem ser agrupadas em um único commit coeso.
+
 Instruções de Resposta:
 
 Forneça sempre os comandos de terminal exatos para instalar dependências (npx expo install ...).
