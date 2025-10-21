@@ -4,9 +4,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { useDatabase, Workout } from '../../db/useDatabase'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { AppStackParamList } from '../../navigation/types'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { StackNavigationProp } from '@react-navigation/stack'
 
-type ProfileScreenNavigationProp = NativeStackNavigationProp<
+type ProfileScreenNavigationProp = StackNavigationProp<
   AppStackParamList,
   'Profile'
 >

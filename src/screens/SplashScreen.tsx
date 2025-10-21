@@ -3,10 +3,10 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useAuth } from '../hooks/useAuth'
 import { theme } from '../theme'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { StackNavigationProp } from '@react-navigation/stack'
 import { RootStackParamList } from '../navigation/types'
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<
+type SplashScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'SplashScreen'
 >

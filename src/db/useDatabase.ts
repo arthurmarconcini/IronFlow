@@ -10,7 +10,13 @@ export interface Exercise {
 export interface Workout {
   id: number
   name: string
-  exercises: Exercise[] // JSON-stringified array of exercises
+  exercises: Exercise[]
+}
+
+interface WorkoutFromDb {
+  id: number
+  name: string
+  exercises_json: string
 }
 
 export function useDatabase() {
@@ -52,9 +58,12 @@ export function useDatabase() {
   const getWorkouts = async (): Promise<Workout[]> => {
     if (!db) return []
 
-    const allRows = await db.getAllAsync<Workout>('SELECT * FROM workouts')
+    const allRows = await db.getAllAsync<WorkoutFromDb>(
+      'SELECT * FROM workouts',
+    )
     return allRows.map((row) => ({
-      ...row,
+      id: row.id,
+      name: row.name,
       exercises: JSON.parse(row.exercises_json),
     }))
   }
