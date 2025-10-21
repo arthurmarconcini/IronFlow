@@ -1,33 +1,20 @@
 import React from 'react'
 import { NavigationContainer } from '@react-navigation/native'
-import { createStackNavigator } from '@react-navigation/stack'
-import { RootStackParamList } from './types'
-import SplashScreen from '../screens/SplashScreen'
+import { useAuth } from '../hooks/useAuth'
 import AuthStack from './AuthStack'
 import AppStack from './AppStack'
-
-const Stack = createStackNavigator<RootStackParamList>()
+import SplashScreen from '../screens/SplashScreen'
 
 export default function RootNavigator() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <SplashScreen />
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="SplashScreen">
-        <Stack.Screen
-          name="SplashScreen"
-          component={SplashScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AuthStack"
-          component={AuthStack}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="AppStack"
-          component={AppStack}
-          options={{ headerShown: false }}
-        />
-      </Stack.Navigator>
+      {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   )
 }
