@@ -5,8 +5,17 @@ export const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: theme.spacing.medium,
+    padding: theme.spacing.large, // Increased padding
     backgroundColor: theme.palette.background,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.large,
+  },
+  logo: {
+    fontSize: 48, // Larger font for the logo
+    fontWeight: 'bold',
+    color: theme.palette.primary,
   },
   title: {
     fontSize: theme.fontSizes.large,
@@ -14,15 +23,17 @@ export const styles = StyleSheet.create({
     marginBottom: theme.spacing.large,
     color: theme.palette.text,
   },
-  input: {
-    height: 40,
-    borderColor: theme.palette.secondary,
-    borderWidth: 1,
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
     marginBottom: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.small,
-    borderRadius: 4,
   },
-  buttonContainer: {
+  navLinkContainer: {
     marginTop: theme.spacing.medium,
+    alignItems: 'center',
+  },
+  navLinkText: {
+    color: theme.palette.primary,
+    fontSize: theme.fontSizes.medium,
   },
 })
