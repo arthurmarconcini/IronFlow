@@ -6,6 +6,8 @@ import CreateWorkoutScreen from '../screens/app/CreateWorkoutScreen'
 
 import HomeScreen from '../screens/app/HomeScreen'
 
+import WorkoutDetailScreen from '../screens/app/WorkoutDetailScreen'
+
 const Stack = createStackNavigator<AppStackParamList>()
 
 export default function AppStack() {
@@ -18,6 +20,7 @@ export default function AppStack() {
       />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="CreateWorkout" component={CreateWorkoutScreen} />
+      <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
     </Stack.Navigator>
   )
 }

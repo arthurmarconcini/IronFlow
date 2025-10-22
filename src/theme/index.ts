@@ -1,8 +1,11 @@
-const palette = {
+const colors = {
   primary: '#007BFF',
   secondary: '#6C757D',
   background: '#F8F9FA',
   text: '#212529',
+  lightGray: '#E0E0E0',
+  white: '#FFFFFF',
+  darkGray: '#343A40',
 }
 
 const fontSizes = {
@@ -12,13 +15,13 @@ const fontSizes = {
 }
 
 const spacing = {
-  small: 10, // from 8
-  medium: 20, // from 16
-  large: 30, // from 24
+  small: 10,
+  medium: 20,
+  large: 30,
 }
 
 export const theme = {
-  palette,
+  colors,
   fontSizes,
   spacing,
 }

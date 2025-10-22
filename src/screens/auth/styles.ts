@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: theme.spacing.large, // Increased padding
-    backgroundColor: theme.palette.background,
+    backgroundColor: theme.colors.background,
   },
   logoContainer: {
     alignItems: 'center',
@@ -15,14 +15,14 @@ export const styles = StyleSheet.create({
   logo: {
     fontSize: 48, // Larger font for the logo
     fontWeight: 'bold',
-    color: theme.palette.primary,
+    color: theme.colors.primary,
   },
   title: {
     fontSize: 32, // Increased size
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: theme.spacing.large,
-    color: theme.palette.primary, // Use primary color
+    color: theme.colors.primary, // Use primary color
   },
   errorText: {
     color: 'red',
@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navLinkText: {
-    color: theme.palette.primary,
+    color: theme.colors.primary,
     fontSize: theme.fontSizes.medium,
   },
 })

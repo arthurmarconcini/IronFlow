@@ -7,7 +7,7 @@ interface PasswordStrengthIndicatorProps {
 }
 
 const strengthColors = [
-  theme.palette.secondary, // 0 - default
+  theme.colors.secondary, // 0 - default
   '#FF4136', // 1 - weak
   '#FF851B', // 2 - medium
   '#FFDC00', // 3 - good

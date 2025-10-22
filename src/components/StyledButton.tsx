@@ -49,7 +49,7 @@ const StyledButton: React.FC<StyledButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: theme.palette.primary,
+    backgroundColor: theme.colors.primary,
     padding: theme.spacing.medium,
     borderRadius: theme.spacing.small,
     alignItems: 'center',
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   disabled: {
-    backgroundColor: theme.palette.secondary,
+    backgroundColor: theme.colors.secondary,
   },
 })
 

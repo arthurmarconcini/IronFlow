@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: theme.palette.secondary,
+    borderColor: theme.colors.secondary,
     borderRadius: theme.spacing.small,
     marginVertical: theme.spacing.small,
   },
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.medium,
     fontSize: theme.fontSizes.medium,
-    color: theme.palette.text,
+    color: theme.colors.text,
   },
   eyeButton: {
     padding: theme.spacing.medium,

@@ -5,7 +5,7 @@ import { theme } from '../theme'
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={theme.palette.primary} />
+      <ActivityIndicator size="large" color={theme.colors.primary} />
     </View>
   )
 }
@@ -15,6 +15,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.palette.background,
+    backgroundColor: theme.colors.background,
   },
 })
