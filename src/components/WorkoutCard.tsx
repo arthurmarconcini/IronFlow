@@ -1,17 +1,41 @@
 import React from 'react'
-import { TouchableOpacity, Text, StyleSheet } from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native'
 import { theme } from '../theme'
 import { Workout } from '../db/useDatabase'
 
 interface WorkoutCardProps {
   workout: Workout
   onPress: () => void
+  onDelete: () => void // Nova propriedade para a função de deletar
 }
 
-const WorkoutCard: React.FC<WorkoutCardProps> = ({ workout, onPress }) => {
+const WorkoutCard: React.FC<WorkoutCardProps> = ({
+  workout,
+  onPress,
+  onDelete,
+}) => {
+  const handleDeletePress = () => {
+    Alert.alert(
+      'Excluir Treino',
+      `Tem certeza que deseja excluir o treino "${workout.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: onDelete },
+      ],
+    )
+  }
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Text style={styles.title}>{workout.name}</Text>
+      <View style={styles.contentContainer}>
+        <Text style={styles.title}>{workout.name}</Text>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDeletePress}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   )
 }
@@ -31,10 +55,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  contentContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: theme.fontSizes.large,
     fontWeight: 'bold',
-    color: theme.palette.text,
+    color: theme.colors.text,
+    flex: 1, // Garante que o título ocupe o espaço disponível
+  },
+  deleteButton: {
+    padding: theme.spacing.small,
+    marginLeft: theme.spacing.medium,
+  },
+  deleteButtonText: {
+    fontSize: theme.fontSizes.large,
+    color: theme.colors.danger,
   },
 })
 

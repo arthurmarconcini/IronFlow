@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native'
-import { useDatabase, Exercise } from '../../db/useDatabase'
+import { useWorkouts } from '../../db/useWorkouts' // Alterado para o novo hook
 import { useNavigation } from '@react-navigation/native'
+import { Exercise } from '../../db/useDatabase' // Mantém a interface
 
 export default function CreateWorkoutScreen() {
-  const { addWorkout } = useDatabase()
+  const { createWorkout } = useWorkouts() // Alterado para o novo hook
   const navigation = useNavigation()
   const [name, setName] = useState('')
   const [exercisesInput, setExercisesInput] = useState('')
@@ -32,8 +33,8 @@ export default function CreateWorkoutScreen() {
     }
 
     try {
-      await addWorkout(name, exercises)
-      Alert.alert('Sucesso', 'Treino salvo!')
+      await createWorkout(name, exercises) // Alterado para a nova função
+      Alert.alert('Sucesso', 'Treino salvo e sincronizado!')
       navigation.goBack()
     } catch (error) {
       console.error(error)

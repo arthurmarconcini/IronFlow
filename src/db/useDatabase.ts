@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import * as SQLite from 'expo-sqlite'
 
 export interface Exercise {
@@ -8,13 +8,15 @@ export interface Exercise {
 }
 
 export interface Workout {
-  id: number
+  id: number // ID local do SQLite
+  firestoreId: string // ID do Firestore, a fonte da verdade
   name: string
   exercises: Exercise[]
 }
 
 interface WorkoutFromDb {
   id: number
+  firestore_id: string
   name: string
   exercises_json: string
 }
@@ -32,6 +34,7 @@ export function useDatabase() {
         PRAGMA journal_mode = WAL;
         CREATE TABLE IF NOT EXISTS workouts (
           id INTEGER PRIMARY KEY NOT NULL,
+          firestore_id TEXT UNIQUE NOT NULL,
           name TEXT NOT NULL,
           exercises_json TEXT NOT NULL
         );
@@ -41,21 +44,26 @@ export function useDatabase() {
     setupDatabase()
   }, [])
 
-  const addWorkout = async (
-    name: string,
-    exercises: Exercise[],
-  ): Promise<void> => {
-    if (!db) return
+  const addWorkout = useCallback(
+    async (
+      firestoreId: string,
+      name: string,
+      exercises: Exercise[],
+    ): Promise<void> => {
+      if (!db) return
 
-    const exercisesJson = JSON.stringify(exercises)
-    await db.runAsync(
-      'INSERT INTO workouts (name, exercises_json) VALUES (?, ?)',
-      name,
-      exercisesJson,
-    )
-  }
+      const exercisesJson = JSON.stringify(exercises)
+      await db.runAsync(
+        'INSERT INTO workouts (firestore_id, name, exercises_json) VALUES (?, ?, ?)',
+        firestoreId,
+        name,
+        exercisesJson,
+      )
+    },
+    [db],
+  )
 
-  const getWorkouts = async (): Promise<Workout[]> => {
+  const getWorkouts = useCallback(async (): Promise<Workout[]> => {
     if (!db) return []
 
     const allRows = await db.getAllAsync<WorkoutFromDb>(
@@ -63,10 +71,22 @@ export function useDatabase() {
     )
     return allRows.map((row) => ({
       id: row.id,
+      firestoreId: row.firestore_id,
       name: row.name,
       exercises: JSON.parse(row.exercises_json),
     }))
-  }
+  }, [db])
 
-  return { db, addWorkout, getWorkouts }
+  const deleteWorkoutLocal = useCallback(
+    async (firestoreId: string): Promise<void> => {
+      if (!db) return
+      await db.runAsync(
+        'DELETE FROM workouts WHERE firestore_id = ?',
+        firestoreId,
+      )
+    },
+    [db],
+  )
+
+  return { db, addWorkout, getWorkouts, deleteWorkoutLocal }
 }

@@ -1,14 +1,15 @@
-import React, { useCallback, useState } from 'react'
+import React, { useEffect, useCallback } from 'react' // Adiciona useCallback
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
-import { useDatabase, Workout } from '../../db/useDatabase'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useWorkouts } from '../../db/useWorkouts'
+import { useNavigation, useFocusEffect } from '@react-navigation/native' // Adiciona useFocusEffect
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
@@ -16,20 +17,26 @@ import WorkoutCard from '../../components/WorkoutCard'
 
 export default function HomeScreen() {
   const { user } = useAuth()
-  const { getWorkouts } = useDatabase()
+  const {
+    workouts,
+    isLoading,
+    syncWorkouts,
+    fetchLocalWorkouts,
+    deleteWorkout,
+  } = useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
-  const [workouts, setWorkouts] = useState<Workout[]>([])
   const insets = useSafeAreaInsets()
 
+  // Sincroniza com o Firestore apenas uma vez ao carregar o app
+  useEffect(() => {
+    syncWorkouts()
+  }, [])
+
+  // Recarrega os treinos do banco local toda vez que a tela ganha foco
   useFocusEffect(
     useCallback(() => {
-      const fetchData = async () => {
-        const data = await getWorkouts()
-        setWorkouts(data)
-      }
-
-      fetchData()
-    }, [getWorkouts]),
+      fetchLocalWorkouts()
+    }, [fetchLocalWorkouts]),
   )
 
   return (
@@ -53,26 +60,35 @@ export default function HomeScreen() {
 
       {/* Workout List */}
       <Text style={styles.sectionTitle}>Meus Planos de Treino</Text>
-      <FlatList
-        data={workouts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <WorkoutCard
-            workout={item}
-            onPress={() =>
-              navigation.navigate('WorkoutDetail', { workoutId: item.id })
-            }
-          />
-        )}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              Você ainda não criou nenhum treino.
-            </Text>
-          </View>
-        )}
-        contentContainerStyle={styles.listContent}
-      />
+      {isLoading ? (
+        <ActivityIndicator
+          size="large"
+          color={theme.colors.primary}
+          style={{ marginTop: 20 }}
+        />
+      ) : (
+        <FlatList
+          data={workouts} // Usa a lista de treinos do hook
+          keyExtractor={(item) => item.firestoreId} // Usa firestoreId como chave
+          renderItem={({ item }) => (
+            <WorkoutCard
+              workout={item}
+              onPress={() =>
+                navigation.navigate('WorkoutDetail', { workoutId: item.id })
+              }
+              onDelete={() => deleteWorkout(item.firestoreId)} // Passa a função de deletar
+            />
+          )}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                Você ainda não criou nenhum treino.
+              </Text>
+            </View>
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
 
       {/* FAB */}
       <TouchableOpacity
@@ -88,7 +104,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.palette.background,
+    backgroundColor: theme.colors.background,
     padding: theme.spacing.medium,
   },
   header: {
@@ -99,8 +115,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: theme.fontSizes.large,
-    fontWeight: 'bold',
-    color: theme.palette.text,
+    color: theme.colors.text,
   },
   profileIcon: {
     fontSize: 28,
@@ -111,11 +126,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.palette.text,
+    color: theme.colors.text,
     marginBottom: theme.spacing.medium,
   },
   featuredCard: {
-    backgroundColor: theme.palette.primary,
+    backgroundColor: theme.colors.primary,
     borderRadius: theme.spacing.medium,
     padding: theme.spacing.large,
     justifyContent: 'center',
@@ -141,13 +156,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: theme.fontSizes.medium,
-    color: theme.palette.secondary,
+    color: theme.colors.secondary,
   },
   fab: {
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: theme.palette.primary,
+    backgroundColor: theme.colors.primary,
     width: 60,
     height: 60,
     borderRadius: 30,
