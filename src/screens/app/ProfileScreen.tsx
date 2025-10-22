@@ -26,8 +26,12 @@ export default function ProfileScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* User Info Header */}
       <View style={styles.header}>
-        <AvatarInput />
-        <Text style={styles.email}>{user?.email}</Text>
+        {user && (
+          <>
+            <AvatarInput />
+            <Text style={styles.email}>{user.email}</Text>
+          </>
+        )}
       </View>
 
       {/* Options List */}
@@ -65,7 +69,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.palette.background,
+    backgroundColor: theme.colors.background,
     padding: theme.spacing.medium,
   },
   header: {
@@ -76,7 +80,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: theme.palette.secondary,
+    backgroundColor: theme.colors.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
@@ -87,7 +91,7 @@ const styles = StyleSheet.create({
   email: {
     fontSize: theme.fontSizes.large,
     fontWeight: '600',
-    color: theme.palette.text,
+    color: theme.colors.text,
   },
   optionsContainer: {
     marginTop: theme.spacing.medium,
@@ -108,11 +112,11 @@ const styles = StyleSheet.create({
   optionLabel: {
     flex: 1,
     fontSize: theme.fontSizes.medium,
-    color: theme.palette.text,
+    color: theme.colors.text,
   },
   optionArrow: {
     fontSize: 24,
-    color: theme.palette.secondary,
+    color: theme.colors.secondary,
   },
   logoutButton: {
     backgroundColor: '#FF4136', // A more prominent danger color
