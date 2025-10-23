@@ -1,27 +1,26 @@
 import { useState, useCallback } from 'react'
 import {
-  getFirestore, // Importa a função de inicialização
+  getFirestore,
   collection,
-  addDoc,
   getDocs,
   query,
   where,
   doc,
   deleteDoc,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore'
-import { app } from '../config/firebaseConfig' // Importa o 'app' em vez de 'db'
+import { app } from '../config/firebaseConfig'
 import { useAuth } from '../hooks/useAuth'
 import { useDatabase, Workout, Exercise } from './useDatabase'
+import * as Crypto from 'expo-crypto'
 
-// Inicializa o Firestore aqui, garantindo que a instância seja válida
 const firestoreDb = getFirestore(app)
 
-// Interface para o documento do Firestore
 interface FirestoreWorkout {
   userId: string
   name: string
-  muscleGroup: string // Novo campo
+  muscleGroup: string
   exercises: Exercise[]
   createdAt: Timestamp
 }
@@ -32,115 +31,135 @@ export function useWorkouts() {
     addWorkout: addWorkoutLocal,
     getWorkouts: getWorkoutsLocal,
     deleteWorkoutLocal,
-    db: localDb,
+    isDbLoading,
   } = useDatabase()
   const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
 
   const fetchLocalWorkouts = useCallback(async () => {
-    if (!localDb) return
-    setIsLoading(true) // Inicia o carregamento
+    if (isDbLoading || !user) return
+
+    setIsLoading(true)
     try {
-      const localWorkouts = await getWorkoutsLocal()
+      const localWorkouts = await getWorkoutsLocal(user.uid)
       setWorkouts(localWorkouts)
     } catch (error) {
       console.error('Erro ao buscar treinos locais:', error)
     } finally {
-      setIsLoading(false) // Finaliza o carregamento
+      setIsLoading(false)
     }
-  }, [localDb, getWorkoutsLocal])
-
-  // O useEffect que existia aqui foi removido para dar controle total às telas.
+  }, [isDbLoading, user, getWorkoutsLocal])
 
   const createWorkout = async (
     name: string,
     muscleGroup: string,
     exercises: Exercise[],
   ) => {
-    if (!user || !localDb) {
-      throw new Error(
-        'Usuário não autenticado ou banco de dados não disponível.',
-      )
+    if (!user) {
+      throw new Error('Usuário não autenticado.')
     }
+    setIsLoading(true)
+    try {
+      // 1. Gera um ID único localmente (UUID)
+      const localId = Crypto.randomUUID()
 
-    // 1. Cria o documento no Firestore para obter o ID
-    const docRef = await addDoc(collection(firestoreDb, 'workouts'), {
-      userId: user.uid,
-      name,
-      muscleGroup,
-      exercises,
-      createdAt: new Date(),
-    })
+      // 2. Salva APENAS no banco de dados local
+      await addWorkoutLocal(localId, user.uid, name, muscleGroup, exercises)
 
-    // 2. Salva no banco de dados local usando o ID do Firestore
-    await addWorkoutLocal(docRef.id, name, muscleGroup, exercises)
-
-    // 3. Atualiza o estado local para refletir a mudança imediatamente
-    await fetchLocalWorkouts()
+      // 3. Atualiza o estado da UI imediatamente
+      await fetchLocalWorkouts()
+    } catch (error) {
+      console.error('Erro ao criar treino local:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const deleteWorkout = async (firestoreId: string) => {
-    if (!user || !localDb) {
-      throw new Error(
-        'Usuário não autenticado ou banco de dados não disponível.',
-      )
+    if (!user) {
+      throw new Error('Usuário não autenticado.')
     }
 
-    // 1. Remove do banco de dados local para uma UI rápida
     await deleteWorkoutLocal(firestoreId)
-
-    // 2. Atualiza o estado local imediatamente
     setWorkouts((prev) => prev.filter((w) => w.firestoreId !== firestoreId))
 
-    // 3. Remove do Firestore
     try {
       await deleteDoc(doc(firestoreDb, 'workouts', firestoreId))
     } catch (error) {
       console.error('Erro ao deletar treino no Firestore:', error)
-      // Opcional: Adicionar lógica para tentar novamente mais tarde
+      // TODO: Adicionar lógica para "fila de exclusão" offline
     }
   }
 
   const syncWorkouts = useCallback(async () => {
-    if (!user || !localDb) return
+    if (isDbLoading || !user) return
 
     setIsLoading(true)
     try {
-      // Busca treinos no Firestore
+      // --- 1. Obter dados da nuvem e locais (lendo a fonte da verdade) ---
+      const localWorkouts = await getWorkoutsLocal(user.uid)
+
       const q = query(
         collection(firestoreDb, 'workouts'),
         where('userId', '==', user.uid),
       )
       const querySnapshot = await getDocs(q)
-
       const firestoreWorkouts = querySnapshot.docs.map((doc) => ({
         firestoreId: doc.id,
         ...(doc.data() as Omit<FirestoreWorkout, 'userId'>),
       }))
 
-      const localWorkouts = await getWorkoutsLocal()
-      const localFirestoreIds = new Set(localWorkouts.map((w) => w.firestoreId))
+      const firestoreIds = new Set(firestoreWorkouts.map((w) => w.firestoreId))
 
-      // Adiciona treinos da nuvem que não existem localmente
-      for (const fw of firestoreWorkouts) {
-        if (!localFirestoreIds.has(fw.firestoreId)) {
+      // --- 2. Fazer UPLOAD (Local -> Nuvem) ---
+      const workoutsToUpload = localWorkouts.filter(
+        (w) => !firestoreIds.has(w.firestoreId),
+      )
+
+      if (workoutsToUpload.length > 0) {
+        const batch = writeBatch(firestoreDb)
+        workoutsToUpload.forEach((workout) => {
+          const docRef = doc(firestoreDb, 'workouts', workout.firestoreId)
+          batch.set(docRef, {
+            userId: user.uid,
+            name: workout.name,
+            muscleGroup: workout.muscleGroup,
+            exercises: workout.exercises,
+            createdAt: new Date(),
+          })
+        })
+        await batch.commit()
+      }
+
+      // --- 3. Fazer DOWNLOAD (Nuvem -> Local) ---
+      const localIds = new Set(localWorkouts.map((w) => w.firestoreId))
+      const workoutsToDownload = firestoreWorkouts.filter(
+        (w) => !localIds.has(w.firestoreId),
+      )
+      if (workoutsToDownload.length > 0) {
+        for (const fw of workoutsToDownload) {
           await addWorkoutLocal(
             fw.firestoreId,
+            user.uid,
             fw.name,
-            fw.muscleGroup,
+            fw.muscleGroup || '',
             fw.exercises,
           )
         }
       }
 
-      // Recarrega os treinos do banco local após a sincronização
-      await fetchLocalWorkouts()
+      // --- 4. Atualizar a UI com o estado final ---
+      // Apenas recarrega se houveram mudanças
+      if (workoutsToUpload.length > 0 || workoutsToDownload.length > 0) {
+        await fetchLocalWorkouts()
+      }
     } catch (error) {
       console.error('Erro ao sincronizar treinos:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [user, localDb, getWorkoutsLocal, addWorkoutLocal, fetchLocalWorkouts])
+  }, [isDbLoading, user, getWorkoutsLocal, addWorkoutLocal, fetchLocalWorkouts])
 
   return {
     workouts,
@@ -148,6 +167,6 @@ export function useWorkouts() {
     createWorkout,
     deleteWorkout,
     syncWorkouts,
-    fetchLocalWorkouts, // Expondo a função
+    fetchLocalWorkouts,
   }
 }

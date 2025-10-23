@@ -5,6 +5,7 @@ export interface Exercise {
   name: string
   sets: number
   reps: number
+  rest?: number // Tempo de descanso em segundos
 }
 
 export interface Workout {
@@ -25,18 +26,22 @@ interface WorkoutFromDb {
 
 export function useDatabase() {
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null)
+  const [isDbLoading, setIsDbLoading] = useState(true)
 
   useEffect(() => {
     let database: SQLite.SQLiteDatabase
     async function setupDatabase() {
+      setIsDbLoading(true)
       database = await SQLite.openDatabaseAsync('ironflow.db')
       setDb(database)
+      setIsDbLoading(false)
 
       await database.execAsync(`
         PRAGMA journal_mode = WAL;
         CREATE TABLE IF NOT EXISTS workouts (
           id INTEGER PRIMARY KEY NOT NULL,
           firestore_id TEXT UNIQUE NOT NULL,
+          user_id TEXT NOT NULL,
           name TEXT NOT NULL,
           muscle_group TEXT NOT NULL,
           exercises_json TEXT NOT NULL
@@ -50,6 +55,7 @@ export function useDatabase() {
   const addWorkout = useCallback(
     async (
       firestoreId: string,
+      userId: string,
       name: string,
       muscleGroup: string,
       exercises: Exercise[],
@@ -58,8 +64,9 @@ export function useDatabase() {
 
       const exercisesJson = JSON.stringify(exercises)
       await db.runAsync(
-        'INSERT INTO workouts (firestore_id, name, muscle_group, exercises_json) VALUES (?, ?, ?, ?)',
+        'INSERT INTO workouts (firestore_id, user_id, name, muscle_group, exercises_json) VALUES (?, ?, ?, ?, ?)',
         firestoreId,
+        userId,
         name,
         muscleGroup,
         exercisesJson,
@@ -68,24 +75,30 @@ export function useDatabase() {
     [db],
   )
 
-  const getWorkouts = useCallback(async (): Promise<Workout[]> => {
-    if (!db) return []
+  const getWorkouts = useCallback(
+    async (userId: string): Promise<Workout[]> => {
+      if (!db) return []
 
-    const allRows = await db.getAllAsync<WorkoutFromDb>(
-      'SELECT * FROM workouts',
-    )
-    return allRows.map((row) => ({
-      id: row.id,
-      firestoreId: row.firestore_id,
-      name: row.name,
-      muscleGroup: row.muscle_group,
-      exercises: JSON.parse(row.exercises_json),
-    }))
-  }, [db])
+      const allRows = await db.getAllAsync<WorkoutFromDb>(
+        'SELECT * FROM workouts WHERE user_id = ?',
+        userId,
+      )
+      return allRows.map((row) => ({
+        id: row.id,
+        firestoreId: row.firestore_id,
+        name: row.name,
+        muscleGroup: row.muscle_group,
+        exercises: JSON.parse(row.exercises_json),
+      }))
+    },
+    [db],
+  )
 
   const deleteWorkoutLocal = useCallback(
     async (firestoreId: string): Promise<void> => {
       if (!db) return
+      // A exclusão ainda pode usar apenas o firestoreId, pois ele é globalmente único,
+      // mas a busca (get) é a principal barreira de segurança.
       await db.runAsync(
         'DELETE FROM workouts WHERE firestore_id = ?',
         firestoreId,
@@ -94,5 +107,5 @@ export function useDatabase() {
     [db],
   )
 
-  return { db, addWorkout, getWorkouts, deleteWorkoutLocal }
+  return { db, isDbLoading, addWorkout, getWorkouts, deleteWorkoutLocal }
 }
