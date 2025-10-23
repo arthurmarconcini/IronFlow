@@ -1,30 +1,40 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native'
-import { useWorkouts } from '../../db/useWorkouts' // Alterado para o novo hook
+import {
+  Text,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native'
+import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation } from '@react-navigation/native'
-import { Exercise } from '../../db/useDatabase' // Mantém a interface
+import { Exercise } from '../../db/useDatabase'
+import { theme } from '../../theme'
+import StyledButton from '../../components/StyledButton'
+import StyledInput from '../../components/StyledInput'
 
 export default function CreateWorkoutScreen() {
-  const { createWorkout } = useWorkouts() // Alterado para o novo hook
+  const { createWorkout } = useWorkouts()
   const navigation = useNavigation()
   const [name, setName] = useState('')
+  const [muscleGroup, setMuscleGroup] = useState('') // Novo estado
   const [exercisesInput, setExercisesInput] = useState('')
 
   const handleSave = async () => {
-    if (!name.trim() || !exercisesInput.trim()) {
-      Alert.alert('Erro', 'Preencha o nome do treino e os exercícios.')
+    if (!name.trim() || !muscleGroup.trim() || !exercisesInput.trim()) {
+      Alert.alert('Erro', 'Preencha todos os campos para continuar.')
       return
     }
 
-    // Transforma a string de exercícios (separada por vírgula) em um array de objetos Exercise
     const exercises: Exercise[] = exercisesInput
       .split(',')
       .map((ex) => ex.trim())
       .filter((ex) => ex)
       .map((exerciseName) => ({
         name: exerciseName,
-        sets: 3, // Valor padrão para séries
-        reps: 10, // Valor padrão para repetições
+        sets: 3,
+        reps: 10,
       }))
 
     if (exercises.length === 0) {
@@ -33,7 +43,7 @@ export default function CreateWorkoutScreen() {
     }
 
     try {
-      await createWorkout(name, exercises) // Alterado para a nova função
+      await createWorkout(name, muscleGroup, exercises) // Envia o novo campo
       Alert.alert('Sucesso', 'Treino salvo e sincronizado!')
       navigation.goBack()
     } catch (error) {
@@ -43,51 +53,69 @@ export default function CreateWorkoutScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Criar Novo Treino</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Criar Novo Treino</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Nome do Treino"
-        value={name}
-        onChangeText={setName}
-      />
+        <StyledInput
+          placeholder="Nome do Treino (Ex: Peito e Tríceps)"
+          value={name}
+          onChangeText={setName}
+        />
 
-      <Text style={styles.label}>Exercícios (separados por vírgula)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ex: Supino Reto, Agachamento, Rosca Direta"
-        value={exercisesInput}
-        onChangeText={setExercisesInput}
-        multiline
-      />
+        <StyledInput
+          placeholder="Grupo Muscular (Ex: Peitoral)"
+          value={muscleGroup}
+          onChangeText={setMuscleGroup}
+        />
 
-      <Button title="Salvar Treino" onPress={handleSave} />
-    </View>
+        <Text style={styles.label}>Exercícios (separados por vírgula)</Text>
+        <StyledInput
+          placeholder="Ex: Supino Reto, Crucifixo, Flexão"
+          value={exercisesInput}
+          onChangeText={setExercisesInput}
+          multiline
+          numberOfLines={4}
+          style={styles.textArea}
+        />
+
+        <StyledButton title="Salvar Treino" onPress={handleSave} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: theme.spacing.medium,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: theme.fontSizes.xlarge,
     fontWeight: 'bold',
-    marginBottom: 24,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: theme.spacing.large,
   },
   label: {
-    fontSize: 16,
-    marginBottom: 8,
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.small,
+    marginLeft: theme.spacing.small,
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
   },
 })

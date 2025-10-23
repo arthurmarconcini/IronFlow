@@ -6,12 +6,14 @@ const colors = {
   lightGray: '#E0E0E0',
   white: '#FFFFFF',
   darkGray: '#343A40',
+  error: '#DC3545', // Cor para ações de perigo/erro
 }
 
 const fontSizes = {
   small: 12,
   medium: 16,
   large: 20,
+  xlarge: 24,
 }
 
 const spacing = {

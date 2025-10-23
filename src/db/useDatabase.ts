@@ -11,6 +11,7 @@ export interface Workout {
   id: number // ID local do SQLite
   firestoreId: string // ID do Firestore, a fonte da verdade
   name: string
+  muscleGroup: string // Novo campo para o grupo muscular
   exercises: Exercise[]
 }
 
@@ -18,6 +19,7 @@ interface WorkoutFromDb {
   id: number
   firestore_id: string
   name: string
+  muscle_group: string // Novo campo
   exercises_json: string
 }
 
@@ -36,6 +38,7 @@ export function useDatabase() {
           id INTEGER PRIMARY KEY NOT NULL,
           firestore_id TEXT UNIQUE NOT NULL,
           name TEXT NOT NULL,
+          muscle_group TEXT NOT NULL,
           exercises_json TEXT NOT NULL
         );
       `)
@@ -48,15 +51,17 @@ export function useDatabase() {
     async (
       firestoreId: string,
       name: string,
+      muscleGroup: string,
       exercises: Exercise[],
     ): Promise<void> => {
       if (!db) return
 
       const exercisesJson = JSON.stringify(exercises)
       await db.runAsync(
-        'INSERT INTO workouts (firestore_id, name, exercises_json) VALUES (?, ?, ?)',
+        'INSERT INTO workouts (firestore_id, name, muscle_group, exercises_json) VALUES (?, ?, ?, ?)',
         firestoreId,
         name,
+        muscleGroup,
         exercisesJson,
       )
     },
@@ -73,6 +78,7 @@ export function useDatabase() {
       id: row.id,
       firestoreId: row.firestore_id,
       name: row.name,
+      muscleGroup: row.muscle_group,
       exercises: JSON.parse(row.exercises_json),
     }))
   }, [db])

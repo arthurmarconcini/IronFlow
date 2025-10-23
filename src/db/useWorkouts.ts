@@ -21,6 +21,7 @@ const firestoreDb = getFirestore(app)
 interface FirestoreWorkout {
   userId: string
   name: string
+  muscleGroup: string // Novo campo
   exercises: Exercise[]
   createdAt: Timestamp
 }
@@ -51,7 +52,11 @@ export function useWorkouts() {
 
   // O useEffect que existia aqui foi removido para dar controle total às telas.
 
-  const createWorkout = async (name: string, exercises: Exercise[]) => {
+  const createWorkout = async (
+    name: string,
+    muscleGroup: string,
+    exercises: Exercise[],
+  ) => {
     if (!user || !localDb) {
       throw new Error(
         'Usuário não autenticado ou banco de dados não disponível.',
@@ -62,12 +67,13 @@ export function useWorkouts() {
     const docRef = await addDoc(collection(firestoreDb, 'workouts'), {
       userId: user.uid,
       name,
+      muscleGroup,
       exercises,
       createdAt: new Date(),
     })
 
     // 2. Salva no banco de dados local usando o ID do Firestore
-    await addWorkoutLocal(docRef.id, name, exercises)
+    await addWorkoutLocal(docRef.id, name, muscleGroup, exercises)
 
     // 3. Atualiza o estado local para refletir a mudança imediatamente
     await fetchLocalWorkouts()
@@ -118,7 +124,12 @@ export function useWorkouts() {
       // Adiciona treinos da nuvem que não existem localmente
       for (const fw of firestoreWorkouts) {
         if (!localFirestoreIds.has(fw.firestoreId)) {
-          await addWorkoutLocal(fw.firestoreId, fw.name, fw.exercises)
+          await addWorkoutLocal(
+            fw.firestoreId,
+            fw.name,
+            fw.muscleGroup,
+            fw.exercises,
+          )
         }
       }
 

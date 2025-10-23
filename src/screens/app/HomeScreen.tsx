@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from 'react' // Adiciona useCallback
+import { StatusBar } from 'expo-status-bar'
+import React, { useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
 } from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
 import { useWorkouts } from '../../db/useWorkouts'
-import { useNavigation, useFocusEffect } from '@react-navigation/native' // Adiciona useFocusEffect
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
@@ -41,48 +42,48 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar style="dark" />
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Olá, {user?.email}!</Text>
+        <View>
+          <Text style={styles.greeting}>Olá,</Text>
+          <Text style={styles.userName}>
+            {user?.displayName || user?.email}
+          </Text>
+        </View>
         <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.profileIcon}>👤</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Featured Workout */}
-      <View style={styles.featuredContainer}>
-        <Text style={styles.sectionTitle}>Meu Próximo Treino</Text>
-        <View style={styles.featuredCard}>
-          <Text style={styles.featuredTitle}>Treino de Peito e Tríceps</Text>
-          <Text style={styles.featuredSubtitle}>Clique para começar</Text>
-        </View>
-      </View>
-
       {/* Workout List */}
-      <Text style={styles.sectionTitle}>Meus Planos de Treino</Text>
+      <Text style={styles.sectionTitle}>Meus Treinos</Text>
       {isLoading ? (
         <ActivityIndicator
           size="large"
           color={theme.colors.primary}
-          style={{ marginTop: 20 }}
+          style={{ flex: 1 }}
         />
       ) : (
         <FlatList
-          data={workouts} // Usa a lista de treinos do hook
-          keyExtractor={(item) => item.firestoreId} // Usa firestoreId como chave
+          data={workouts}
+          keyExtractor={(item) => item.firestoreId}
           renderItem={({ item }) => (
             <WorkoutCard
               workout={item}
               onPress={() =>
                 navigation.navigate('WorkoutDetail', { workoutId: item.id })
               }
-              onDelete={() => deleteWorkout(item.firestoreId)} // Passa a função de deletar
+              onDelete={() => deleteWorkout(item.firestoreId)}
             />
           )}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
                 Você ainda não criou nenhum treino.
+              </Text>
+              <Text style={styles.emptySubText}>
+                Clique no botão '+' para começar.
               </Text>
             </View>
           )}
@@ -105,63 +106,55 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    padding: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
   },
   greeting: {
     fontSize: theme.fontSizes.large,
+    color: theme.colors.secondary,
+  },
+  userName: {
+    fontSize: theme.fontSizes.xlarge,
+    fontWeight: 'bold',
     color: theme.colors.text,
   },
   profileIcon: {
     fontSize: 28,
   },
-  featuredContainer: {
-    marginBottom: theme.spacing.large,
-  },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: theme.spacing.medium,
   },
-  featuredCard: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.spacing.medium,
-    padding: theme.spacing.large,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featuredTitle: {
-    fontSize: theme.fontSizes.large,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  featuredSubtitle: {
-    fontSize: theme.fontSizes.medium,
-    color: '#FFFFFF',
-    opacity: 0.8,
-    marginTop: theme.spacing.small,
-  },
   listContent: {
-    paddingBottom: 80, // To avoid FAB overlap
+    paddingBottom: 100, // Aumenta o espaço para o FAB não sobrepor o último item
   },
   emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: '40%',
   },
   emptyText: {
+    fontSize: theme.fontSizes.large,
+    color: theme.colors.text,
+    fontWeight: 'bold',
+  },
+  emptySubText: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
+    marginTop: theme.spacing.small,
   },
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
     backgroundColor: theme.colors.primary,
     width: 60,
     height: 60,
@@ -170,7 +163,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
