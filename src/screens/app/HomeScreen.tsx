@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import WorkoutCard from '../../components/WorkoutCard'
@@ -28,10 +29,11 @@ export default function HomeScreen() {
   const navigation = useNavigation<AppNavigationProp>()
   const insets = useSafeAreaInsets()
 
-  // Sincroniza com o Firestore apenas uma vez ao carregar o app
+  // Sincroniza com o Firestore quando o app carrega e o usuário/db estão prontos
   useEffect(() => {
+    // A função syncWorkouts já tem a lógica interna para não rodar se não for necessário
     syncWorkouts()
-  }, [])
+  }, [syncWorkouts])
 
   // Recarrega os treinos do banco local toda vez que a tela ganha foco
   useFocusEffect(
@@ -44,20 +46,35 @@ export default function HomeScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Olá,</Text>
-          <Text style={styles.userName}>
-            {user?.displayName || user?.email}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.profileIcon}>👤</Text>
+      <View style={styles.headerContainer}>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() =>
+            navigation.navigate('AppTabs', { screen: 'ProfileTab' })
+          }
+        >
+          <Ionicons
+            name="person-circle-outline"
+            size={42}
+            color={theme.colors.darkGray}
+          />
         </TouchableOpacity>
       </View>
 
+      {/* Greeting */}
+      <View style={styles.greetingContainer}>
+        <Text style={styles.greeting}>Olá,</Text>
+        <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+          {user?.displayName || user?.email}
+        </Text>
+      </View>
+
+      {/* Workout List Title */}
+      <View style={styles.listTitleContainer}>
+        <Text style={styles.listTitle}>Meus Treinos</Text>
+      </View>
+
       {/* Workout List */}
-      <Text style={styles.sectionTitle}>Meus Treinos</Text>
       {isLoading ? (
         <ActivityIndicator
           size="large"
@@ -94,7 +111,7 @@ export default function HomeScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={[styles.fab, { bottom: insets.bottom + 20 }]}
-        onPress={() => navigation.navigate('CreateWorkout')}
+        onPress={() => navigation.navigate('CreateWorkout', {})}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -108,39 +125,45 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.medium,
   },
-  header: {
+  headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.medium,
-    marginBottom: theme.spacing.medium,
+    justifyContent: 'flex-end',
+    paddingVertical: theme.spacing.small,
+  },
+  profileButton: {
+    padding: 5,
+  },
+  greetingContainer: {
+    marginBottom: theme.spacing.large,
   },
   greeting: {
-    fontSize: theme.fontSizes.large,
+    fontSize: theme.fontSizes.xlarge,
     color: theme.colors.secondary,
   },
   userName: {
-    fontSize: theme.fontSizes.xlarge,
+    fontSize: 32,
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  profileIcon: {
-    fontSize: 28,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: theme.colors.text,
+  listTitleContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.lightGray,
     marginBottom: theme.spacing.medium,
   },
+  listTitle: {
+    fontSize: theme.fontSizes.large,
+    fontWeight: '600',
+    color: theme.colors.text,
+    paddingBottom: theme.spacing.small,
+  },
   listContent: {
-    paddingBottom: 100, // Aumenta o espaço para o FAB não sobrepor o último item
+    paddingBottom: 100,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: '40%',
+    marginTop: '30%',
   },
   emptyText: {
     fontSize: theme.fontSizes.large,
