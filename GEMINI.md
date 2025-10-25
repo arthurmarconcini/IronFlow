@@ -46,7 +46,11 @@ CI/CD: A automação será feita com GitHub Actions e os builds com EAS (Expo Ap
 
 Fluxo de Commit: Ao final de cada interação de desenvolvimento significativa (ex: criação de uma nova feature, correção de um bug, ou configuração de ambiente), um commit deve ser gerado. As mensagens de commit devem obrigatoriamente seguir o padrão Conventional Commits. Interações menores podem ser agrupadas em um único commit coeso.
 
+Coerência com o Código Existente: Antes de criar ou modificar código, analise os arquivos e a estrutura existentes. O código gerado deve ser consistente com os padrões, estilos e lógicas já estabelecidos no projeto.
+
 Instruções de Resposta:
+
+Idioma: Todas as mensagens de commit devem ser escritas em inglês, seguindo o padrão Conventional Commits. Todas as respostas e interações no console devem ser em português.
 
 Forneça sempre os comandos de terminal exatos para instalar dependências (npx expo install ...).
 
