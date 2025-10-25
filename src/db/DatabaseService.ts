@@ -18,6 +18,7 @@ interface UserProfileFromDB {
   last_modified_locally: number
   retry_count: number | null
   next_retry_timestamp: number | null
+  last_updated_server: number | null
 }
 
 const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
@@ -36,6 +37,7 @@ const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
   lastModifiedLocally: record.last_modified_locally,
   retryCount: record.retry_count ?? undefined,
   nextRetryTimestamp: record.next_retry_timestamp ?? undefined,
+  lastUpdatedServer: record.last_updated_server ?? undefined,
 })
 
 /**
@@ -57,7 +59,8 @@ const initDB = async (): Promise<void> => {
       sync_status TEXT NOT NULL,
       last_modified_locally INTEGER NOT NULL,
       retry_count INTEGER DEFAULT 0,
-      next_retry_timestamp INTEGER
+      next_retry_timestamp INTEGER,
+      last_updated_server INTEGER
     );
   `)
   // TODO: Adicionar lógica de migração para adicionar novas colunas se a tabela já existir

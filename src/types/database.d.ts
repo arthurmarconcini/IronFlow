@@ -11,4 +11,5 @@ export interface UserProfile {
   lastModifiedLocally: number // Unix timestamp
   retryCount?: number
   nextRetryTimestamp?: number
+  lastUpdatedServer?: number // Timestamp da última escrita bem-sucedida no servidor
 }
