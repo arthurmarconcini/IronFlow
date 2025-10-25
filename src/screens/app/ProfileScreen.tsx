@@ -1,68 +1,191 @@
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
 import AvatarInput from '../../components/AvatarInput'
+import { useProfileStore } from '../../state/profileStore'
+import { Ionicons } from '@expo/vector-icons'
+import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
 
-// Define a type for the option items for better type-checking
-type OptionItem = {
-  icon: string
+const DataRow = ({
+  label,
+  value,
+}: {
+  label: string
+  value: string | number | null | undefined
+}) => (
+  <View style={styles.dataRow}>
+    <Text style={styles.dataLabel}>{label}</Text>
+    <Text style={styles.dataValue}>{value || 'N/A'}</Text>
+  </View>
+)
+
+const ActionButton = ({
+  icon,
+  label,
+  onPress,
+  isLogout = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap
   label: string
   onPress: () => void
-}
+  isLogout?: boolean
+}) => (
+  <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+    <Ionicons
+      name={icon}
+      size={22}
+      color={isLogout ? theme.colors.error : theme.colors.primary}
+      style={styles.actionIcon}
+    />
+    <Text style={[styles.actionLabel, isLogout && styles.logoutText]}>
+      {label}
+    </Text>
+    {!isLogout && (
+      <Ionicons
+        name="chevron-forward-outline"
+        size={20}
+        color={theme.colors.secondary}
+      />
+    )}
+  </TouchableOpacity>
+)
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth()
+  const { profile, unitSystem, setUnitSystem } = useProfileStore()
   const insets = useSafeAreaInsets()
 
-  const options: OptionItem[] = [
-    { icon: '✏️', label: 'Editar Perfil', onPress: () => {} },
-    { icon: '📊', label: 'Estatísticas', onPress: () => {} },
-    { icon: '⚙️', label: 'Configurações', onPress: () => {} },
-  ]
+  const goalMap = {
+    GAIN_MASS: 'Ganhar Massa',
+    LOSE_FAT: 'Perder Gordura',
+    MAINTAIN: 'Manter a Forma',
+  }
+
+  const bmiCategoryMap = {
+    UNDERWEIGHT: 'Abaixo do Peso',
+    HEALTHY_WEIGHT: 'Peso Saudável',
+    OVERWEIGHT: 'Sobrepeso',
+    OBESITY: 'Obesidade',
+  }
+
+  const displayHeight =
+    unitSystem === 'metric'
+      ? `${profile?.heightCm?.toFixed(0) ?? 'N/A'} cm`
+      : convertCmToFtIn(profile?.heightCm ?? 0)
+
+  const displayWeight =
+    unitSystem === 'metric'
+      ? `${profile?.currentWeightKg?.toFixed(1) ?? 'N/A'} kg`
+      : `${convertKgToLbs(profile?.currentWeightKg ?? 0).toFixed(1)} lbs`
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* User Info Header */}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header */}
       <View style={styles.header}>
-        {user && (
-          <>
-            <AvatarInput />
-            <Text style={styles.email}>{user.email}</Text>
-          </>
-        )}
+        <AvatarInput />
+        <Text style={styles.displayName}>{user?.displayName || 'Usuário'}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
       </View>
 
-      {/* Options List */}
-      <View style={styles.optionsContainer}>
-        {options.map((option, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.optionButton}
-            onPress={option.onPress}
-          >
-            <Text style={styles.optionIcon}>{option.icon}</Text>
-            <Text style={styles.optionLabel}>{option.label}</Text>
-            <Text style={styles.optionArrow}>›</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Profile Data Card */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Meu Perfil</Text>
+          {/* Unit Selector */}
+          <View style={styles.unitSelector}>
+            <TouchableOpacity
+              onPress={() => setUnitSystem('metric')}
+              style={[
+                styles.unitButton,
+                unitSystem === 'metric' && styles.unitButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.unitText,
+                  unitSystem === 'metric' && styles.unitTextActive,
+                ]}
+              >
+                Métrico
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setUnitSystem('imperial')}
+              style={[
+                styles.unitButton,
+                unitSystem === 'imperial' && styles.unitButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.unitText,
+                  unitSystem === 'imperial' && styles.unitTextActive,
+                ]}
+              >
+                Imperial
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <DataRow
+          label="Objetivo"
+          value={
+            profile?.goal ? goalMap[profile.goal as keyof typeof goalMap] : null
+          }
+        />
+        <DataRow label="Altura" value={displayHeight} />
+        <DataRow label="Peso Atual" value={displayWeight} />
+        <DataRow
+          label="IMC"
+          value={
+            profile?.bmi && profile.bmiCategory
+              ? `${profile.bmi.toFixed(1)} (${bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]})`
+              : null
+          }
+        />
       </View>
 
-      {/* Spacer to push logout to the bottom */}
-      <View style={{ flex: 1 }} />
-
-      {/* Logout Button */}
-      <TouchableOpacity
-        style={[
-          styles.logoutButton,
-          { marginBottom: insets.bottom + theme.spacing.small },
-        ]}
-        onPress={logout}
-      >
-        <Text style={styles.logoutButtonText}>Sair</Text>
-      </TouchableOpacity>
-    </View>
+      {/* Actions Card */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Ações</Text>
+        <ActionButton
+          icon="create-outline"
+          label="Editar Perfil"
+          onPress={() => {}}
+        />
+        <ActionButton
+          icon="stats-chart-outline"
+          label="Estatísticas"
+          onPress={() => {}}
+        />
+        <ActionButton
+          icon="settings-outline"
+          label="Configurações"
+          onPress={() => {}}
+        />
+        <ActionButton
+          icon="log-out-outline"
+          label="Sair"
+          onPress={logout}
+          isLogout
+        />
+      </View>
+    </ScrollView>
   )
 }
 
@@ -70,65 +193,101 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    padding: theme.spacing.medium,
   },
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.secondary,
-    justifyContent: 'center',
+  displayName: {
+    fontSize: theme.fontSizes.xlarge,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginTop: theme.spacing.medium,
+  },
+  email: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.secondary,
+    marginTop: theme.spacing.small / 2,
+  },
+  card: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 12,
+    padding: theme.spacing.medium,
+    marginHorizontal: theme.spacing.medium,
+    marginBottom: theme.spacing.large,
+    // iOS Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    // Android Shadow
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
   },
-  avatarIcon: {
-    fontSize: 50,
-  },
-  email: {
+  cardTitle: {
     fontSize: theme.fontSizes.large,
     fontWeight: '600',
     color: theme.colors.text,
   },
-  optionsContainer: {
-    marginTop: theme.spacing.medium,
+  unitSelector: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.lightGray,
+    borderRadius: 8,
   },
-  optionButton: {
+  unitButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  unitButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  unitText: {
+    color: theme.colors.secondary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  unitTextActive: {
+    color: theme.colors.white,
+  },
+  dataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.small,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.lightGray,
+  },
+  dataLabel: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.secondary,
+  },
+  dataValue: {
+    fontSize: theme.fontSizes.medium,
+    fontWeight: '500',
+    color: theme.colors.text,
+  },
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.spacing.small,
-    marginBottom: theme.spacing.small,
+    paddingVertical: theme.spacing.small,
   },
-  optionIcon: {
-    fontSize: 24,
+  actionIcon: {
     marginRight: theme.spacing.medium,
   },
-  optionLabel: {
+  actionLabel: {
     flex: 1,
     fontSize: theme.fontSizes.medium,
     color: theme.colors.text,
   },
-  optionArrow: {
-    fontSize: 24,
-    color: theme.colors.secondary,
-  },
-  logoutButton: {
-    backgroundColor: '#FF4136', // A more prominent danger color
-    padding: theme.spacing.medium,
-    borderRadius: theme.spacing.small,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: theme.spacing.medium, // Changed from margin
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: theme.fontSizes.medium,
-    fontWeight: 'bold',
+  logoutText: {
+    color: theme.colors.error,
+    fontWeight: '600',
   },
 })
