@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import WorkoutCard from '../../components/WorkoutCard'
+import { useNetworkStore } from '../../state/networkStore'
 
 export default function HomeScreen() {
   const { user } = useAuth()
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   } = useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
   const insets = useSafeAreaInsets()
+  const isOnline = useNetworkStore((state) => state.isOnline)
 
   // Sincroniza com o Firestore quando o app carrega e o usuário/db estão prontos
   useEffect(() => {
@@ -72,6 +74,16 @@ export default function HomeScreen() {
       {/* Workout List Title */}
       <View style={styles.listTitleContainer}>
         <Text style={styles.listTitle}>Meus Treinos</Text>
+        <View
+          style={[
+            styles.networkIndicator,
+            {
+              backgroundColor: isOnline
+                ? theme.colors.primary
+                : theme.colors.error,
+            },
+          ]}
+        />
       </View>
 
       {/* Workout List */}
@@ -146,6 +158,8 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   listTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.lightGray,
     marginBottom: theme.spacing.medium,
@@ -155,6 +169,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text,
     paddingBottom: theme.spacing.small,
+  },
+  networkIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginLeft: theme.spacing.small,
+    marginBottom: theme.spacing.small,
   },
   listContent: {
     paddingBottom: 100,
