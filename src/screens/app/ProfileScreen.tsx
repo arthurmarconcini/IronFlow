@@ -14,6 +14,8 @@ import { useProfileStore } from '../../state/profileStore'
 import { Ionicons } from '@expo/vector-icons'
 import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
 
+import { AppNavigationProp } from '../../navigation/types'
+
 const DataRow = ({
   label,
   value,
@@ -58,7 +60,11 @@ const ActionButton = ({
   </TouchableOpacity>
 )
 
-export default function ProfileScreen() {
+type Props = {
+  navigation: AppNavigationProp
+}
+
+export default function ProfileScreen({ navigation }: Props) {
   const { user, logout } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
   const insets = useSafeAreaInsets()
@@ -75,6 +81,32 @@ export default function ProfileScreen() {
     OVERWEIGHT: 'Sobrepeso',
     OBESITY: 'Obesidade',
   }
+
+  const syncStatusMap = {
+    synced: {
+      text: 'Sincronizado',
+      color: theme.colors.primary,
+      icon: 'checkmark-circle-outline' as const,
+    },
+    dirty: {
+      text: 'Aguardando Sinc.',
+      color: theme.colors.secondary,
+      icon: 'time-outline' as const,
+    },
+    syncing: {
+      text: 'Sincronizando...',
+      color: theme.colors.primary,
+      icon: 'sync-circle-outline' as const,
+    },
+    error: {
+      text: 'Falha na Sinc.',
+      color: theme.colors.error,
+      icon: 'alert-circle-outline' as const,
+    },
+  }
+
+  const currentSyncStatus = profile?.syncStatus ?? 'dirty'
+  const syncDisplay = syncStatusMap[currentSyncStatus]
 
   const displayHeight =
     unitSystem === 'metric'
@@ -154,10 +186,32 @@ export default function ProfileScreen() {
           label="IMC"
           value={
             profile?.bmi && profile.bmiCategory
-              ? `${profile.bmi.toFixed(1)} (${bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]})`
+              ? `${profile.bmi.toFixed(1)} (${
+                  bmiCategoryMap[
+                    profile.bmiCategory as keyof typeof bmiCategoryMap
+                  ]
+                })`
               : null
           }
         />
+        <View style={styles.dataRow}>
+          <Text style={styles.dataLabel}>Status</Text>
+          <View style={styles.statusContainer}>
+            <Ionicons
+              name={syncDisplay.icon}
+              size={18}
+              color={syncDisplay.color}
+            />
+            <Text
+              style={[
+                styles.dataValue,
+                { color: syncDisplay.color, marginLeft: 6 },
+              ]}
+            >
+              {syncDisplay.text}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Actions Card */}
@@ -166,7 +220,7 @@ export default function ProfileScreen() {
         <ActionButton
           icon="create-outline"
           label="Editar Perfil"
-          onPress={() => {}}
+          onPress={() => navigation.navigate('ProfileEdit')}
         />
         <ActionButton
           icon="stats-chart-outline"
@@ -272,6 +326,10 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.medium,
     fontWeight: '500',
     color: theme.colors.text,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionButton: {
     flexDirection: 'row',

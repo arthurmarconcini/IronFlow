@@ -7,6 +7,8 @@ export interface UserProfile {
   bmi: number | null
   bmiCategory: string | null
   onboardingCompleted: boolean | null
-  syncStatus: 'synced' | 'dirty'
+  syncStatus: 'synced' | 'dirty' | 'error' | 'syncing'
   lastModifiedLocally: number // Unix timestamp
+  retryCount?: number
+  nextRetryTimestamp?: number
 }

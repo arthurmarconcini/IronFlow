@@ -4,7 +4,8 @@ import { AppStackParamList } from './types'
 import CreateWorkoutScreen from '../screens/app/CreateWorkoutScreen'
 import AddExerciseScreen from '../screens/app/AddExerciseScreen'
 import WorkoutDetailScreen from '../screens/app/WorkoutDetailScreen'
-import AppTabs from './AppTabs' // Importa o novo Tab Navigator
+import ProfileEditScreen from '../screens/app/ProfileEditScreen' // Importa a nova tela
+import AppTabs from './AppTabs'
 
 const Stack = createStackNavigator<AppStackParamList>()
 
@@ -15,6 +16,11 @@ export default function AppStack() {
         name="AppTabs"
         component={AppTabs}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProfileEdit"
+        component={ProfileEditScreen}
+        options={{ title: 'Editar Perfil' }}
       />
       <Stack.Screen
         name="CreateWorkout"

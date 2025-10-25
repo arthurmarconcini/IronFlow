@@ -27,6 +27,7 @@ export type AppTabParamList = {
 
 export type AppStackParamList = {
   AppTabs: { screen: keyof AppTabParamList } // Para aninhar o Tab Navigator
+  ProfileEdit: undefined
   CreateWorkout: { newExercise?: Exercise }
   WorkoutDetail: { workoutId: number }
   AddExercise: undefined

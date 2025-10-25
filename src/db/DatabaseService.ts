@@ -14,13 +14,32 @@ interface UserProfileFromDB {
   bmi: number | null
   bmi_category: string | null
   onboarding_completed: number | null // 0, 1, ou NULL
-  sync_status: 'synced' | 'dirty'
+  sync_status: 'synced' | 'dirty' | 'error' | 'syncing'
   last_modified_locally: number
+  retry_count: number | null
+  next_retry_timestamp: number | null
 }
 
+const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
+  id: record.id,
+  userId: record.user_id,
+  goal: record.goal,
+  heightCm: record.height_cm,
+  currentWeightKg: record.current_weight_kg,
+  bmi: record.bmi,
+  bmiCategory: record.bmi_category,
+  onboardingCompleted:
+    record.onboarding_completed === null
+      ? null
+      : record.onboarding_completed === 1,
+  syncStatus: record.sync_status,
+  lastModifiedLocally: record.last_modified_locally,
+  retryCount: record.retry_count ?? undefined,
+  nextRetryTimestamp: record.next_retry_timestamp ?? undefined,
+})
+
 /**
- * Inicializa a conexão com o banco de dados e cria a tabela 'user_profile' se ela não existir.
- * Deve ser chamado uma vez na inicialização do aplicativo.
+ * Inicializa a conexão com o banco de dados e cria/atualiza a tabela 'user_profile'.
  */
 const initDB = async (): Promise<void> => {
   db = await SQLite.openDatabaseAsync('ironflow.db')
@@ -36,46 +55,73 @@ const initDB = async (): Promise<void> => {
       bmi_category TEXT,
       onboarding_completed INTEGER,
       sync_status TEXT NOT NULL,
-      last_modified_locally INTEGER NOT NULL
+      last_modified_locally INTEGER NOT NULL,
+      retry_count INTEGER DEFAULT 0,
+      next_retry_timestamp INTEGER
     );
   `)
+  // TODO: Adicionar lógica de migração para adicionar novas colunas se a tabela já existir
   console.log('Database and user_profile table initialized.')
 }
 
 /**
- * Insere um novo perfil de usuário. Assume que só haverá um perfil, mas não impõe isso.
- * @param profile - O objeto de perfil do usuário a ser inserido.
- * @returns O ID do registro inserido.
+ * Insere ou atualiza um perfil de usuário (upsert).
+ * Se um perfil com o mesmo userId já existir, ele será atualizado.
+ * @param profile - O objeto de perfil do usuário a ser salvo.
+ * @returns O ID do registro inserido ou atualizado.
  */
-const insertUserProfile = async (
+const saveUserProfile = async (
   profile: Omit<UserProfile, 'id'>,
 ): Promise<number> => {
-  const onboardingCompleted =
-    profile.onboardingCompleted === null
-      ? null
-      : profile.onboardingCompleted
-        ? 1
-        : 0
-
-  const result = await db.runAsync(
-    'INSERT INTO user_profile (user_id, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    profile.userId,
-    profile.goal ?? null,
-    profile.heightCm ?? null,
-    profile.currentWeightKg ?? null,
-    profile.bmi ?? null,
-    profile.bmiCategory ?? null,
+  const {
+    userId,
+    goal,
+    heightCm,
+    currentWeightKg,
+    bmi,
+    bmiCategory,
     onboardingCompleted,
-    profile.syncStatus,
-    profile.lastModifiedLocally,
+    syncStatus,
+    lastModifiedLocally,
+  } = profile
+  const onboardingCompletedInt =
+    onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
+
+  await db.runAsync(
+    `INSERT INTO user_profile (user_id, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       goal=excluded.goal,
+       height_cm=excluded.height_cm,
+       current_weight_kg=excluded.current_weight_kg,
+       bmi=excluded.bmi,
+       bmi_category=excluded.bmi_category,
+       onboarding_completed=excluded.onboarding_completed,
+       sync_status=excluded.sync_status,
+       last_modified_locally=excluded.last_modified_locally`,
+    userId,
+    goal ?? null,
+    heightCm ?? null,
+    currentWeightKg ?? null,
+    bmi ?? null,
+    bmiCategory ?? null,
+    onboardingCompletedInt,
+    syncStatus,
+    lastModifiedLocally,
   )
-  return result.lastInsertRowId
+
+  // Após um upsert, precisamos buscar o registro para garantir que temos o ID correto.
+  const savedProfile = await getUserProfileByUserId(userId)
+  if (!savedProfile) {
+    throw new Error(
+      'Falha ao salvar ou encontrar o perfil do usuário após o upsert.',
+    )
+  }
+  return savedProfile.id!
 }
 
 /**
  * Busca um perfil de usuário pelo seu ID de usuário.
- * @param userId - O ID do usuário (do Firebase Auth).
- * @returns O perfil do usuário, ou null se não for encontrado.
  */
 const getUserProfileByUserId = async (
   userId: string,
@@ -84,38 +130,30 @@ const getUserProfileByUserId = async (
     'SELECT * FROM user_profile WHERE user_id = ?',
     userId,
   )
+  return record ? mapRecordToProfile(record) : null
+}
 
-  if (!record) {
-    return null
-  }
-
-  return {
-    id: record.id,
-    userId: record.user_id,
-    goal: record.goal,
-    heightCm: record.height_cm,
-    currentWeightKg: record.current_weight_kg,
-    bmi: record.bmi,
-    bmiCategory: record.bmi_category,
-    onboardingCompleted:
-      record.onboarding_completed === null
-        ? null
-        : record.onboarding_completed === 1,
-    syncStatus: record.sync_status,
-    lastModifiedLocally: record.last_modified_locally,
-  }
+/**
+ * Retorna registros que precisam ser sincronizados.
+ * Inclui registros 'dirty' e registros 'error' cujo tempo de nova tentativa chegou.
+ */
+const getRecordsToSync = async (): Promise<UserProfile[]> => {
+  const now = Date.now()
+  const records = await db.getAllAsync<UserProfileFromDB>(
+    "SELECT * FROM user_profile WHERE sync_status = 'dirty' OR (sync_status = 'error' AND (next_retry_timestamp IS NULL OR next_retry_timestamp <= ?))",
+    now,
+  )
+  return records.map(mapRecordToProfile)
 }
 
 /**
  * Atualiza o perfil do usuário existente.
- * @param id - O ID do perfil a ser atualizado.
- * @param profile - Um objeto contendo os campos a serem atualizados.
  */
 const updateUserProfile = async (
   id: number,
-  profile: Partial<Omit<UserProfile, 'id'>>,
+  profile: Partial<Omit<UserProfile, 'id' | 'userId'>>,
 ): Promise<void> => {
-  const fields = Object.keys(profile).filter((key) => key !== 'id')
+  const fields = Object.keys(profile)
 
   const values = fields.map((key) => {
     const value = profile[key as keyof typeof profile]
@@ -144,37 +182,19 @@ const updateUserProfile = async (
   )
 }
 
-/**
- * Retorna todos os registros da tabela 'user_profile' que não estão sincronizados (status 'dirty').
- * @returns Uma lista de perfis de usuário 'dirty'.
- */
+// Manter getDirtyRecords pode ser útil para UI, mas a sincronização usará getRecordsToSync
 const getDirtyRecords = async (): Promise<UserProfile[]> => {
   const dirtyRecords = await db.getAllAsync<UserProfileFromDB>(
-    "SELECT * FROM user_profile WHERE sync_status = 'dirty'",
+    "SELECT * FROM user_profile WHERE sync_status = 'dirty' OR sync_status = 'error' OR sync_status = 'syncing'",
   )
-
-  // Mapeia os nomes de coluna (snake_case) para nomes de propriedade (camelCase)
-  return dirtyRecords.map((record) => ({
-    id: record.id,
-    userId: record.user_id,
-    goal: record.goal,
-    heightCm: record.height_cm,
-    currentWeightKg: record.current_weight_kg,
-    bmi: record.bmi,
-    bmiCategory: record.bmi_category,
-    onboardingCompleted:
-      record.onboarding_completed === null
-        ? null
-        : record.onboarding_completed === 1,
-    syncStatus: record.sync_status,
-    lastModifiedLocally: record.last_modified_locally,
-  }))
+  return dirtyRecords.map(mapRecordToProfile)
 }
 
 export const DatabaseService = {
   initDB,
-  insertUserProfile,
+  saveUserProfile,
   getUserProfileByUserId,
+  getRecordsToSync, // Nova função exportada
   updateUserProfile,
   getDirtyRecords,
 }

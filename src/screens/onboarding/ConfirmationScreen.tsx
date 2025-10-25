@@ -10,6 +10,7 @@ import { UserProfile } from '../../types/database'
 import { ConfirmationScreenRouteProp } from '../../navigation/types'
 import { useProfileStore } from '../../state/profileStore'
 import { useAuth } from '../../hooks/useAuth'
+import { SyncService } from '../../sync/SyncService'
 
 type Props = {
   route: ConfirmationScreenRouteProp
@@ -61,9 +62,14 @@ const ConfirmationScreen = ({ route }: Props) => {
         lastModifiedLocally: Date.now(),
       }
 
-      const newId = await DatabaseService.insertUserProfile(userProfileData)
+      const newId = await DatabaseService.saveUserProfile(userProfileData)
 
-      setProfile({ ...userProfileData, id: newId })
+      // Atualiza o estado global. O RootNavigator irá reagir e trocar a tela.
+      const finalProfile = { ...userProfileData, id: newId }
+      setProfile(finalProfile)
+
+      // Dispara a sincronização em segundo plano
+      SyncService.syncUserProfile(user)
     } catch (error) {
       console.error('Erro ao salvar o perfil:', error)
     } finally {
