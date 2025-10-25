@@ -7,6 +7,7 @@ let db: SQLite.SQLiteDatabase
 // Interface para o formato de dados retornado do SQLite (snake_case)
 interface UserProfileFromDB {
   id: number
+  user_id: string
   goal: string | null
   height_cm: number | null
   current_weight_kg: number | null
@@ -27,6 +28,7 @@ const initDB = async (): Promise<void> => {
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS user_profile (
       id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      user_id TEXT NOT NULL UNIQUE,
       goal TEXT,
       height_cm REAL,
       current_weight_kg REAL,
@@ -49,14 +51,15 @@ const insertUserProfile = async (
   profile: Omit<UserProfile, 'id'>,
 ): Promise<number> => {
   const onboardingCompleted =
-    profile.onboardingCompleted === undefined
+    profile.onboardingCompleted === null
       ? null
       : profile.onboardingCompleted
         ? 1
         : 0
 
   const result = await db.runAsync(
-    'INSERT INTO user_profile (goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO user_profile (user_id, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    profile.userId,
     profile.goal ?? null,
     profile.heightCm ?? null,
     profile.currentWeightKg ?? null,
@@ -67,6 +70,40 @@ const insertUserProfile = async (
     profile.lastModifiedLocally,
   )
   return result.lastInsertRowId
+}
+
+/**
+ * Busca um perfil de usuário pelo seu ID de usuário.
+ * @param userId - O ID do usuário (do Firebase Auth).
+ * @returns O perfil do usuário, ou null se não for encontrado.
+ */
+const getUserProfileByUserId = async (
+  userId: string,
+): Promise<UserProfile | null> => {
+  const record = await db.getFirstAsync<UserProfileFromDB>(
+    'SELECT * FROM user_profile WHERE user_id = ?',
+    userId,
+  )
+
+  if (!record) {
+    return null
+  }
+
+  return {
+    id: record.id,
+    userId: record.user_id,
+    goal: record.goal,
+    heightCm: record.height_cm,
+    currentWeightKg: record.current_weight_kg,
+    bmi: record.bmi,
+    bmiCategory: record.bmi_category,
+    onboardingCompleted:
+      record.onboarding_completed === null
+        ? null
+        : record.onboarding_completed === 1,
+    syncStatus: record.sync_status,
+    lastModifiedLocally: record.last_modified_locally,
+  }
 }
 
 /**
@@ -119,6 +156,7 @@ const getDirtyRecords = async (): Promise<UserProfile[]> => {
   // Mapeia os nomes de coluna (snake_case) para nomes de propriedade (camelCase)
   return dirtyRecords.map((record) => ({
     id: record.id,
+    userId: record.user_id,
     goal: record.goal,
     heightCm: record.height_cm,
     currentWeightKg: record.current_weight_kg,
@@ -136,6 +174,7 @@ const getDirtyRecords = async (): Promise<UserProfile[]> => {
 export const DatabaseService = {
   initDB,
   insertUserProfile,
+  getUserProfileByUserId,
   updateUserProfile,
   getDirtyRecords,
 }
