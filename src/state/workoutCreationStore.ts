@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import { Exercise } from '../db/useDatabase'
+
+export interface Exercise {
+  name: string
+  sets: number
+  reps: number
+  rest: number
+  dbId?: string // ID from ExerciseDB
+}
 
 interface WorkoutCreationState {
   workoutName: string

@@ -1,106 +1,125 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View,
+  FlatList,
   Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { theme } from '../../theme'
-import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
+import StyledButton from '../../components/StyledButton'
+import { useExerciseStore } from '../../state/exerciseStore'
 import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
+import { Exercise } from '../../services/exerciseDB'
 
 export default function AddExerciseScreen() {
   const navigation = useNavigation()
-  const { addExercise } = useWorkoutCreationStore()
+  const { addExercise: addExerciseToWorkout } = useWorkoutCreationStore()
+  const {
+    exercises,
+    loading,
+    error,
+    fetchExercises,
+    filterExercises,
+    filteredExercises,
+  } = useExerciseStore()
 
-  const [name, setName] = useState('')
-  const [sets, setSets] = useState('')
-  const [repetitions, setRepetitions] = useState('')
-  const [rest, setRest] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([])
 
-  const handleAddExercise = () => {
-    if (!name.trim() || !sets.trim() || !repetitions.trim() || !rest.trim()) {
-      Alert.alert('Erro', 'Todos os campos são obrigatórios.')
-      return
+  useEffect(() => {
+    if (!exercises.length) {
+      fetchExercises()
     }
+  }, [exercises, fetchExercises])
 
-    const setsNum = parseInt(sets, 10)
-    const repsNum = parseInt(repetitions, 10)
-    const restNum = parseInt(rest, 10)
+  useEffect(() => {
+    filterExercises(searchTerm, 'name')
+  }, [searchTerm, filterExercises])
 
-    if (
-      isNaN(setsNum) ||
-      isNaN(repsNum) ||
-      isNaN(restNum) ||
-      setsNum <= 0 ||
-      repsNum <= 0 ||
-      restNum < 0
-    ) {
+  const toggleExerciseSelection = (exercise: Exercise) => {
+    setSelectedExercises((prevSelected) =>
+      prevSelected.find((e) => e.id === exercise.id)
+        ? prevSelected.filter((e) => e.id !== exercise.id)
+        : [...prevSelected, exercise],
+    )
+  }
+
+  const handleAddSelectedExercises = () => {
+    if (selectedExercises.length === 0) {
       Alert.alert(
-        'Erro',
-        'Séries e repetições devem ser números positivos. Descanso não pode ser negativo.',
+        'Nenhum exercício selecionado',
+        'Por favor, selecione ao menos um exercício.',
       )
       return
     }
 
-    addExercise({
-      name: name.trim(),
-      sets: setsNum,
-      reps: repsNum,
-      rest: restNum,
+    selectedExercises.forEach((exercise) => {
+      addExerciseToWorkout({
+        name: exercise.name,
+        sets: 3, // Default value, user can change later
+        reps: 10, // Default value
+        rest: 60, // Default value
+        dbId: exercise.id,
+      })
     })
 
     navigation.goBack()
   }
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+  const renderExerciseItem = ({ item }: { item: Exercise }) => {
+    const isSelected = selectedExercises.some((e) => e.id === item.id)
+    return (
+      <TouchableOpacity
+        style={[styles.exerciseItem, isSelected && styles.exerciseItemSelected]}
+        onPress={() => toggleExerciseSelection(item)}
       >
-        <Text style={styles.title}>Adicionar Exercício</Text>
+        <Text style={styles.exerciseName}>{item.name}</Text>
+        <Text style={styles.exerciseDetail}>
+          {item.bodyPart} - {item.equipment}
+        </Text>
+      </TouchableOpacity>
+    )
+  }
 
-        <StyledInput
-          placeholder="Nome do Exercício (Ex: Supino Reto)"
-          value={name}
-          onChangeText={setName}
-        />
+  return (
+    <View style={styles.container}>
+      <StyledInput
+        placeholder="Buscar exercício por nome..."
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        style={styles.searchInput}
+      />
 
-        <StyledInput
-          placeholder="Número de Séries"
-          value={sets}
-          onChangeText={setSets}
-          keyboardType="numeric"
-        />
+      {loading && (
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      )}
+      {error && (
+        <Text style={styles.errorText}>
+          Erro ao carregar exercícios: {error}
+        </Text>
+      )}
 
-        <StyledInput
-          placeholder="Repetições (Ex: 10)"
-          value={repetitions}
-          onChangeText={setRepetitions}
-          keyboardType="numeric"
+      {!loading && !error && (
+        <FlatList
+          data={filteredExercises}
+          renderItem={renderExerciseItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
         />
+      )}
 
-        <StyledInput
-          placeholder="Descanso (segundos)"
-          value={rest}
-          onChangeText={setRest}
-          keyboardType="numeric"
-        />
-
-        <StyledButton
-          title="Adicionar Exercício ao Treino"
-          onPress={handleAddExercise}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <StyledButton
+        title={`Adicionar ${selectedExercises.length} Exercícios`}
+        onPress={handleAddSelectedExercises}
+        disabled={selectedExercises.length === 0}
+        style={styles.addButton}
+      />
+    </View>
   )
 }
 
@@ -108,17 +127,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
     padding: theme.spacing.medium,
-    justifyContent: 'center',
   },
-  title: {
-    fontSize: theme.fontSizes.xlarge,
+  searchInput: {
+    marginBottom: theme.spacing.medium,
+  },
+  listContent: {
+    paddingBottom: theme.spacing.large,
+  },
+  exerciseItem: {
+    backgroundColor: theme.colors.card,
+    padding: theme.spacing.medium,
+    marginBottom: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  exerciseItemSelected: {
+    borderColor: theme.colors.primary,
+    borderWidth: 2,
+  },
+  exerciseName: {
+    fontSize: theme.fontSizes.medium,
     fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  exerciseDetail: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.small,
+  },
+  errorText: {
+    color: theme.colors.error,
     textAlign: 'center',
-    marginBottom: theme.spacing.large,
+    marginTop: theme.spacing.medium,
+  },
+  addButton: {
+    marginTop: theme.spacing.medium,
   },
 })

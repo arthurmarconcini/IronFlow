@@ -6,6 +6,7 @@ export interface Exercise {
   sets: number
   reps: number
   rest?: number // Tempo de descanso em segundos
+  dbId?: string // ID from ExerciseDB
 }
 
 export interface Workout {

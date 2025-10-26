@@ -11,7 +11,10 @@ import {
 import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Exercise } from '../../db/useDatabase'
+import {
+  Exercise,
+  useWorkoutCreationStore,
+} from '../../state/workoutCreationStore'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
