@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   View,
   TextInput,
@@ -6,47 +6,79 @@ import {
   TextInputProps,
   TouchableOpacity,
   Text,
+  Pressable,
 } from 'react-native'
 import { theme } from '../theme'
 
-// Extend props to include our custom prop
+// Estendendo as props para incluir a label opcional
 interface StyledInputProps extends TextInputProps {
   isPassword?: boolean
+  label?: string
+  containerStyle?: object // Para permitir estilos customizados no container
 }
 
-const StyledInput: React.FC<StyledInputProps> = ({ isPassword, ...props }) => {
-  // A password field should be secure by default.
+const StyledInput: React.FC<StyledInputProps> = ({
+  isPassword,
+  label,
+  containerStyle,
+  style, // Extrai o style para aplicar ao TextInput
+  ...props
+}) => {
   const [isSecure, setIsSecure] = useState(true)
+  const textInputRef = useRef<TextInput>(null)
 
-  // Only apply secure text entry if it's a password field.
+  const handlePress = () => {
+    textInputRef.current?.focus()
+  }
+
   const secureText = isPassword ? isSecure : false
 
   return (
-    <View style={styles.container}>
-      <TextInput style={styles.input} secureTextEntry={secureText} {...props} />
-      {isPassword && (
-        <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => setIsSecure((prev) => !prev)}
-        >
-          {/* Show open eye when secure (text hidden), closed eye when not */}
-          <Text>{isSecure ? '👁️' : '🙈'}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    // O Pressable envolve tudo, tornando a área inteira clicável
+    <Pressable
+      onPress={handlePress}
+      style={[styles.pressableContainer, containerStyle]}
+    >
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View style={styles.inputWrapper}>
+        <TextInput
+          ref={textInputRef}
+          style={[styles.input, style]} // Combina estilos
+          secureTextEntry={secureText}
+          placeholderTextColor={theme.colors.textMuted}
+          {...props}
+        />
+        {isPassword && (
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setIsSecure((prev) => !prev)}
+          >
+            <Text>{isSecure ? '👁️' : '🙈'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pressableContainer: {
+    width: '100%',
+    marginVertical: theme.spacing.small,
+  },
+  label: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.small / 2,
+    marginLeft: theme.spacing.small,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: theme.colors.secondary,
-    borderRadius: theme.spacing.small,
-    marginVertical: theme.spacing.small,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.medium,
   },
   input: {
     flex: 1,

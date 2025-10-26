@@ -6,6 +6,7 @@ import CreateWorkoutScreen from '../screens/app/CreateWorkoutScreen'
 import AddExerciseScreen from '../screens/app/AddExerciseScreen'
 import WorkoutDetailScreen from '../screens/app/WorkoutDetailScreen'
 import ProfileEditScreen from '../screens/app/ProfileEditScreen'
+import CustomizeExerciseScreen from '../screens/app/CustomizeExerciseScreen'
 import AppTabs from './AppTabs'
 import ConnectivityIndicator from '../components/ConnectivityIndicator'
 import SyncIndicator from '../components/SyncIndicator'
@@ -44,6 +45,11 @@ export default function AppStack() {
         name="AddExercise"
         component={AddExerciseScreen}
         options={{ title: 'Adicionar Exercício' }}
+      />
+      <Stack.Screen
+        name="CustomizeExercise"
+        component={CustomizeExerciseScreen}
+        options={{ title: 'Personalizar Exercício' }}
       />
       <Stack.Screen
         name="WorkoutDetail"

@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  View,
   ViewStyle,
   TextStyle,
 } from 'react-native'
@@ -13,7 +14,8 @@ interface StyledButtonProps {
   title: string
   onPress: () => void
   isLoading?: boolean
-  style?: ViewStyle
+  containerStyle?: ViewStyle // Para o wrapper
+  buttonStyle?: ViewStyle // Para o botão em si
   textStyle?: TextStyle
   disabled?: boolean
 }
@@ -22,40 +24,45 @@ const StyledButton: React.FC<StyledButtonProps> = ({
   title,
   onPress,
   isLoading = false,
-  style,
+  containerStyle,
+  buttonStyle,
   textStyle,
   disabled = false,
 }) => {
   const buttonStyles = [
     styles.button,
-    style,
+    buttonStyle,
     (disabled || isLoading) && styles.disabled,
   ]
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={buttonStyles}
+      style={[styles.container, containerStyle]} // Aplica o containerStyle aqui
       disabled={disabled || isLoading}
     >
-      {isLoading ? (
-        <ActivityIndicator color="#FFFFFF" />
-      ) : (
-        <Text style={[styles.text, textStyle]}>{title}</Text>
-      )}
+      <View style={buttonStyles}>
+        {isLoading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={[styles.text, textStyle]}>{title}</Text>
+        )}
+      </View>
     </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    marginVertical: theme.spacing.small,
+  },
   button: {
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.medium,
-    borderRadius: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    marginVertical: theme.spacing.small,
   },
   text: {
     color: '#FFFFFF',

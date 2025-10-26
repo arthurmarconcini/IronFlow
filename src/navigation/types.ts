@@ -1,6 +1,7 @@
 import { StackNavigationProp } from '@react-navigation/stack'
 import { RouteProp } from '@react-navigation/native'
-import { Exercise } from '../db/useDatabase'
+import { Exercise as WorkoutExercise } from '../types/database' // Corrigido
+import { Exercise as ApiExercise } from '../services/exerciseDB'
 
 export type AuthStackParamList = {
   Login: undefined
@@ -26,11 +27,12 @@ export type AppTabParamList = {
 }
 
 export type AppStackParamList = {
-  AppTabs: { screen: keyof AppTabParamList } // Para aninhar o Tab Navigator
+  AppTabs: { screen: keyof AppTabParamList }
   ProfileEdit: undefined
-  CreateWorkout: { newExercise?: Exercise }
+  CreateWorkout: { newExercise?: WorkoutExercise }
   WorkoutDetail: { workoutId: number }
   AddExercise: undefined
+  CustomizeExercise: { selectedExercises: ApiExercise[] }
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
@@ -42,4 +44,8 @@ export type AppNavigationProp = StackNavigationProp<AppStackParamList>
 export type ConfirmationScreenRouteProp = RouteProp<
   OnboardingStackParamList,
   'Confirmation'
+>
+export type CustomizeExerciseScreenRouteProp = RouteProp<
+  AppStackParamList,
+  'CustomizeExercise'
 >

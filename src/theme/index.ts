@@ -7,6 +7,9 @@ const colors = {
   white: '#FFFFFF',
   darkGray: '#343A40',
   error: '#DC3545', // Cor para ações de perigo/erro
+  card: '#FFFFFF',
+  border: '#E0E0E0',
+  textMuted: '#6C757D',
 }
 
 const fontSizes = {
@@ -22,8 +25,15 @@ const spacing = {
   large: 30,
 }
 
+const borderRadius = {
+  small: 4,
+  medium: 8,
+  large: 12,
+}
+
 export const theme = {
   colors,
   fontSizes,
   spacing,
+  borderRadius,
 }

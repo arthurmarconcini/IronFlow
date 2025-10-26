@@ -6,7 +6,7 @@ const exerciseSchema = z.object({
   name: z.string(),
   bodyPart: z.string(),
   target: z.string(),
-  gifUrl: z.string(),
+  gifUrl: z.string().optional(),
   equipment: z.string(),
 })
 
@@ -29,7 +29,9 @@ const apiClient = axios.create({
 export const exerciseDB = {
   getAll: async (): Promise<Exercise[]> => {
     try {
-      const response = await apiClient.get('/exercises')
+      const response = await apiClient.get(
+        'https://exercisedb.p.rapidapi.com/exercises',
+      )
       return exerciseResponseSchema.parse(response.data)
     } catch (error) {
       console.error('Failed to fetch exercises:', error)
@@ -38,7 +40,9 @@ export const exerciseDB = {
   },
   getByBodyPart: async (bodyPart: string): Promise<Exercise[]> => {
     try {
-      const response = await apiClient.get(`/exercises/bodyPart/${bodyPart}`)
+      const response = await apiClient.get(
+        `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${bodyPart}`,
+      )
       return exerciseResponseSchema.parse(response.data)
     } catch (error) {
       console.error(

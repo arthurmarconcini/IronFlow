@@ -11,10 +11,10 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation, useFocusEffect } from '@react-navigation/native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
+import ScreenContainer from '../../components/ScreenContainer'
 import WorkoutCard from '../../components/WorkoutCard'
 import { useNetworkStore } from '../../state/networkStore'
 
@@ -28,16 +28,12 @@ export default function HomeScreen() {
     deleteWorkout,
   } = useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
-  const insets = useSafeAreaInsets()
   const isOnline = useNetworkStore((state) => state.isOnline)
 
-  // Sincroniza com o Firestore quando o app carrega e o usuário/db estão prontos
   useEffect(() => {
-    // A função syncWorkouts já tem a lógica interna para não rodar se não for necessário
     syncWorkouts()
   }, [syncWorkouts])
 
-  // Recarrega os treinos do banco local toda vez que a tela ganha foco
   useFocusEffect(
     useCallback(() => {
       fetchLocalWorkouts()
@@ -45,7 +41,7 @@ export default function HomeScreen() {
   )
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenContainer style={styles.container}>
       <StatusBar style="dark" />
       {/* Header */}
       <View style={styles.headerContainer}>
@@ -122,21 +118,17 @@ export default function HomeScreen() {
 
       {/* FAB */}
       <TouchableOpacity
-        style={[styles.fab, { bottom: insets.bottom + 20 }]}
+        style={styles.fab}
         onPress={() => navigation.navigate('CreateWorkout', {})}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.medium,
-  },
+  container: {},
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -199,6 +191,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 20,
+    bottom: 20,
     backgroundColor: theme.colors.primary,
     width: 60,
     height: 60,

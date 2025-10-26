@@ -10,23 +10,20 @@ import {
 } from 'react-native'
 import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation } from '@react-navigation/native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import {
   Exercise,
   useWorkoutCreationStore,
 } from '../../state/workoutCreationStore'
 import { theme } from '../../theme'
+import ScreenContainer from '../../components/ScreenContainer'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
 import { AppNavigationProp } from '../../navigation/types'
-import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
 
 export default function CreateWorkoutScreen() {
   const { createWorkout, isLoading } = useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
-  const insets = useSafeAreaInsets()
 
-  // Pega o estado e as ações do store Zustand
   const {
     workoutName,
     muscleGroup,
@@ -36,7 +33,6 @@ export default function CreateWorkoutScreen() {
     reset,
   } = useWorkoutCreationStore()
 
-  // Limpa o formulário sempre que a tela é montada
   useEffect(() => {
     reset()
   }, [reset])
@@ -53,7 +49,7 @@ export default function CreateWorkoutScreen() {
     try {
       await createWorkout(workoutName, muscleGroup, exercises)
       Alert.alert('Sucesso', 'Treino salvo e sincronizado!')
-      reset() // Limpa o store após salvar
+      reset()
       navigation.goBack()
     } catch (error) {
       console.error(error)
@@ -82,65 +78,64 @@ export default function CreateWorkoutScreen() {
   )
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[
-        styles.container,
-        { paddingBottom: insets.bottom + theme.spacing.medium },
-      ]}
-    >
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Criar Novo Treino</Text>
-        <StyledInput
-          placeholder="Nome do Treino (Ex: Peito e Tríceps)"
-          value={workoutName}
-          onChangeText={setWorkoutName} // Usa a ação do store
-        />
-        <StyledInput
-          placeholder="Grupo Muscular (Ex: Peitoral)"
-          value={muscleGroup}
-          onChangeText={setMuscleGroup} // Usa a ação do store
-        />
-      </View>
+    <ScreenContainer style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingContainer}
+      >
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Criar Novo Treino</Text>
+          <StyledInput
+            placeholder="Nome do Treino (Ex: Peito e Tríceps)"
+            value={workoutName}
+            onChangeText={setWorkoutName}
+          />
+          <StyledInput
+            placeholder="Grupo Muscular (Ex: Peitoral)"
+            value={muscleGroup}
+            onChangeText={setMuscleGroup}
+          />
+        </View>
 
-      <View style={styles.listHeader}>
-        <Text style={styles.subtitle}>Exercícios</Text>
-        <Text style={styles.exerciseCount}>{exercises.length}</Text>
-      </View>
+        <View style={styles.listHeader}>
+          <Text style={styles.subtitle}>Exercícios</Text>
+          <Text style={styles.exerciseCount}>{exercises.length}</Text>
+        </View>
 
-      <FlatList
-        data={exercises}
-        renderItem={renderExercise}
-        keyExtractor={(item, index) => `${item.name}-${index}`}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <Text style={styles.emptyListText}>Nenhum exercício adicionado.</Text>
-        }
-      />
+        <FlatList
+          data={exercises}
+          renderItem={renderExercise}
+          keyExtractor={(item, index) => `${item.name}-${index}`}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyListText}>
+              Nenhum exercício adicionado.
+            </Text>
+          }
+        />
 
-      <View style={styles.footerContainer}>
-        <StyledButton
-          title="Adicionar Exercício"
-          onPress={() => navigation.navigate('AddExercise')}
-        />
-        <StyledButton
-          title="Salvar Treino"
-          onPress={handleSave}
-          disabled={!workoutName.trim() || exercises.length === 0}
-          isLoading={isLoading}
-        />
-      </View>
-    </KeyboardAvoidingView>
+        <View style={styles.footerContainer}>
+          <StyledButton
+            title="Adicionar Exercício"
+            onPress={() => navigation.navigate('AddExercise')}
+          />
+          <StyledButton
+            title="Salvar Treino"
+            onPress={handleSave}
+            disabled={!workoutName.trim() || exercises.length === 0}
+            isLoading={isLoading}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: {},
+  keyboardAvoidingContainer: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    paddingHorizontal: theme.spacing.medium,
-    paddingTop: theme.spacing.medium,
   },
   formContainer: {
     marginBottom: theme.spacing.medium,
@@ -181,14 +176,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     paddingVertical: theme.spacing.small,
     paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
     marginBottom: theme.spacing.medium,
-    // Sombra para iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    // Sombra para Android
     elevation: 2,
   },
   exerciseName: {

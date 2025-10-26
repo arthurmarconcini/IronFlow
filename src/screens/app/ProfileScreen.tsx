@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
+import ScreenContainer from '../../components/ScreenContainer'
 import AvatarInput from '../../components/AvatarInput'
 import { useProfileStore } from '../../state/profileStore'
 import { Ionicons } from '@expo/vector-icons'
 import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
-
 import { AppNavigationProp } from '../../navigation/types'
 
 const DataRow = ({
@@ -67,7 +66,6 @@ type Props = {
 export default function ProfileScreen({ navigation }: Props) {
   const { user, logout } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
-  const insets = useSafeAreaInsets()
 
   const goalMap = {
     GAIN_MASS: 'Ganhar Massa',
@@ -112,146 +110,132 @@ export default function ProfileScreen({ navigation }: Props) {
     unitSystem === 'metric'
       ? `${profile?.heightCm?.toFixed(0) ?? 'N/A'} cm`
       : convertCmToFtIn(profile?.heightCm ?? 0)
-
   const displayWeight =
     unitSystem === 'metric'
       ? `${profile?.currentWeightKg?.toFixed(1) ?? 'N/A'} kg`
       : `${convertKgToLbs(profile?.currentWeightKg ?? 0).toFixed(1)} lbs`
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{
-        paddingTop: insets.top,
-        paddingBottom: insets.bottom,
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <AvatarInput />
-        <Text style={styles.displayName}>{user?.displayName || 'Usuário'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-      </View>
+    <ScreenContainer>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <AvatarInput />
+          <Text style={styles.displayName}>
+            {user?.displayName || 'Usuário'}
+          </Text>
+          <Text style={styles.email}>{user?.email}</Text>
+        </View>
 
-      {/* Profile Data Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Meu Perfil</Text>
-          {/* Unit Selector */}
-          <View style={styles.unitSelector}>
-            <TouchableOpacity
-              onPress={() => setUnitSystem('metric')}
-              style={[
-                styles.unitButton,
-                unitSystem === 'metric' && styles.unitButtonActive,
-              ]}
-            >
-              <Text
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Meu Perfil</Text>
+            <View style={styles.unitSelector}>
+              <TouchableOpacity
+                onPress={() => setUnitSystem('metric')}
                 style={[
-                  styles.unitText,
-                  unitSystem === 'metric' && styles.unitTextActive,
+                  styles.unitButton,
+                  unitSystem === 'metric' && styles.unitButtonActive,
                 ]}
               >
-                Métrico
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setUnitSystem('imperial')}
-              style={[
-                styles.unitButton,
-                unitSystem === 'imperial' && styles.unitButtonActive,
-              ]}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.unitText,
+                    unitSystem === 'metric' && styles.unitTextActive,
+                  ]}
+                >
+                  Métrico
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setUnitSystem('imperial')}
                 style={[
-                  styles.unitText,
-                  unitSystem === 'imperial' && styles.unitTextActive,
+                  styles.unitButton,
+                  unitSystem === 'imperial' && styles.unitButtonActive,
                 ]}
               >
-                Imperial
+                <Text
+                  style={[
+                    styles.unitText,
+                    unitSystem === 'imperial' && styles.unitTextActive,
+                  ]}
+                >
+                  Imperial
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <DataRow
+            label="Objetivo"
+            value={
+              profile?.goal
+                ? goalMap[profile.goal as keyof typeof goalMap]
+                : null
+            }
+          />
+          <DataRow label="Altura" value={displayHeight} />
+          <DataRow label="Peso Atual" value={displayWeight} />
+          <DataRow
+            label="IMC"
+            value={
+              profile?.bmi && profile.bmiCategory
+                ? `${profile.bmi.toFixed(1)} (${bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]})`
+                : null
+            }
+          />
+          <View style={styles.dataRow}>
+            <Text style={styles.dataLabel}>Status</Text>
+            <View style={styles.statusContainer}>
+              <Ionicons
+                name={syncDisplay.icon}
+                size={18}
+                color={syncDisplay.color}
+              />
+              <Text
+                style={[
+                  styles.dataValue,
+                  { color: syncDisplay.color, marginLeft: 6 },
+                ]}
+              >
+                {syncDisplay.text}
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
-        <DataRow
-          label="Objetivo"
-          value={
-            profile?.goal ? goalMap[profile.goal as keyof typeof goalMap] : null
-          }
-        />
-        <DataRow label="Altura" value={displayHeight} />
-        <DataRow label="Peso Atual" value={displayWeight} />
-        <DataRow
-          label="IMC"
-          value={
-            profile?.bmi && profile.bmiCategory
-              ? `${profile.bmi.toFixed(1)} (${
-                  bmiCategoryMap[
-                    profile.bmiCategory as keyof typeof bmiCategoryMap
-                  ]
-                })`
-              : null
-          }
-        />
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>Status</Text>
-          <View style={styles.statusContainer}>
-            <Ionicons
-              name={syncDisplay.icon}
-              size={18}
-              color={syncDisplay.color}
-            />
-            <Text
-              style={[
-                styles.dataValue,
-                { color: syncDisplay.color, marginLeft: 6 },
-              ]}
-            >
-              {syncDisplay.text}
-            </Text>
-          </View>
-        </View>
-      </View>
 
-      {/* Actions Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Ações</Text>
-        <ActionButton
-          icon="create-outline"
-          label="Editar Perfil"
-          onPress={() => navigation.navigate('ProfileEdit')}
-        />
-        <ActionButton
-          icon="stats-chart-outline"
-          label="Estatísticas"
-          onPress={() => {}}
-        />
-        <ActionButton
-          icon="settings-outline"
-          label="Configurações"
-          onPress={() => {}}
-        />
-        <ActionButton
-          icon="log-out-outline"
-          label="Sair"
-          onPress={logout}
-          isLogout
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Ações</Text>
+          <ActionButton
+            icon="create-outline"
+            label="Editar Perfil"
+            onPress={() => navigation.navigate('ProfileEdit')}
+          />
+          <ActionButton
+            icon="stats-chart-outline"
+            label="Estatísticas"
+            onPress={() => {}}
+          />
+          <ActionButton
+            icon="settings-outline"
+            label="Configurações"
+            onPress={() => {}}
+          />
+          <ActionButton
+            icon="log-out-outline"
+            label="Sair"
+            onPress={logout}
+            isLogout
+          />
+        </View>
+      </ScrollView>
+    </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     alignItems: 'center',
     paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.medium,
+    // O paddingHorizontal agora é gerenciado pelo ScreenContainer
   },
   displayName: {
     fontSize: theme.fontSizes.xlarge,
@@ -268,14 +252,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     borderRadius: 12,
     padding: theme.spacing.medium,
-    marginHorizontal: theme.spacing.medium,
     marginBottom: theme.spacing.large,
-    // iOS Shadow
+    // O marginHorizontal foi removido para alinhar com o padding do ScreenContainer
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    // Android Shadow
     elevation: 3,
   },
   cardHeader: {

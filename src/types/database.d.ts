@@ -1,6 +1,6 @@
 export interface UserProfile {
-  id?: number // Opcional apenas antes da inserção no DB
-  userId: string // ID do Firebase Auth
+  id?: number
+  userId: string
   goal: string | null
   heightCm: number | null
   currentWeightKg: number | null
@@ -8,8 +8,26 @@ export interface UserProfile {
   bmiCategory: string | null
   onboardingCompleted: boolean | null
   syncStatus: 'synced' | 'dirty' | 'error' | 'syncing'
-  lastModifiedLocally: number // Unix timestamp
+  lastModifiedLocally: number
   retryCount?: number
   nextRetryTimestamp?: number
-  lastUpdatedServer?: number // Timestamp da última escrita bem-sucedida no servidor
+  lastUpdatedServer?: number
+}
+
+// Representa um exercício dentro de um treino salvo pelo usuário
+export interface Exercise {
+  name: string
+  sets: number
+  reps: number
+  rest: number
+  dbId?: string // ID opcional do exercício da API ExerciseDB
+}
+
+// Representa um treino completo salvo pelo usuário
+export interface Workout {
+  id: number // ID local do SQLite
+  firestoreId: string // ID do Firestore
+  name: string
+  muscleGroup: string
+  exercises: Exercise[]
 }

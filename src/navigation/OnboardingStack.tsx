@@ -18,8 +18,9 @@ export default function OnboardingStack() {
         headerShown: true,
         headerTransparent: true,
         headerTitle: '',
-        headerBackTitleVisible: false,
+
         headerTintColor: theme.colors.primary,
+        headerBackTitle: ' ',
       }}
     >
       <Stack.Screen

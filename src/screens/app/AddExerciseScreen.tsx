@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import {
   StyleSheet,
-  View,
   FlatList,
   Text,
   ActivityIndicator,
@@ -9,33 +8,25 @@ import {
   Alert,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
+import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
+import ScreenContainer from '../../components/ScreenContainer'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
 import { useExerciseStore } from '../../state/exerciseStore'
-import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
 import { Exercise } from '../../services/exerciseDB'
 
 export default function AddExerciseScreen() {
-  const navigation = useNavigation()
-  const { addExercise: addExerciseToWorkout } = useWorkoutCreationStore()
-  const {
-    exercises,
-    loading,
-    error,
-    fetchExercises,
-    filterExercises,
-    filteredExercises,
-  } = useExerciseStore()
+  const navigation = useNavigation<AppNavigationProp>()
+  const { loading, error, fetchExercises, filterExercises, filteredExercises } =
+    useExerciseStore()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([])
 
   useEffect(() => {
-    if (!exercises.length) {
-      fetchExercises()
-    }
-  }, [exercises, fetchExercises])
+    fetchExercises()
+  }, [fetchExercises])
 
   useEffect(() => {
     filterExercises(searchTerm, 'name')
@@ -49,7 +40,7 @@ export default function AddExerciseScreen() {
     )
   }
 
-  const handleAddSelectedExercises = () => {
+  const handleProceedToCustomization = () => {
     if (selectedExercises.length === 0) {
       Alert.alert(
         'Nenhum exercício selecionado',
@@ -57,18 +48,7 @@ export default function AddExerciseScreen() {
       )
       return
     }
-
-    selectedExercises.forEach((exercise) => {
-      addExerciseToWorkout({
-        name: exercise.name,
-        sets: 3, // Default value, user can change later
-        reps: 10, // Default value
-        rest: 60, // Default value
-        dbId: exercise.id,
-      })
-    })
-
-    navigation.goBack()
+    navigation.navigate('CustomizeExercise', { selectedExercises })
   }
 
   const renderExerciseItem = ({ item }: { item: Exercise }) => {
@@ -87,12 +67,12 @@ export default function AddExerciseScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScreenContainer style={styles.container}>
       <StyledInput
         placeholder="Buscar exercício por nome..."
         value={searchTerm}
         onChangeText={setSearchTerm}
-        style={styles.searchInput}
+        containerStyle={styles.searchInput} // Usar containerStyle para margem
       />
 
       {loading && (
@@ -115,20 +95,16 @@ export default function AddExerciseScreen() {
 
       <StyledButton
         title={`Adicionar ${selectedExercises.length} Exercícios`}
-        onPress={handleAddSelectedExercises}
+        onPress={handleProceedToCustomization}
         disabled={selectedExercises.length === 0}
-        style={styles.addButton}
+        containerStyle={styles.addButton} // Usar containerStyle para margem
       />
-    </View>
+    </ScreenContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.medium,
-  },
+  container: {},
   searchInput: {
     marginBottom: theme.spacing.medium,
   },
