@@ -32,6 +32,7 @@ export type AppStackParamList = {
   CreateWorkout: { newExercise?: WorkoutExercise }
   WorkoutDetail: { workoutId: number }
   AddExercise: undefined
+  AddManualExercise: undefined
   CustomizeExercise: { selectedExercises: ApiExercise[] }
 }
 

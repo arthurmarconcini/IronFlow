@@ -1,60 +1,47 @@
 import React from 'react'
-import { View } from 'react-native'
 import { createStackNavigator } from '@react-navigation/stack'
 import { AppStackParamList } from './types'
+import AppTabs from './AppTabs'
 import CreateWorkoutScreen from '../screens/app/CreateWorkoutScreen'
 import AddExerciseScreen from '../screens/app/AddExerciseScreen'
-import WorkoutDetailScreen from '../screens/app/WorkoutDetailScreen'
-import ProfileEditScreen from '../screens/app/ProfileEditScreen'
+import AddManualExerciseScreen from '../screens/app/AddManualExerciseScreen'
 import CustomizeExerciseScreen from '../screens/app/CustomizeExerciseScreen'
-import AppTabs from './AppTabs'
-import ConnectivityIndicator from '../components/ConnectivityIndicator'
-import SyncIndicator from '../components/SyncIndicator'
+import WorkoutDetailScreen from '../screens/app/WorkoutDetailScreen'
 
 const Stack = createStackNavigator<AppStackParamList>()
 
 export default function AppStack() {
   return (
     <Stack.Navigator
-      initialRouteName="AppTabs"
       screenOptions={{
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SyncIndicator />
-            <ConnectivityIndicator />
-          </View>
-        ),
+        headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="AppTabs"
-        component={AppTabs}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ProfileEdit"
-        component={ProfileEditScreen}
-        options={{ title: 'Editar Perfil' }}
-      />
+      <Stack.Screen name="AppTabs" component={AppTabs} />
       <Stack.Screen
         name="CreateWorkout"
         component={CreateWorkoutScreen}
-        options={{ title: 'Criar Treino' }}
+        options={{ title: 'Criar Treino', headerShown: true }}
       />
       <Stack.Screen
         name="AddExercise"
         component={AddExerciseScreen}
-        options={{ title: 'Adicionar Exercício' }}
+        options={{ title: 'Adicionar Exercício', headerShown: true }}
+      />
+      <Stack.Screen
+        name="AddManualExercise"
+        component={AddManualExerciseScreen}
+        options={{ title: 'Adicionar Manualmente', headerShown: true }}
       />
       <Stack.Screen
         name="CustomizeExercise"
         component={CustomizeExerciseScreen}
-        options={{ title: 'Personalizar Exercício' }}
+        options={{ title: 'Customizar Exercício', headerShown: true }}
       />
       <Stack.Screen
         name="WorkoutDetail"
         component={WorkoutDetailScreen}
-        options={{ title: 'Detalhes do Treino' }}
+        options={{ title: 'Detalhes do Treino', headerShown: true }}
       />
     </Stack.Navigator>
   )

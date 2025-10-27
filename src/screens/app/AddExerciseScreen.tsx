@@ -154,9 +154,7 @@ export default function AddExerciseScreen() {
 
       <StyledButton
         title="Adicionar Exercício Manualmente"
-        onPress={() => {
-          /* Navegar para a tela de adição manual */
-        }}
+        onPress={() => navigation.navigate('AddManualExercise')}
         type="secondary" // Um estilo diferente para ação secundária
         containerStyle={styles.manualAddButton}
       />

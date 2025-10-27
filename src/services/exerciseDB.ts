@@ -13,13 +13,14 @@ const exerciseSchema = z.object({
 export type Exercise = z.infer<typeof exerciseSchema>
 
 const exerciseResponseSchema = z.array(exerciseSchema)
+const bodyPartListResponseSchema = z.array(z.string())
+const equipmentListResponseSchema = z.array(z.string())
 
-const BASE_URL = process.env.EXPO_PUBLIC_EXERCISEDB_BASE_URL
 const API_KEY = process.env.EXPO_PUBLIC_RAPIDAPI_KEY
 const API_HOST = process.env.EXPO_PUBLIC_RAPIDAPI_HOST
 
 const apiClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: 'https://exercisedb.p.rapidapi.com', // Correção definitiva
   headers: {
     'X-RapidAPI-Key': API_KEY,
     'X-RapidAPI-Host': API_HOST,
@@ -31,7 +32,6 @@ const handleError = (error: unknown, context: string): Error => {
   if (axios.isAxiosError(error)) {
     const errorMessage =
       error.response?.data?.message || 'Um erro de API ocorreu.'
-    // Verifica por mensagens comuns de limite de taxa
     if (
       typeof errorMessage === 'string' &&
       errorMessage.toLowerCase().includes('limit')
@@ -87,6 +87,24 @@ export const exerciseDB = {
       return exerciseResponseSchema.parse(response.data)
     } catch (error) {
       throw handleError(error, `fetch exercises for body part ${bodyPart}`)
+    }
+  },
+
+  getBodyPartList: async (): Promise<string[]> => {
+    try {
+      const response = await apiClient.get('/exercises/bodyPartList')
+      return bodyPartListResponseSchema.parse(response.data)
+    } catch (error) {
+      throw handleError(error, 'fetch body part list')
+    }
+  },
+
+  getEquipmentList: async (): Promise<string[]> => {
+    try {
+      const response = await apiClient.get('/exercises/equipmentList')
+      return equipmentListResponseSchema.parse(response.data)
+    } catch (error) {
+      throw handleError(error, 'fetch equipment list')
     }
   },
 }
