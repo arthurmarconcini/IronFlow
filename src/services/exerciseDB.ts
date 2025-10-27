@@ -26,30 +26,67 @@ const apiClient = axios.create({
   },
 })
 
+// Helper para tratamento de erros
+const handleError = (error: unknown, context: string): Error => {
+  if (axios.isAxiosError(error)) {
+    const errorMessage =
+      error.response?.data?.message || 'Um erro de API ocorreu.'
+    // Verifica por mensagens comuns de limite de taxa
+    if (
+      typeof errorMessage === 'string' &&
+      errorMessage.toLowerCase().includes('limit')
+    ) {
+      return new Error('API_LIMIT_REACHED')
+    }
+  }
+  console.error(`Failed to ${context}:`, error)
+  return new Error(`Failed to ${context} from ExerciseDB.`)
+}
+
 export const exerciseDB = {
-  getAll: async (): Promise<Exercise[]> => {
+  getAll: async (
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<Exercise[]> => {
     try {
       const response = await apiClient.get(
-        'https://exercisedb.p.rapidapi.com/exercises',
+        `https://exercisedb.p.rapidapi.com/exercises?limit=${limit}&offset=${offset}`,
       )
       return exerciseResponseSchema.parse(response.data)
     } catch (error) {
-      console.error('Failed to fetch exercises:', error)
-      throw new Error('Failed to fetch exercises from ExerciseDB.')
+      throw handleError(error, 'fetch exercises')
     }
   },
-  getByBodyPart: async (bodyPart: string): Promise<Exercise[]> => {
+
+  searchByName: async (
+    name: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<Exercise[]> => {
+    if (!name) return []
     try {
       const response = await apiClient.get(
-        `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${bodyPart}`,
+        `https://exercisedb.p.rapidapi.com/exercises/name/${name}?limit=${limit}&offset=${offset}`,
       )
       return exerciseResponseSchema.parse(response.data)
     } catch (error) {
-      console.error(
-        `Failed to fetch exercises for body part ${bodyPart}:`,
-        error,
+      throw handleError(error, `search exercises by name "${name}"`)
+    }
+  },
+
+  getByBodyPart: async (
+    bodyPart: string,
+    limit: number = 20,
+    offset: number = 0,
+  ): Promise<Exercise[]> => {
+    if (!bodyPart) return []
+    try {
+      const response = await apiClient.get(
+        `https://exercisedb.p.rapidapi.com/exercises/bodyPart/${bodyPart}?limit=${limit}&offset=${offset}`,
       )
-      throw new Error(`Failed to fetch exercises for body part ${bodyPart}.`)
+      return exerciseResponseSchema.parse(response.data)
+    } catch (error) {
+      throw handleError(error, `fetch exercises for body part ${bodyPart}`)
     }
   },
 }

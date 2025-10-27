@@ -4,7 +4,6 @@ import {
   Workout,
   Exercise as WorkoutExercise,
 } from '../types/database'
-import { Exercise as ApiExercise } from '../services/exerciseDB'
 
 // --- Instância Única do Banco de Dados ---
 let db: SQLite.SQLiteDatabase
@@ -32,15 +31,6 @@ interface WorkoutFromDb {
   name: string
   muscle_group: string
   exercises_json: string
-}
-
-interface ApiExerciseFromDB {
-  id: string
-  name: string
-  body_part: string
-  target: string
-  gif_url: string | null
-  equipment: string
 }
 
 // --- Funções de Mapeamento (DB -> App) ---
@@ -94,15 +84,6 @@ const initDB = async (): Promise<void> => {
       last_updated_server INTEGER
     );
 
-    CREATE TABLE IF NOT EXISTS exercises (
-      id TEXT PRIMARY KEY NOT NULL,
-      name TEXT NOT NULL,
-      body_part TEXT NOT NULL,
-      target TEXT NOT NULL,
-      gif_url TEXT,
-      equipment TEXT NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS workouts (
       id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
       firestore_id TEXT UNIQUE NOT NULL,
@@ -113,39 +94,6 @@ const initDB = async (): Promise<void> => {
     );
   `)
   console.log('Database singleton initialized with all tables.')
-}
-
-// --- Funções de Cache de Exercícios ---
-const saveExercises = async (exercises: ApiExercise[]): Promise<void> => {
-  await db.withTransactionAsync(async () => {
-    for (const exercise of exercises) {
-      await db.runAsync(
-        'INSERT OR REPLACE INTO exercises (id, name, body_part, target, gif_url, equipment) VALUES (?, ?, ?, ?, ?, ?);',
-        [
-          exercise.id,
-          exercise.name,
-          exercise.bodyPart,
-          exercise.target,
-          exercise.gifUrl ?? null,
-          exercise.equipment,
-        ],
-      )
-    }
-  })
-}
-
-const getCachedExercises = async (): Promise<ApiExercise[]> => {
-  const results = await db.getAllAsync<ApiExerciseFromDB>(
-    'SELECT * FROM exercises',
-  )
-  return results.map((row) => ({
-    id: row.id,
-    name: row.name,
-    bodyPart: row.body_part,
-    target: row.target,
-    gifUrl: row.gif_url ?? undefined,
-    equipment: row.equipment,
-  }))
 }
 
 // --- Funções de Perfil de Usuário ---
@@ -272,8 +220,6 @@ export const DatabaseService = {
   getRecordsToSync,
   updateUserProfile,
   getDirtyRecords,
-  saveExercises,
-  getCachedExercises,
   addWorkout,
   getWorkouts,
   deleteWorkout,
