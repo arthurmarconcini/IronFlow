@@ -97,7 +97,9 @@ export default function HomeScreen() {
             <WorkoutCard
               workout={item}
               onPress={() =>
-                navigation.navigate('WorkoutDetail', { workoutId: item.id })
+                navigation.navigate('WorkoutExecution', {
+                  workoutId: item.firestoreId,
+                })
               }
               onDelete={() => deleteWorkout(item.firestoreId)}
             />

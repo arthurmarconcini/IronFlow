@@ -30,7 +30,6 @@ export type AppStackParamList = {
   AppTabs: { screen: keyof AppTabParamList }
   ProfileEdit: undefined
   CreateWorkout: { newExercise?: WorkoutExercise }
-  WorkoutDetail: { workoutId: number }
   AddExercise: undefined
   AddManualExercise: undefined
   CustomizeExercise: { selectedExercises: ApiExercise[] }
@@ -50,4 +49,10 @@ export type ConfirmationScreenRouteProp = RouteProp<
 export type CustomizeExerciseScreenRouteProp = RouteProp<
   AppStackParamList,
   'CustomizeExercise'
+>
+
+// Tipo genérico para `useRoute` no AppStack
+export type AppRouteProp<RouteName extends keyof AppStackParamList> = RouteProp<
+  AppStackParamList,
+  RouteName
 >
