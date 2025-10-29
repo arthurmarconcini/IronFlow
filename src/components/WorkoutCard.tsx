@@ -7,6 +7,7 @@ import {
   Alert,
   GestureResponderEvent,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { theme } from '../theme'
 import { Workout } from '../types/database'
 
@@ -14,6 +15,31 @@ interface WorkoutCardProps {
   workout: Workout
   onPress: () => void
   onDelete: () => void
+}
+
+const getIconForMuscleGroup = (muscleGroup: string) => {
+  switch (muscleGroup.toLowerCase()) {
+    case 'chest':
+      return 'analytics-outline'
+    case 'back':
+      return 'barbell-outline'
+    case 'legs':
+    case 'upper legs':
+    case 'lower legs':
+      return 'footsteps-outline'
+    case 'shoulders':
+      return 'arrow-up-circle-outline'
+    case 'arms':
+    case 'upper arms':
+    case 'lower arms':
+      return 'flash-outline'
+    case 'cardio':
+      return 'heart-outline'
+    case 'waist':
+      return 'remove-circle-outline'
+    default:
+      return 'barbell-outline'
+  }
 }
 
 const WorkoutCard: React.FC<WorkoutCardProps> = ({
@@ -38,7 +64,11 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
       <View style={styles.cardContent}>
         {/* Ícone */}
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>💪</Text>
+          <Ionicons
+            name={getIconForMuscleGroup(workout.muscleGroup)}
+            size={28}
+            color={theme.colors.primary}
+          />
         </View>
 
         {/* Informações do Treino */}

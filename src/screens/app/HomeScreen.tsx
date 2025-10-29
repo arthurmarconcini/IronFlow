@@ -106,11 +106,14 @@ export default function HomeScreen() {
           )}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                Você ainda não criou nenhum treino.
-              </Text>
+              <Ionicons
+                name="barbell-outline"
+                size={80}
+                color={theme.colors.lightGray}
+              />
+              <Text style={styles.emptyText}>Nenhum treino encontrado</Text>
               <Text style={styles.emptySubText}>
-                Clique no botão '+' para começar.
+                Clique no botão '+' para criar seu primeiro treino.
               </Text>
             </View>
           )}
@@ -173,22 +176,26 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
+    flexGrow: 1, // Garante que o container possa crescer
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: '30%',
+    padding: theme.spacing.large,
   },
   emptyText: {
     fontSize: theme.fontSizes.large,
     color: theme.colors.text,
     fontWeight: 'bold',
+    marginTop: theme.spacing.medium,
+    textAlign: 'center',
   },
   emptySubText: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
     marginTop: theme.spacing.small,
+    textAlign: 'center',
   },
   fab: {
     position: 'absolute',
