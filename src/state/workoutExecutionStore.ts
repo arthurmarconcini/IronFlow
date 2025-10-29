@@ -137,12 +137,7 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       if (timerState === 'running') {
         set({ timerValue: timerValue + 1 }) // Count up
       } else if (timerState === 'resting') {
-        if (timerValue <= 1) {
-          // Rest timer finished, reset it
-          set({ timerState: 'idle', timerValue: 0 })
-        } else {
-          set({ timerValue: timerValue - 1 }) // Count down
-        }
+        set({ timerValue: Math.max(0, timerValue - 1) }) // Count down, ensuring it doesn't go below 0
       }
     },
 

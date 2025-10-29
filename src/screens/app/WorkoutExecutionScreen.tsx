@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native'
-import { useRoute } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
-import { AppRouteProp } from '../../navigation/types'
+import { AppNavigationProp, AppRouteProp } from '../../navigation/types'
 import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 import { useWorkouts } from '../../db/useWorkouts'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
+import { DatabaseService, ExerciseRecord } from '../../db/DatabaseService'
+import { useAuth } from '../../hooks/useAuth'
 
 // Helper para formatar o tempo
 const formatTime = (seconds: number) => {
@@ -20,6 +22,8 @@ const formatTime = (seconds: number) => {
 
 export default function WorkoutExecutionScreen() {
   const route = useRoute<AppRouteProp<'WorkoutExecution'>>()
+  const navigation = useNavigation<AppNavigationProp>()
+  const { user } = useAuth()
   const { workoutId } = route.params
 
   const { getWorkoutById, isLoading } = useWorkouts()
@@ -29,6 +33,7 @@ export default function WorkoutExecutionScreen() {
     currentWorkout,
     currentExerciseIndex,
     currentSetIndex,
+    setLogs,
     nextSet,
     previousSet,
     logSet,
@@ -44,34 +49,41 @@ export default function WorkoutExecutionScreen() {
 
   const [currentRepsInput, setCurrentRepsInput] = useState('')
   const [currentWeightInput, setCurrentWeightInput] = useState('')
+  const [workoutLogId, setWorkoutLogId] = useState<number | null>(null)
+  const [currentExerciseRecord, setCurrentExerciseRecord] =
+    useState<ExerciseRecord | null>(null)
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     const loadWorkout = async () => {
+      if (!user) return
       const workoutDetails = await getWorkoutById(workoutId)
       if (workoutDetails) {
         startWorkout(workoutDetails)
+        const newLogId = await DatabaseService.startWorkoutLog(
+          workoutDetails.firestoreId,
+          user.uid,
+        )
+        setWorkoutLogId(newLogId)
       } else {
         Alert.alert('Erro', 'Não foi possível carregar os detalhes do treino.')
+        navigation.goBack()
       }
     }
     loadWorkout()
     return () => {
       endWorkout()
     }
-  }, [workoutId, getWorkoutById, startWorkout, endWorkout])
+  }, [workoutId, getWorkoutById, startWorkout, endWorkout, user, navigation])
 
-  // Efeito para o cronômetro principal
   useEffect(() => {
     if (timerState === 'running' || timerState === 'resting') {
       intervalRef.current = setInterval(() => {
         tickTimer()
       }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current)
     }
     return () => {
       if (intervalRef.current) {
@@ -80,7 +92,6 @@ export default function WorkoutExecutionScreen() {
     }
   }, [timerState, tickTimer])
 
-  // Efeito para avançar após o descanso
   useEffect(() => {
     if (timerState === 'resting' && timerValue < 1) {
       resetTimer()
@@ -88,16 +99,47 @@ export default function WorkoutExecutionScreen() {
     }
   }, [timerValue, timerState, resetTimer, nextSet])
 
-  // Efeito para resetar os inputs ao mudar de série/exercício
+  const completedLog = setLogs.find(
+    (log) =>
+      log.exerciseIndex === currentExerciseIndex &&
+      log.setIndex === currentSetIndex,
+  )
+  const isSetCompleted = !!completedLog
+
+  useEffect(() => {
+    const fetchRecord = async () => {
+      if (currentWorkout && user) {
+        const exercise = currentWorkout.exercises[currentExerciseIndex]
+        const record = await DatabaseService.getExerciseRecord(
+          user.uid,
+          exercise.name,
+        )
+        setCurrentExerciseRecord(record)
+      }
+    }
+    fetchRecord()
+  }, [currentExerciseIndex, currentWorkout, user])
+
   useEffect(() => {
     if (currentWorkout) {
-      const exercise = currentWorkout.exercises[currentExerciseIndex]
-      setCurrentRepsInput(exercise.reps?.toString() ?? '')
-      setCurrentWeightInput(exercise.weight?.toString() ?? '')
+      if (isSetCompleted) {
+        setCurrentRepsInput(completedLog.reps?.toString() ?? '')
+        setCurrentWeightInput(completedLog.weight?.toString() ?? '')
+      } else {
+        const exercise = currentWorkout.exercises[currentExerciseIndex]
+        setCurrentRepsInput(exercise.reps?.toString() ?? '')
+        setCurrentWeightInput(exercise.weight?.toString() ?? '')
+      }
     }
-  }, [currentExerciseIndex, currentSetIndex, currentWorkout])
+  }, [
+    currentExerciseIndex,
+    currentSetIndex,
+    currentWorkout,
+    isSetCompleted,
+    completedLog,
+  ])
 
-  if (isLoading || !currentWorkout) {
+  if (isLoading || !currentWorkout || !user) {
     return (
       <ScreenContainer>
         <View style={styles.centered}>
@@ -113,19 +155,61 @@ export default function WorkoutExecutionScreen() {
     currentExerciseIndex === currentWorkout.exercises.length - 1 &&
     currentSetIndex === currentExercise.sets - 1
 
-  const handleNextPress = () => {
-    const reps = parseInt(currentRepsInput, 10)
-    const weight = parseFloat(currentWeightInput)
-    logSet({
-      reps: !isNaN(reps) ? reps : null,
-      weight: !isNaN(weight) ? weight : null,
+  const handleNextPress = async () => {
+    if (isSetCompleted) {
+      if (!isLastSet) nextSet()
+      else Alert.alert('Treino já finalizado.')
+      return
+    }
+
+    if (!workoutLogId) {
+      Alert.alert('Erro', 'ID do log de treino não encontrado.')
+      return
+    }
+
+    const actualReps = parseInt(currentRepsInput, 10)
+    const actualWeight = parseFloat(currentWeightInput)
+    const logData = {
+      reps: !isNaN(actualReps) ? actualReps : null,
+      weight: !isNaN(actualWeight) ? actualWeight : null,
+    }
+
+    logSet(logData)
+    await DatabaseService.logSetData({
+      workoutLogId,
+      exerciseName: currentExercise.name,
+      exerciseDbId: currentExercise.dbId ?? null,
+      setIndex: currentSetIndex,
+      targetReps: currentExercise.reps ?? null,
+      actualReps: logData.reps,
+      targetWeight: currentExercise.weight ?? null,
+      actualWeight: logData.weight,
+      restTime: currentExercise.rest ?? null,
+      completedAt: Date.now(),
     })
 
-    if (!isLastSet) {
-      startRestTimer()
+    if (logData.weight && logData.reps) {
+      await DatabaseService.saveOrUpdateExerciseRecord({
+        userId: user.uid,
+        exerciseName: currentExercise.name,
+        actualWeight: logData.weight,
+        actualReps: logData.reps,
+      })
+      // Re-fetch record to show potential new record immediately
+      const record = await DatabaseService.getExerciseRecord(
+        user.uid,
+        currentExercise.name,
+      )
+      setCurrentExerciseRecord(record)
+    }
+
+    if (isLastSet) {
+      await DatabaseService.finishWorkoutLog(workoutLogId)
+      Alert.alert('Treino Finalizado!', 'Parabéns!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ])
     } else {
-      // Lógica para finalizar o treino virá aqui
-      Alert.alert('Treino Finalizado!', 'Parabéns!')
+      startRestTimer()
     }
   }
 
@@ -144,7 +228,7 @@ export default function WorkoutExecutionScreen() {
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
         </View>
-        {timerState === 'idle' && (
+        {timerState === 'idle' && !isSetCompleted && (
           <StyledButton title="Iniciar Série" onPress={startTimer} />
         )}
         {timerState === 'running' && (
@@ -162,6 +246,12 @@ export default function WorkoutExecutionScreen() {
       <View style={styles.container}>
         <View style={styles.exerciseInfoContainer}>
           <Text style={styles.exerciseName}>{currentExercise.name}</Text>
+          {currentExerciseRecord && (
+            <Text style={styles.recordText}>
+              Recorde: {currentExerciseRecord.weight}kg para{' '}
+              {currentExerciseRecord.reps} reps
+            </Text>
+          )}
           <Text style={styles.setText}>
             Série {currentSetIndex + 1} de {currentExercise.sets}
           </Text>
@@ -174,6 +264,7 @@ export default function WorkoutExecutionScreen() {
             onChangeText={setCurrentRepsInput}
             keyboardType="numeric"
             containerStyle={styles.input}
+            editable={!isSetCompleted}
           />
           <StyledInput
             label="Peso (kg)"
@@ -181,6 +272,7 @@ export default function WorkoutExecutionScreen() {
             onChangeText={setCurrentWeightInput}
             keyboardType="numeric"
             containerStyle={styles.input}
+            editable={!isSetCompleted}
           />
         </View>
 
@@ -195,11 +287,19 @@ export default function WorkoutExecutionScreen() {
             containerStyle={styles.navButton}
           />
           <StyledButton
-            title={isLastSet ? 'Finalizar Treino' : 'Finalizar Série'}
+            title={
+              isLastSet && isSetCompleted
+                ? 'Finalizado'
+                : isLastSet
+                  ? 'Finalizar Treino'
+                  : isSetCompleted
+                    ? 'Próximo'
+                    : 'Finalizar Série'
+            }
             onPress={handleNextPress}
             type="primary"
             containerStyle={styles.navButton}
-            disabled={timerState === 'resting'}
+            disabled={timerState === 'resting' || (isLastSet && isSetCompleted)}
           />
         </View>
       </View>
@@ -231,6 +331,12 @@ const styles = StyleSheet.create({
   setText: {
     fontSize: theme.fontSizes.large,
     color: theme.colors.primary,
+    marginTop: theme.spacing.small,
+  },
+  recordText: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.secondary,
+    fontStyle: 'italic',
     marginTop: theme.spacing.small,
   },
   logInputContainer: {

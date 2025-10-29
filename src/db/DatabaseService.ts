@@ -92,6 +92,40 @@ const initDB = async (): Promise<void> => {
       muscle_group TEXT NOT NULL,
       exercises_json TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS workout_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      workout_firestore_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      finished_at INTEGER,
+      status TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS set_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      workout_log_id INTEGER NOT NULL,
+      exercise_name TEXT NOT NULL,
+      exercise_db_id TEXT,
+      set_index INTEGER NOT NULL,
+      target_reps INTEGER,
+      actual_reps INTEGER,
+      target_weight_kg REAL,
+      actual_weight_kg REAL,
+      rest_time_seconds INTEGER,
+      completed_at INTEGER NOT NULL,
+      FOREIGN KEY (workout_log_id) REFERENCES workout_logs (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS exercise_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      user_id TEXT NOT NULL,
+      exercise_name TEXT NOT NULL,
+      best_weight_kg REAL NOT NULL,
+      reps_at_best_weight INTEGER NOT NULL,
+      achieved_at INTEGER NOT NULL,
+      UNIQUE(user_id, exercise_name)
+    );
   `)
   console.log('Database singleton initialized with all tables.')
 }
@@ -220,6 +254,114 @@ const getWorkoutById = async (firestoreId: string): Promise<Workout | null> => {
   return record ? mapRecordToWorkout(record) : null
 }
 
+// --- Funções de Logging de Treino ---
+
+interface SetLogData {
+  workoutLogId: number
+  exerciseName: string
+  exerciseDbId: string | null
+  setIndex: number
+  targetReps: number | null
+  actualReps: number | null
+  targetWeight: number | null
+  actualWeight: number | null
+  restTime: number | null
+  completedAt: number
+}
+
+interface ExerciseRecordData {
+  userId: string
+  exerciseName: string
+  actualWeight: number
+  actualReps: number
+}
+
+const startWorkoutLog = async (
+  workoutFirestoreId: string,
+  userId: string,
+): Promise<number> => {
+  const result = await db.runAsync(
+    'INSERT INTO workout_logs (workout_firestore_id, user_id, started_at, status) VALUES (?, ?, ?, ?)',
+    workoutFirestoreId,
+    userId,
+    Date.now(),
+    'in_progress',
+  )
+  return result.lastInsertRowId
+}
+
+const logSetData = async (log: SetLogData): Promise<void> => {
+  await db.runAsync(
+    'INSERT INTO set_logs (workout_log_id, exercise_name, exercise_db_id, set_index, target_reps, actual_reps, target_weight_kg, actual_weight_kg, rest_time_seconds, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    log.workoutLogId,
+    log.exerciseName,
+    log.exerciseDbId ?? null,
+    log.setIndex,
+    log.targetReps ?? null,
+    log.actualReps ?? null,
+    log.targetWeight ?? null,
+    log.actualWeight ?? null,
+    log.restTime ?? null,
+    log.completedAt,
+  )
+}
+
+const saveOrUpdateExerciseRecord = async (
+  record: ExerciseRecordData,
+): Promise<void> => {
+  const { userId, exerciseName, actualWeight, actualReps } = record
+  const existingRecord = await db.getFirstAsync<{ best_weight_kg: number }>(
+    'SELECT best_weight_kg FROM exercise_records WHERE user_id = ? AND exercise_name = ?',
+    userId,
+    exerciseName,
+  )
+
+  if (!existingRecord || actualWeight > existingRecord.best_weight_kg) {
+    await db.runAsync(
+      'INSERT INTO exercise_records (user_id, exercise_name, best_weight_kg, reps_at_best_weight, achieved_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id, exercise_name) DO UPDATE SET best_weight_kg=excluded.best_weight_kg, reps_at_best_weight=excluded.reps_at_best_weight, achieved_at=excluded.achieved_at',
+      userId,
+      exerciseName,
+      actualWeight,
+      actualReps,
+      Date.now(),
+    )
+  }
+}
+
+const finishWorkoutLog = async (workoutLogId: number): Promise<void> => {
+  await db.runAsync(
+    "UPDATE workout_logs SET finished_at = ?, status = 'completed' WHERE id = ?",
+    Date.now(),
+    workoutLogId,
+  )
+}
+
+export interface ExerciseRecord {
+  weight: number
+  reps: number
+}
+
+const getExerciseRecord = async (
+  userId: string,
+  exerciseName: string,
+): Promise<ExerciseRecord | null> => {
+  const record = await db.getFirstAsync<{
+    best_weight_kg: number
+    reps_at_best_weight: number
+  }>(
+    'SELECT best_weight_kg, reps_at_best_weight FROM exercise_records WHERE user_id = ? AND exercise_name = ?',
+    userId,
+    exerciseName,
+  )
+
+  if (!record) return null
+
+  return {
+    weight: record.best_weight_kg,
+    reps: record.reps_at_best_weight,
+  }
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -232,4 +374,9 @@ export const DatabaseService = {
   getWorkouts,
   deleteWorkout,
   getWorkoutById,
+  startWorkoutLog,
+  logSetData,
+  saveOrUpdateExerciseRecord,
+  finishWorkoutLog,
+  getExerciseRecord,
 }
