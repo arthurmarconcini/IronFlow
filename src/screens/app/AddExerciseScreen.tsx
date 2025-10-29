@@ -5,12 +5,12 @@ import {
   Text,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   View,
   ScrollView,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import debounce from 'lodash.debounce'
+import Toast from 'react-native-toast-message'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
@@ -109,10 +109,11 @@ export default function AddExerciseScreen() {
 
   const handleProceedToCustomization = () => {
     if (selectedExercises.length === 0) {
-      Alert.alert(
-        'Nenhum exercício selecionado',
-        'Por favor, selecione ao menos um exercício.',
-      )
+      Toast.show({
+        type: 'error',
+        text1: 'Nenhum exercício selecionado',
+        text2: 'Por favor, selecione ao menos um exercício.',
+      })
       return
     }
     navigation.navigate('CustomizeExercise', { selectedExercises })

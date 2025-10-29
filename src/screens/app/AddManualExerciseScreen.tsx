@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Alert } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { Picker } from '@react-native-picker/picker'
 import * as Crypto from 'expo-crypto'
+import Toast from 'react-native-toast-message'
 
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
@@ -21,7 +22,11 @@ export default function AddManualExerciseScreen() {
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('Erro', 'Por favor, insira o nome do exercício.')
+      Toast.show({
+        type: 'error',
+        text1: 'Nome Inválido',
+        text2: 'Por favor, insira o nome do exercício.',
+      })
       return
     }
 

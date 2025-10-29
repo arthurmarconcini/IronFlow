@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, FlatList, Alert } from 'react-native'
+import { View, Text, StyleSheet, FlatList } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
+import Toast from 'react-native-toast-message'
 import {
   CustomizeExerciseScreenRouteProp,
   AppNavigationProp,
@@ -55,10 +56,11 @@ export default function CustomizeExerciseScreen() {
     // Validação
     for (const ex of customExercises) {
       if (!ex.sets.trim() || !ex.reps.trim() || !ex.rest.trim()) {
-        Alert.alert(
-          'Erro',
-          `Por favor, preencha todos os campos para o exercício "${ex.name}".`,
-        )
+        Toast.show({
+          type: 'error',
+          text1: 'Campos Incompletos',
+          text2: `Preencha todos os campos para o exercício "${ex.name}".`,
+        })
         return
       }
       if (
@@ -66,10 +68,11 @@ export default function CustomizeExerciseScreen() {
         parseInt(ex.reps, 10) <= 0 ||
         parseInt(ex.rest, 10) < 0
       ) {
-        Alert.alert(
-          'Valores Inválidos',
-          `Séries e repetições devem ser maiores que zero para "${ex.name}".`,
-        )
+        Toast.show({
+          type: 'error',
+          text1: 'Valores Inválidos',
+          text2: `Séries e repetições devem ser maiores que zero.`,
+        })
         return
       }
     }

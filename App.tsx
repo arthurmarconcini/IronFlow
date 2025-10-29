@@ -3,7 +3,8 @@ import RootNavigator from './src/navigation'
 import { DatabaseService } from './src/db/DatabaseService'
 import { useNetworkStatus } from './src/hooks/useNetworkStatus'
 import { useSyncTrigger } from './src/hooks/useSyncTrigger'
-import SplashScreen from './src/screens/SplashScreen' // Importar o SplashScreen
+import SplashScreen from './src/screens/SplashScreen'
+import Toast from 'react-native-toast-message'
 
 export default function App() {
   const [isDbLoading, setIsDbLoading] = useState(true)
@@ -33,5 +34,10 @@ export default function App() {
     return <SplashScreen />
   }
 
-  return <RootNavigator />
+  return (
+    <>
+      <RootNavigator />
+      <Toast />
+    </>
+  )
 }
