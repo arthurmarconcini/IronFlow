@@ -34,6 +34,7 @@ export type AppStackParamList = {
   AddExercise: undefined
   AddManualExercise: undefined
   CustomizeExercise: { selectedExercises: ApiExercise[] }
+  WorkoutExecution: { workoutId: string }
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
