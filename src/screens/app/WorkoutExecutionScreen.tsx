@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { useRoute } from '@react-navigation/native'
 import { theme } from '../../theme'
@@ -7,6 +7,7 @@ import { AppRouteProp } from '../../navigation/types'
 import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 import { useWorkouts } from '../../db/useWorkouts'
 import StyledButton from '../../components/StyledButton'
+import StyledInput from '../../components/StyledInput'
 
 // Helper para formatar o tempo
 const formatTime = (seconds: number) => {
@@ -40,6 +41,9 @@ export default function WorkoutExecutionScreen() {
     tickTimer,
     resetTimer,
   } = useWorkoutExecutionStore()
+
+  const [currentRepsInput, setCurrentRepsInput] = useState('')
+  const [currentWeightInput, setCurrentWeightInput] = useState('')
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -84,6 +88,15 @@ export default function WorkoutExecutionScreen() {
     }
   }, [timerValue, timerState, resetTimer, nextSet])
 
+  // Efeito para resetar os inputs ao mudar de série/exercício
+  useEffect(() => {
+    if (currentWorkout) {
+      const exercise = currentWorkout.exercises[currentExerciseIndex]
+      setCurrentRepsInput(exercise.reps?.toString() ?? '')
+      setCurrentWeightInput(exercise.weight?.toString() ?? '')
+    }
+  }, [currentExerciseIndex, currentSetIndex, currentWorkout])
+
   if (isLoading || !currentWorkout) {
     return (
       <ScreenContainer>
@@ -101,7 +114,13 @@ export default function WorkoutExecutionScreen() {
     currentSetIndex === currentExercise.sets - 1
 
   const handleNextPress = () => {
-    logSet({ reps: null, weight: null }) // Log com valores nulos por enquanto
+    const reps = parseInt(currentRepsInput, 10)
+    const weight = parseFloat(currentWeightInput)
+    logSet({
+      reps: !isNaN(reps) ? reps : null,
+      weight: !isNaN(weight) ? weight : null,
+    })
+
     if (!isLastSet) {
       startRestTimer()
     } else {
@@ -146,9 +165,23 @@ export default function WorkoutExecutionScreen() {
           <Text style={styles.setText}>
             Série {currentSetIndex + 1} de {currentExercise.sets}
           </Text>
-          <Text style={styles.repsText}>
-            Repetições Alvo: {currentExercise.reps}
-          </Text>
+        </View>
+
+        <View style={styles.logInputContainer}>
+          <StyledInput
+            label="Repetições"
+            value={currentRepsInput}
+            onChangeText={setCurrentRepsInput}
+            keyboardType="numeric"
+            containerStyle={styles.input}
+          />
+          <StyledInput
+            label="Peso (kg)"
+            value={currentWeightInput}
+            onChangeText={setCurrentWeightInput}
+            keyboardType="numeric"
+            containerStyle={styles.input}
+          />
         </View>
 
         {renderTimerControls()}
@@ -200,10 +233,14 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     marginTop: theme.spacing.small,
   },
-  repsText: {
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.small,
+  logInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: theme.spacing.medium,
+  },
+  input: {
+    flex: 1,
+    marginHorizontal: theme.spacing.small,
   },
   timerControlContainer: {
     marginVertical: theme.spacing.large,
