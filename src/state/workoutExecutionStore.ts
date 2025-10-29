@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Workout } from '../../types/database'
+import { Workout } from '../types/database'
 
 type TimerState = 'idle' | 'running' | 'paused' | 'resting'
 
