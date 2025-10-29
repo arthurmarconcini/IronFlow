@@ -8,7 +8,7 @@ import {
   GestureResponderEvent,
 } from 'react-native'
 import { theme } from '../theme'
-import { Workout } from '../db/useDatabase'
+import { Workout } from '../types/database'
 
 interface WorkoutCardProps {
   workout: Workout
