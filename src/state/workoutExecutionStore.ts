@@ -114,7 +114,7 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       }))
     },
 
-    startTimer: () => set({ timerState: 'running' }),
+    startTimer: () => set({ timerState: 'running', timerValue: 0 }),
     pauseTimer: () => set({ timerState: 'paused' }),
     resumeTimer: () => set({ timerState: 'running' }),
 
@@ -133,12 +133,16 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     },
 
     tickTimer: () => {
-      const { timerValue } = get()
-      if (timerValue <= 1) {
-        // Timer finished, reset it
-        set({ timerState: 'idle', timerValue: 0 })
-      } else {
-        set({ timerValue: timerValue - 1 })
+      const { timerState, timerValue } = get()
+      if (timerState === 'running') {
+        set({ timerValue: timerValue + 1 }) // Count up
+      } else if (timerState === 'resting') {
+        if (timerValue <= 1) {
+          // Rest timer finished, reset it
+          set({ timerState: 'idle', timerValue: 0 })
+        } else {
+          set({ timerValue: timerValue - 1 }) // Count down
+        }
       }
     },
 
