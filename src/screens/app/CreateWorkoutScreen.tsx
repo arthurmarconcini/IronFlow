@@ -2,7 +2,6 @@ import React, { useEffect, useCallback } from 'react'
 import {
   Text,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   FlatList,
@@ -19,6 +18,7 @@ import ScreenContainer from '../../components/ScreenContainer'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
 import { AppNavigationProp } from '../../navigation/types'
+import Toast from 'react-native-toast-message'
 
 export default function CreateWorkoutScreen() {
   const { createWorkout, isLoading } = useWorkouts()
@@ -34,26 +34,42 @@ export default function CreateWorkoutScreen() {
   } = useWorkoutCreationStore()
 
   useEffect(() => {
-    reset()
+    // Retorna uma função de cleanup que será chamada quando a tela for desmontada
+    return () => {
+      reset()
+    }
   }, [reset])
 
   const handleSave = useCallback(async () => {
     if (!workoutName.trim() || !muscleGroup.trim() || exercises.length === 0) {
-      Alert.alert(
-        'Erro',
-        'Nome, grupo muscular e pelo menos um exercício são necessários.',
-      )
+      Toast.show({
+        type: 'error',
+        text1: 'Campos incompletos',
+        text2:
+          'Nome, grupo muscular e pelo menos um exercício são necessários.',
+      })
       return
     }
 
     try {
       await createWorkout(workoutName, muscleGroup, exercises)
-      Alert.alert('Sucesso', 'Treino salvo e sincronizado!')
-      reset()
-      navigation.goBack()
+      Toast.show({
+        type: 'success',
+        text1: 'Sucesso',
+        text2: 'Treino salvo com sucesso!',
+        visibilityTime: 2000,
+        onHide: () => {
+          reset()
+          navigation.goBack()
+        },
+      })
     } catch (error) {
       console.error(error)
-      Alert.alert('Erro', 'Não foi possível salvar o treino.')
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: 'Não foi possível salvar o treino.',
+      })
     }
   }, [workoutName, muscleGroup, exercises, createWorkout, navigation, reset])
 
@@ -123,7 +139,11 @@ export default function CreateWorkoutScreen() {
           <StyledButton
             title="Salvar Treino"
             onPress={handleSave}
-            disabled={!workoutName.trim() || exercises.length === 0}
+            disabled={
+              !workoutName.trim() ||
+              !muscleGroup.trim() ||
+              exercises.length === 0
+            }
             isLoading={isLoading}
           />
         </View>
