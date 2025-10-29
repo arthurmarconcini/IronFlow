@@ -195,7 +195,7 @@ export default function WorkoutExecutionScreen() {
             containerStyle={styles.navButton}
           />
           <StyledButton
-            title={isLastSet ? 'Finalizar Treino' : 'Próximo Set'}
+            title={isLastSet ? 'Finalizar Treino' : 'Finalizar Série'}
             onPress={handleNextPress}
             type="primary"
             containerStyle={styles.navButton}
