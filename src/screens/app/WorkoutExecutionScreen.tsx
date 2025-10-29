@@ -10,6 +10,7 @@ import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
 import { DatabaseService, ExerciseRecord } from '../../db/DatabaseService'
 import { useAuth } from '../../hooks/useAuth'
+import CircularProgress from '../../components/CircularProgress' // <-- Importado
 
 // Helper para formatar o tempo
 const formatTime = (seconds: number) => {
@@ -39,6 +40,7 @@ export default function WorkoutExecutionScreen() {
     logSet,
     timerState,
     timerValue,
+    restTimeTarget, // <-- Obtido da store
     startTimer,
     pauseTimer,
     resumeTimer,
@@ -55,6 +57,7 @@ export default function WorkoutExecutionScreen() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ... (Toda a lógica de useEffects e handleNextPress permanece a mesma) ...
   useEffect(() => {
     const loadWorkout = async () => {
       if (!user) return
@@ -215,28 +218,55 @@ export default function WorkoutExecutionScreen() {
 
   const renderTimerControls = () => {
     if (timerState === 'resting') {
+      const progress = restTimeTarget > 0 ? timerValue / restTimeTarget : 0
       return (
         <View style={styles.timerContainer}>
-          <Text style={styles.timerTextLabel}>Descansando...</Text>
-          <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+          <CircularProgress size={200} strokeWidth={15} progress={progress} />
+          <View style={styles.timerTextContainer}>
+            <Text style={styles.timerTextLabel}>Descanso</Text>
+            <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+          </View>
         </View>
       )
     }
 
+    // Painel de Controle para série ativa
     return (
-      <View style={styles.timerControlContainer}>
-        <View style={styles.timerContainer}>
-          <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+      <View style={styles.controlPanel}>
+        <View style={styles.logInputContainer}>
+          <StyledInput
+            label="Repetições"
+            value={currentRepsInput}
+            onChangeText={setCurrentRepsInput}
+            keyboardType="numeric"
+            containerStyle={styles.input}
+            editable={!isSetCompleted}
+          />
+          <StyledInput
+            label="Peso (kg)"
+            value={currentWeightInput}
+            onChangeText={setCurrentWeightInput}
+            keyboardType="numeric"
+            containerStyle={styles.input}
+            editable={!isSetCompleted}
+          />
         </View>
-        {timerState === 'idle' && !isSetCompleted && (
-          <StyledButton title="Iniciar Série" onPress={startTimer} />
-        )}
-        {timerState === 'running' && (
-          <StyledButton title="Pausar" onPress={pauseTimer} type="secondary" />
-        )}
-        {timerState === 'paused' && (
-          <StyledButton title="Retomar" onPress={resumeTimer} />
-        )}
+        <View style={styles.timerActionContainer}>
+          <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+          {timerState === 'idle' && !isSetCompleted && (
+            <StyledButton title="Iniciar Série" onPress={startTimer} />
+          )}
+          {timerState === 'running' && (
+            <StyledButton
+              title="Pausar"
+              onPress={pauseTimer}
+              type="secondary"
+            />
+          )}
+          {timerState === 'paused' && (
+            <StyledButton title="Retomar" onPress={resumeTimer} />
+          )}
+        </View>
       </View>
     )
   }
@@ -255,25 +285,6 @@ export default function WorkoutExecutionScreen() {
           <Text style={styles.setText}>
             Série {currentSetIndex + 1} de {currentExercise.sets}
           </Text>
-        </View>
-
-        <View style={styles.logInputContainer}>
-          <StyledInput
-            label="Repetições"
-            value={currentRepsInput}
-            onChangeText={setCurrentRepsInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-            editable={!isSetCompleted}
-          />
-          <StyledInput
-            label="Peso (kg)"
-            value={currentWeightInput}
-            onChangeText={setCurrentWeightInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-            editable={!isSetCompleted}
-          />
         </View>
 
         {renderTimerControls()}
@@ -320,7 +331,7 @@ const styles = StyleSheet.create({
   },
   exerciseInfoContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.large,
+    marginBottom: theme.spacing.medium, // Reduzido
   },
   exerciseName: {
     fontSize: theme.fontSizes.xlarge,
@@ -339,31 +350,52 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: theme.spacing.small,
   },
+  // Estilos do Painel de Controle
+  controlPanel: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.medium,
+    marginVertical: theme.spacing.medium,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   logInputContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: theme.spacing.medium,
   },
   input: {
     flex: 1,
     marginHorizontal: theme.spacing.small,
   },
-  timerControlContainer: {
-    marginVertical: theme.spacing.large,
+  timerActionContainer: {
+    marginTop: theme.spacing.medium,
+    alignItems: 'center',
   },
+  // Estilos do Timer Circular
   timerContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.medium,
+    justifyContent: 'center',
+    marginVertical: theme.spacing.large,
+  },
+  timerTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   timerTextLabel: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.textMuted,
+    fontWeight: 'bold',
   },
   timerText: {
     fontSize: 48,
     fontWeight: 'bold',
     color: theme.colors.text,
   },
+  // Estilos da Navegação
   navigationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
