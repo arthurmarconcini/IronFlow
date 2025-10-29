@@ -145,6 +145,19 @@ export function useWorkouts() {
     }
   }, [user, fetchLocalWorkouts])
 
+  const getWorkoutById = useCallback(async (firestoreId: string) => {
+    setIsLoading(true)
+    try {
+      const workout = await DatabaseService.getWorkoutById(firestoreId)
+      return workout
+    } catch (error) {
+      console.error('Erro ao buscar treino por ID:', error)
+      return null
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     workouts,
     isLoading,
@@ -152,5 +165,6 @@ export function useWorkouts() {
     deleteWorkout,
     syncWorkouts,
     fetchLocalWorkouts,
+    getWorkoutById,
   }
 }

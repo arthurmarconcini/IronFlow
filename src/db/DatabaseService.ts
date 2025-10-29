@@ -212,6 +212,14 @@ const deleteWorkout = async (firestoreId: string): Promise<void> => {
   await db.runAsync('DELETE FROM workouts WHERE firestore_id = ?', firestoreId)
 }
 
+const getWorkoutById = async (firestoreId: string): Promise<Workout | null> => {
+  const record = await db.getFirstAsync<WorkoutFromDb>(
+    'SELECT * FROM workouts WHERE firestore_id = ?',
+    firestoreId,
+  )
+  return record ? mapRecordToWorkout(record) : null
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -223,4 +231,5 @@ export const DatabaseService = {
   addWorkout,
   getWorkouts,
   deleteWorkout,
+  getWorkoutById,
 }
