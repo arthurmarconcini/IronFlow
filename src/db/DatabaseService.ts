@@ -32,6 +32,7 @@ interface WorkoutFromDb {
   muscle_group: string
   exercises_json: string
   last_modified: number
+  deleted_at: number | null
 }
 
 // --- Funções de Mapeamento (DB -> App) ---
@@ -61,6 +62,7 @@ const mapRecordToWorkout = (record: WorkoutFromDb): Workout => ({
   muscleGroup: record.muscle_group,
   exercises: JSON.parse(record.exercises_json),
   lastModified: record.last_modified,
+  deletedAt: record.deleted_at ?? undefined,
 })
 
 // --- Função de Inicialização ---
@@ -93,7 +95,8 @@ const initDB = async (): Promise<void> => {
       name TEXT NOT NULL,
       muscle_group TEXT NOT NULL,
       exercises_json TEXT NOT NULL,
-      last_modified INTEGER NOT NULL
+      last_modified INTEGER NOT NULL,
+      deleted_at INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS workout_logs (
@@ -259,6 +262,14 @@ const updateWorkout = async (
 
 const getWorkouts = async (userId: string): Promise<Workout[]> => {
   const allRows = await db.getAllAsync<WorkoutFromDb>(
+    'SELECT * FROM workouts WHERE user_id = ? AND deleted_at IS NULL',
+    userId,
+  )
+  return allRows.map(mapRecordToWorkout)
+}
+
+const getAllWorkoutsForSync = async (userId: string): Promise<Workout[]> => {
+  const allRows = await db.getAllAsync<WorkoutFromDb>(
     'SELECT * FROM workouts WHERE user_id = ?',
     userId,
   )
@@ -266,12 +277,18 @@ const getWorkouts = async (userId: string): Promise<Workout[]> => {
 }
 
 const deleteWorkout = async (firestoreId: string): Promise<void> => {
-  await db.runAsync('DELETE FROM workouts WHERE firestore_id = ?', firestoreId)
+  const now = Date.now()
+  await db.runAsync(
+    'UPDATE workouts SET deleted_at = ?, last_modified = ? WHERE firestore_id = ?',
+    now,
+    now,
+    firestoreId,
+  )
 }
 
 const getWorkoutById = async (firestoreId: string): Promise<Workout | null> => {
   const record = await db.getFirstAsync<WorkoutFromDb>(
-    'SELECT * FROM workouts WHERE firestore_id = ?',
+    'SELECT * FROM workouts WHERE firestore_id = ? AND deleted_at IS NULL',
     firestoreId,
   )
   return record ? mapRecordToWorkout(record) : null
@@ -396,6 +413,7 @@ export const DatabaseService = {
   addWorkout,
   updateWorkout,
   getWorkouts,
+  getAllWorkoutsForSync,
   deleteWorkout,
   getWorkoutById,
   startWorkoutLog,

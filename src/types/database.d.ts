@@ -32,4 +32,5 @@ export interface Workout {
   muscleGroup: string
   exercises: Exercise[]
   lastModified: number
+  deletedAt?: number
 }

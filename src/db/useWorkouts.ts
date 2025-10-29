@@ -6,7 +6,6 @@ import {
   query,
   where,
   doc,
-  deleteDoc,
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
@@ -76,11 +75,7 @@ export function useWorkouts() {
     if (!user) throw new Error('Usuário não autenticado.')
     await DatabaseService.deleteWorkout(firestoreId)
     setWorkouts((prev) => prev.filter((w) => w.firestoreId !== firestoreId))
-    try {
-      await deleteDoc(doc(firestoreDb, 'workouts', firestoreId))
-    } catch (error) {
-      console.error('Erro ao deletar treino no Firestore:', error)
-    }
+    // A deleção no Firestore agora é tratada pelo syncWorkouts
   }
 
   const syncWorkouts = useCallback(async () => {
@@ -88,8 +83,10 @@ export function useWorkouts() {
     setIsLoading(true)
     let needsRefresh = false
     try {
-      // 1. Get local and remote data
-      const localWorkouts = await DatabaseService.getWorkouts(user.uid)
+      // 1. Get local (including deleted) and remote data
+      const localWorkouts = await DatabaseService.getAllWorkoutsForSync(
+        user.uid,
+      )
       const q = query(
         collection(firestoreDb, 'workouts'),
         where('userId', '==', user.uid),
@@ -119,6 +116,15 @@ export function useWorkouts() {
         const local = localWorkoutMap.get(id)
         const remote = remoteWorkoutMap.get(id)
 
+        if (local && local.deletedAt) {
+          // Local is soft-deleted, delete remote
+          if (remote) {
+            const docRef = doc(firestoreDb, 'workouts', id)
+            batch.delete(docRef)
+          }
+          continue // No further action needed
+        }
+
         if (local && !remote) {
           // Upload new local workout
           const docRef = doc(firestoreDb, 'workouts', id)
@@ -129,7 +135,6 @@ export function useWorkouts() {
             exercises: local.exercises,
             lastModified: Timestamp.fromMillis(local.lastModified),
           })
-          needsRefresh = true
         } else if (!local && remote) {
           // Download new remote workout
           await DatabaseService.addWorkout(
