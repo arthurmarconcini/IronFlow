@@ -1,6 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
+import Toast from 'react-native-toast-message'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import { AppNavigationProp, AppRouteProp } from '../../navigation/types'
@@ -10,9 +18,8 @@ import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
 import { DatabaseService, ExerciseRecord } from '../../db/DatabaseService'
 import { useAuth } from '../../hooks/useAuth'
-import CircularProgress from '../../components/CircularProgress' // <-- Importado
+import CircularProgress from '../../components/CircularProgress'
 
-// Helper para formatar o tempo
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
@@ -37,16 +44,18 @@ export default function WorkoutExecutionScreen() {
     setLogs,
     nextSet,
     previousSet,
+    nextExercise,
+    previousExercise,
+    skipRest,
     logSet,
     timerState,
     timerValue,
-    restTimeTarget, // <-- Obtido da store
+    restTimeTarget,
     startTimer,
     pauseTimer,
     resumeTimer,
     startRestTimer,
     tickTimer,
-    resetTimer,
   } = useWorkoutExecutionStore()
 
   const [currentRepsInput, setCurrentRepsInput] = useState('')
@@ -57,7 +66,6 @@ export default function WorkoutExecutionScreen() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ... (Toda a lógica de useEffects e handleNextPress permanece a mesma) ...
   useEffect(() => {
     const loadWorkout = async () => {
       if (!user) return
@@ -70,7 +78,11 @@ export default function WorkoutExecutionScreen() {
         )
         setWorkoutLogId(newLogId)
       } else {
-        Alert.alert('Erro', 'Não foi possível carregar os detalhes do treino.')
+        Toast.show({
+          type: 'error',
+          text1: 'Erro',
+          text2: 'Não foi possível carregar os detalhes do treino.',
+        })
         navigation.goBack()
       }
     }
@@ -97,10 +109,9 @@ export default function WorkoutExecutionScreen() {
 
   useEffect(() => {
     if (timerState === 'resting' && timerValue < 1) {
-      resetTimer()
-      nextSet()
+      skipRest()
     }
-  }, [timerValue, timerState, resetTimer, nextSet])
+  }, [timerValue, timerState, skipRest])
 
   const completedLog = setLogs.find(
     (log) =>
@@ -161,12 +172,20 @@ export default function WorkoutExecutionScreen() {
   const handleNextPress = async () => {
     if (isSetCompleted) {
       if (!isLastSet) nextSet()
-      else Alert.alert('Treino já finalizado.')
+      else
+        Toast.show({
+          type: 'info',
+          text1: 'Treino já finalizado.',
+        })
       return
     }
 
     if (!workoutLogId) {
-      Alert.alert('Erro', 'ID do log de treino não encontrado.')
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: 'ID do log de treino não encontrado.',
+      })
       return
     }
 
@@ -198,7 +217,6 @@ export default function WorkoutExecutionScreen() {
         actualWeight: logData.weight,
         actualReps: logData.reps,
       })
-      // Re-fetch record to show potential new record immediately
       const record = await DatabaseService.getExerciseRecord(
         user.uid,
         currentExercise.name,
@@ -208,9 +226,13 @@ export default function WorkoutExecutionScreen() {
 
     if (isLastSet) {
       await DatabaseService.finishWorkoutLog(workoutLogId)
-      Alert.alert('Treino Finalizado!', 'Parabéns!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ])
+      Toast.show({
+        type: 'success',
+        text1: 'Treino Finalizado!',
+        text2: 'Parabéns por completar seu treino.',
+        visibilityTime: 3000,
+        onHide: () => navigation.goBack(),
+      })
     } else {
       startRestTimer()
     }
@@ -218,19 +240,23 @@ export default function WorkoutExecutionScreen() {
 
   const renderTimerControls = () => {
     if (timerState === 'resting') {
-      const progress = restTimeTarget > 0 ? timerValue / restTimeTarget : 0
+      const progress = restTimeTarget > 0 ? 1 - timerValue / restTimeTarget : 0
       return (
         <View style={styles.timerContainer}>
-          <CircularProgress size={200} strokeWidth={15} progress={progress} />
-          <View style={styles.timerTextContainer}>
-            <Text style={styles.timerTextLabel}>Descanso</Text>
-            <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+          <View style={styles.circularProgressWrapper}>
+            <CircularProgress size={200} strokeWidth={15} progress={progress} />
+            <View style={styles.timerTextContainer}>
+              <Text style={styles.timerTextLabel}>Descanso</Text>
+              <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+            </View>
           </View>
+          <TouchableOpacity style={styles.skipButton} onPress={skipRest}>
+            <Text style={styles.skipButtonText}>Pular</Text>
+          </TouchableOpacity>
         </View>
       )
     }
 
-    // Painel de Controle para série ativa
     return (
       <View style={styles.controlPanel}>
         <View style={styles.logInputContainer}>
@@ -274,29 +300,69 @@ export default function WorkoutExecutionScreen() {
   return (
     <ScreenContainer>
       <View style={styles.container}>
-        <View style={styles.exerciseInfoContainer}>
-          <Text style={styles.exerciseName}>{currentExercise.name}</Text>
-          {currentExerciseRecord && (
-            <Text style={styles.recordText}>
-              Recorde: {currentExerciseRecord.weight}kg para{' '}
-              {currentExerciseRecord.reps} reps
+        <View>
+          <View style={styles.exerciseNavContainer}>
+            <TouchableOpacity
+              onPress={previousExercise}
+              disabled={currentExerciseIndex === 0}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={32}
+                color={
+                  currentExerciseIndex === 0
+                    ? theme.colors.lightGray
+                    : theme.colors.primary
+                }
+              />
+            </TouchableOpacity>
+            <Text style={styles.exerciseNavText}>
+              Exercício {currentExerciseIndex + 1} de{' '}
+              {currentWorkout.exercises.length}
             </Text>
-          )}
-          <Text style={styles.setText}>
-            Série {currentSetIndex + 1} de {currentExercise.sets}
-          </Text>
+            <TouchableOpacity
+              onPress={nextExercise}
+              disabled={
+                currentExerciseIndex === currentWorkout.exercises.length - 1
+              }
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={32}
+                color={
+                  currentExerciseIndex === currentWorkout.exercises.length - 1
+                    ? theme.colors.lightGray
+                    : theme.colors.primary
+                }
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.exerciseInfoContainer}>
+            <Text style={styles.exerciseName}>{currentExercise.name}</Text>
+            {currentExerciseRecord && (
+              <Text style={styles.recordText}>
+                Recorde: {currentExerciseRecord.weight}kg para{' '}
+                {currentExerciseRecord.reps} reps
+              </Text>
+            )}
+            <Text style={styles.setText}>
+              Série {currentSetIndex + 1} de {currentExercise.sets}
+            </Text>
+          </View>
         </View>
 
         {renderTimerControls()}
 
         <View style={styles.navigationContainer}>
-          <StyledButton
-            title="Anterior"
-            onPress={previousSet}
-            disabled={isFirstSet}
-            type="secondary"
-            containerStyle={styles.navButton}
-          />
+          {!isFirstSet && (
+            <StyledButton
+              title="Anterior"
+              onPress={previousSet}
+              type="secondary"
+              containerStyle={styles.navButton}
+            />
+          )}
           <StyledButton
             title={
               isLastSet && isSetCompleted
@@ -309,7 +375,7 @@ export default function WorkoutExecutionScreen() {
             }
             onPress={handleNextPress}
             type="primary"
-            containerStyle={styles.navButton}
+            containerStyle={[styles.navButton, isFirstSet && styles.fullWidth]}
             disabled={timerState === 'resting' || (isLastSet && isSetCompleted)}
           />
         </View>
@@ -329,9 +395,20 @@ const styles = StyleSheet.create({
     padding: theme.spacing.medium,
     justifyContent: 'space-between',
   },
+  exerciseNavContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
+  exerciseNavText: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+    fontWeight: 'bold',
+  },
   exerciseInfoContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.medium, // Reduzido
+    marginBottom: theme.spacing.medium,
   },
   exerciseName: {
     fontSize: theme.fontSizes.xlarge,
@@ -350,7 +427,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: theme.spacing.small,
   },
-  // Estilos do Painel de Controle
   controlPanel: {
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.large,
@@ -374,14 +450,23 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.medium,
     alignItems: 'center',
   },
-  // Estilos do Timer Circular
   timerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: theme.spacing.large,
   },
+  circularProgressWrapper: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   timerTextContainer: {
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -395,7 +480,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  // Estilos da Navegação
+  skipButton: {
+    marginTop: theme.spacing.medium,
+  },
+  skipButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fontSizes.medium,
+    fontWeight: 'bold',
+  },
   navigationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -404,5 +496,9 @@ const styles = StyleSheet.create({
   navButton: {
     flex: 1,
     marginHorizontal: theme.spacing.small,
+  },
+  fullWidth: {
+    flex: 1,
+    marginHorizontal: 0,
   },
 })

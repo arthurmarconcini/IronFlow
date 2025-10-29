@@ -24,6 +24,9 @@ interface WorkoutExecutionState {
   startWorkout: (workout: Workout) => void
   nextSet: () => void
   previousSet: () => void
+  nextExercise: () => void
+  previousExercise: () => void
+  skipRest: () => void
   logSet: (log: { reps: number | null; weight: number | null }) => void
   startTimer: () => void
   pauseTimer: () => void
@@ -99,6 +102,37 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
           currentSetIndex: prevExercise.sets - 1, // Go to the last set of the previous exercise
         })
       }
+    },
+
+    nextExercise: () => {
+      const { currentWorkout, currentExerciseIndex } = get()
+      if (
+        !currentWorkout ||
+        currentExerciseIndex >= currentWorkout.exercises.length - 1
+      ) {
+        return
+      }
+      set({
+        currentExerciseIndex: currentExerciseIndex + 1,
+        currentSetIndex: 0,
+      })
+    },
+
+    previousExercise: () => {
+      const { currentExerciseIndex } = get()
+      if (currentExerciseIndex <= 0) {
+        return
+      }
+      set({
+        currentExerciseIndex: currentExerciseIndex - 1,
+        currentSetIndex: 0,
+      })
+    },
+
+    skipRest: () => {
+      const { nextSet, resetTimer } = get()
+      resetTimer()
+      nextSet()
     },
 
     logSet: (log) => {

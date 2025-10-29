@@ -7,6 +7,7 @@ import {
   View,
   ViewStyle,
   TextStyle,
+  StyleProp,
 } from 'react-native'
 import { theme } from '../theme'
 
@@ -14,9 +15,9 @@ interface StyledButtonProps {
   title: string
   onPress: () => void
   isLoading?: boolean
-  containerStyle?: ViewStyle
-  buttonStyle?: ViewStyle
-  textStyle?: TextStyle
+  containerStyle?: StyleProp<ViewStyle>
+  buttonStyle?: StyleProp<ViewStyle>
+  textStyle?: StyleProp<TextStyle>
   disabled?: boolean
   type?: 'primary' | 'secondary'
 }
