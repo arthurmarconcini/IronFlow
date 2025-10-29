@@ -19,6 +19,7 @@ export interface Exercise {
   name: string
   sets: number
   reps: number
+  weight?: number // Peso alvo em kg
   rest: number
   dbId?: string // ID opcional do exercício da API ExerciseDB
 }
