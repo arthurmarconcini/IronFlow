@@ -8,6 +8,7 @@ import {
   doc,
   deleteDoc,
   writeBatch,
+  Timestamp,
 } from 'firebase/firestore'
 import { app } from '../config/firebaseConfig'
 import { useAuth } from '../hooks/useAuth'
@@ -23,7 +24,7 @@ interface FirestoreWorkoutData {
   name: string
   muscleGroup: string
   exercises: Exercise[]
-  createdAt: Date
+  lastModified: Timestamp
 }
 
 export function useWorkouts() {
@@ -53,12 +54,14 @@ export function useWorkouts() {
     setIsLoading(true)
     try {
       const localId = Crypto.randomUUID()
+      const now = Date.now()
       await DatabaseService.addWorkout(
         localId,
         user.uid,
         name,
         muscleGroup,
         exercises,
+        now,
       )
       await fetchLocalWorkouts()
     } catch (error) {
@@ -83,64 +86,94 @@ export function useWorkouts() {
   const syncWorkouts = useCallback(async () => {
     if (!user) return
     setIsLoading(true)
+    let needsRefresh = false
     try {
+      // 1. Get local and remote data
       const localWorkouts = await DatabaseService.getWorkouts(user.uid)
       const q = query(
         collection(firestoreDb, 'workouts'),
         where('userId', '==', user.uid),
       )
       const querySnapshot = await getDocs(q)
-
-      // Corrigido: Aplicar o tipo aos dados do Firestore
-      const firestoreWorkouts = querySnapshot.docs.map((doc) => ({
+      const remoteWorkouts = querySnapshot.docs.map((doc) => ({
         firestoreId: doc.id,
-        ...(doc.data() as Omit<FirestoreWorkoutData, 'userId' | 'createdAt'>),
+        ...(doc.data() as FirestoreWorkoutData),
       }))
 
-      const firestoreIds = new Set(firestoreWorkouts.map((w) => w.firestoreId))
-      const workoutsToUpload = localWorkouts.filter(
-        (w) => !firestoreIds.has(w.firestoreId),
+      // 2. Create maps for efficient lookup
+      const localWorkoutMap = new Map(
+        localWorkouts.map((w) => [w.firestoreId, w]),
       )
+      const remoteWorkoutMap = new Map(
+        remoteWorkouts.map((w) => [w.firestoreId, w]),
+      )
+      const allIds = new Set([
+        ...localWorkoutMap.keys(),
+        ...remoteWorkoutMap.keys(),
+      ])
 
-      if (workoutsToUpload.length > 0) {
-        const batch = writeBatch(firestoreDb)
-        workoutsToUpload.forEach((workout) => {
-          const docRef = doc(firestoreDb, 'workouts', workout.firestoreId)
-          const workoutData: FirestoreWorkoutData = {
+      const batch = writeBatch(firestoreDb)
+
+      // 3. Compare and decide sync direction
+      for (const id of allIds) {
+        const local = localWorkoutMap.get(id)
+        const remote = remoteWorkoutMap.get(id)
+
+        if (local && !remote) {
+          // Upload new local workout
+          const docRef = doc(firestoreDb, 'workouts', id)
+          batch.set(docRef, {
             userId: user.uid,
-            name: workout.name,
-            muscleGroup: workout.muscleGroup,
-            exercises: workout.exercises,
-            createdAt: new Date(),
-          }
-          batch.set(docRef, workoutData)
-        })
-        await batch.commit()
-      }
-
-      const localIds = new Set(localWorkouts.map((w) => w.firestoreId))
-      const workoutsToDownload = firestoreWorkouts.filter(
-        (w) => !localIds.has(w.firestoreId),
-      )
-
-      if (workoutsToDownload.length > 0) {
-        for (const fw of workoutsToDownload) {
+            name: local.name,
+            muscleGroup: local.muscleGroup,
+            exercises: local.exercises,
+            lastModified: Timestamp.fromMillis(local.lastModified),
+          })
+          needsRefresh = true
+        } else if (!local && remote) {
+          // Download new remote workout
           await DatabaseService.addWorkout(
-            fw.firestoreId,
+            remote.firestoreId,
             user.uid,
-            fw.name,
-            fw.muscleGroup || '',
-            fw.exercises,
+            remote.name,
+            remote.muscleGroup,
+            remote.exercises,
+            remote.lastModified.toMillis(),
           )
+          needsRefresh = true
+        } else if (local && remote) {
+          // Conflict resolution: compare timestamps
+          const remoteMillis = remote.lastModified.toMillis()
+          if (local.lastModified > remoteMillis) {
+            // Local is newer, upload changes
+            const docRef = doc(firestoreDb, 'workouts', id)
+            batch.update(docRef, {
+              name: local.name,
+              muscleGroup: local.muscleGroup,
+              exercises: local.exercises,
+              lastModified: Timestamp.fromMillis(local.lastModified),
+            })
+          } else if (remoteMillis > local.lastModified) {
+            // Remote is newer, update local
+            await DatabaseService.updateWorkout(
+              id,
+              remote.name,
+              remote.muscleGroup,
+              remote.exercises,
+              remoteMillis,
+            )
+            needsRefresh = true
+          }
         }
       }
 
-      if (workoutsToUpload.length > 0 || workoutsToDownload.length > 0) {
-        await fetchLocalWorkouts()
-      }
+      await batch.commit()
     } catch (error) {
       console.error('Erro ao sincronizar treinos:', error)
     } finally {
+      if (needsRefresh) {
+        await fetchLocalWorkouts()
+      }
       setIsLoading(false)
     }
   }, [user, fetchLocalWorkouts])

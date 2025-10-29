@@ -31,4 +31,5 @@ export interface Workout {
   name: string
   muscleGroup: string
   exercises: Exercise[]
+  lastModified: number
 }

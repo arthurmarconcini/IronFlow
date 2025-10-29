@@ -31,6 +31,7 @@ interface WorkoutFromDb {
   name: string
   muscle_group: string
   exercises_json: string
+  last_modified: number
 }
 
 // --- Funções de Mapeamento (DB -> App) ---
@@ -59,6 +60,7 @@ const mapRecordToWorkout = (record: WorkoutFromDb): Workout => ({
   name: record.name,
   muscleGroup: record.muscle_group,
   exercises: JSON.parse(record.exercises_json),
+  lastModified: record.last_modified,
 })
 
 // --- Função de Inicialização ---
@@ -90,7 +92,8 @@ const initDB = async (): Promise<void> => {
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       muscle_group TEXT NOT NULL,
-      exercises_json TEXT NOT NULL
+      exercises_json TEXT NOT NULL,
+      last_modified INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_logs (
@@ -222,15 +225,35 @@ const addWorkout = async (
   name: string,
   muscleGroup: string,
   exercises: WorkoutExercise[],
+  lastModified: number,
 ): Promise<void> => {
   const exercisesJson = JSON.stringify(exercises)
   await db.runAsync(
-    'INSERT INTO workouts (firestore_id, user_id, name, muscle_group, exercises_json) VALUES (?, ?, ?, ?, ?)',
+    'INSERT INTO workouts (firestore_id, user_id, name, muscle_group, exercises_json, last_modified) VALUES (?, ?, ?, ?, ?, ?)',
     firestoreId,
     userId,
     name,
     muscleGroup,
     exercisesJson,
+    lastModified,
+  )
+}
+
+const updateWorkout = async (
+  firestoreId: string,
+  name: string,
+  muscleGroup: string,
+  exercises: WorkoutExercise[],
+  lastModified: number,
+): Promise<void> => {
+  const exercisesJson = JSON.stringify(exercises)
+  await db.runAsync(
+    'UPDATE workouts SET name = ?, muscle_group = ?, exercises_json = ?, last_modified = ? WHERE firestore_id = ?',
+    name,
+    muscleGroup,
+    exercisesJson,
+    lastModified,
+    firestoreId,
   )
 }
 
@@ -371,6 +394,7 @@ export const DatabaseService = {
   updateUserProfile,
   getDirtyRecords,
   addWorkout,
+  updateWorkout,
   getWorkouts,
   deleteWorkout,
   getWorkoutById,
