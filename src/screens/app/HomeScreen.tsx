@@ -20,13 +20,8 @@ import { useNetworkStore } from '../../state/networkStore'
 
 export default function HomeScreen() {
   const { user } = useAuth()
-  const {
-    workouts,
-    isLoading,
-    syncWorkouts,
-    fetchLocalWorkouts,
-    deleteWorkout,
-  } = useWorkouts()
+  const { workouts, isLoading, syncWorkouts, fetchLocalWorkouts } =
+    useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
   const isOnline = useNetworkStore((state) => state.isOnline)
 
@@ -97,11 +92,15 @@ export default function HomeScreen() {
             <WorkoutCard
               workout={item}
               onPress={() =>
+                navigation.navigate('WorkoutDetails', {
+                  workoutId: item.firestoreId,
+                })
+              }
+              onPlay={() =>
                 navigation.navigate('WorkoutExecution', {
                   workoutId: item.firestoreId,
                 })
               }
-              onDelete={() => deleteWorkout(item.firestoreId)}
             />
           )}
           ListEmptyComponent={() => (
