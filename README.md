@@ -33,17 +33,23 @@ O núcleo do IronFlow é sua resiliência. A arquitetura foi projetada para forn
 -   **UI de Feedback Global:**
     -   Indicador de conectividade (online/offline) em tempo real.
     -   Indicador de atividade de sincronização em tempo real.
+-   **Gerenciamento de Treinos (CRUD Offline-First):**
+    -   Criação, edição, visualização de detalhes e exclusão de treinos e exercícios.
+    -   Sincronização offline-first robusta para todos os dados de treino.
+    -   **Modelo de Exercícios Flexível:** Suporte para exercícios de força (séries, repetições, peso, descanso) e cardio (duração em minutos).
+-   **Tela de Detalhes do Treino:** Exibe a lista de exercícios de um treino específico, com opções para iniciar, editar ou excluir o treino.
+-   **Execução de Treino:** Interface para registrar séries, repetições, peso e descansos durante um treino de força, e controle de tempo para treinos de cardio. Inclui cronômetro de descanso.
 
 ---
 
 ## 🗺️ Roadmap (Funcionalidades Futuras)
 
--   [ ] **Gerenciamento Completo de Treinos:**
-    -   [ ] Criação, leitura, atualização e exclusão (CRUD) de treinos e exercícios.
-    -   [ ] Sincronização offline-first para todos os dados de treino.
--   [ ] **Execução de Treino:**
-    -   [ ] Interface para registrar séries, repetições, peso e descansos durante um treino.
-    -   [ ] Cronômetro de descanso.
+-   [x] **Gerenciamento Completo de Treinos:** (Concluído em 30/10/2025)
+    -   [x] Criação, leitura, atualização e exclusão (CRUD) de treinos e exercícios.
+    -   [x] Sincronização offline-first para todos os dados de treino.
+-   [x] **Execução de Treino:** (Concluído em 30/10/2025)
+    -   [x] Interface para registrar séries, repetições, peso e descansos durante um treino.
+    -   [x] Cronômetro de descanso.
 -   [ ] **Biblioteca de Exercícios:**
     -   [ ] Uma lista de exercícios pesquisável com instruções e GIFs/vídeos.
 -   [ ] **Dashboard e Estatísticas:**
