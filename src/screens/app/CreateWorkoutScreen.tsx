@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native'
 import { useWorkouts } from '../../db/useWorkouts'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import {
   Exercise,
   useWorkoutCreationStore,
@@ -17,12 +17,20 @@ import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
-import { AppNavigationProp } from '../../navigation/types'
+import { AppNavigationProp, AppStackParamList } from '../../navigation/types'
 import Toast from 'react-native-toast-message'
 
+type CreateWorkoutScreenRouteProp = RouteProp<
+  AppStackParamList,
+  'CreateWorkout'
+>
+
 export default function CreateWorkoutScreen() {
-  const { createWorkout, isLoading } = useWorkouts()
+  const { createWorkout, updateWorkout, getWorkoutById, isLoading } =
+    useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
+  const route = useRoute<CreateWorkoutScreenRouteProp>()
+  const { workoutId } = route.params || {}
 
   const {
     workoutName,
@@ -30,15 +38,35 @@ export default function CreateWorkoutScreen() {
     exercises,
     setWorkoutName,
     setMuscleGroup,
+    setExercises,
     reset,
   } = useWorkoutCreationStore()
 
   useEffect(() => {
-    // Retorna uma função de cleanup que será chamada quando a tela for desmontada
+    if (workoutId) {
+      const fetchAndSetWorkout = async () => {
+        const workout = await getWorkoutById(workoutId)
+        if (workout) {
+          setWorkoutName(workout.name)
+          setMuscleGroup(workout.muscleGroup)
+          setExercises(workout.exercises)
+        }
+      }
+      fetchAndSetWorkout()
+    } else {
+      reset()
+    }
     return () => {
       reset()
     }
-  }, [reset])
+  }, [
+    workoutId,
+    getWorkoutById,
+    setWorkoutName,
+    setMuscleGroup,
+    setExercises,
+    reset,
+  ])
 
   const handleSave = useCallback(async () => {
     if (!workoutName.trim() || !muscleGroup.trim() || exercises.length === 0) {
@@ -52,17 +80,37 @@ export default function CreateWorkoutScreen() {
     }
 
     try {
-      await createWorkout(workoutName, muscleGroup, exercises)
-      Toast.show({
-        type: 'success',
-        text1: 'Sucesso',
-        text2: 'Treino salvo com sucesso!',
-        visibilityTime: 2000,
-        onHide: () => {
-          reset()
-          navigation.goBack()
-        },
-      })
+      if (workoutId) {
+        await updateWorkout(
+          workoutId,
+          workoutName,
+          muscleGroup,
+          exercises,
+          Date.now(),
+        )
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso',
+          text2: 'Treino atualizado com sucesso!',
+          visibilityTime: 2000,
+          onHide: () => {
+            reset()
+            navigation.goBack()
+          },
+        })
+      } else {
+        await createWorkout(workoutName, muscleGroup, exercises)
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso',
+          text2: 'Treino salvo com sucesso!',
+          visibilityTime: 2000,
+          onHide: () => {
+            reset()
+            navigation.goBack()
+          },
+        })
+      }
     } catch (error) {
       console.error(error)
       Toast.show({
@@ -71,7 +119,16 @@ export default function CreateWorkoutScreen() {
         text2: 'Não foi possível salvar o treino.',
       })
     }
-  }, [workoutName, muscleGroup, exercises, createWorkout, navigation, reset])
+  }, [
+    workoutName,
+    muscleGroup,
+    exercises,
+    createWorkout,
+    updateWorkout,
+    workoutId,
+    navigation,
+    reset,
+  ])
 
   const renderExercise = ({ item }: { item: Exercise }) => (
     <View style={styles.exerciseItem}>
@@ -100,7 +157,9 @@ export default function CreateWorkoutScreen() {
         style={styles.keyboardAvoidingContainer}
       >
         <View style={styles.formContainer}>
-          <Text style={styles.title}>Criar Novo Treino</Text>
+          <Text style={styles.title}>
+            {workoutId ? 'Editar Treino' : 'Criar Novo Treino'}
+          </Text>
           <StyledInput
             placeholder="Nome do Treino (Ex: Peito e Tríceps)"
             value={workoutName}
@@ -137,7 +196,7 @@ export default function CreateWorkoutScreen() {
             onPress={() => navigation.navigate('AddExercise')}
           />
           <StyledButton
-            title="Salvar Treino"
+            title={workoutId ? 'Atualizar Treino' : 'Salvar Treino'}
             onPress={handleSave}
             disabled={
               !workoutName.trim() ||
