@@ -1,12 +1,28 @@
 import { create } from 'zustand'
 
-export interface Exercise {
+// Base interface for all exercises
+interface BaseExercise {
   name: string
+  dbId?: string // ID from ExerciseDB
+}
+
+// Exercise type for strength-based activities
+export interface StrengthExercise extends BaseExercise {
+  type: 'strength'
   sets: number
   reps: number
   rest: number
-  dbId?: string // ID from ExerciseDB
+  weight?: number
 }
+
+// Exercise type for cardio-based activities
+export interface CardioExercise extends BaseExercise {
+  type: 'cardio'
+  durationMinutes: number
+}
+
+// Union type for any exercise
+export type Exercise = StrengthExercise | CardioExercise
 
 interface WorkoutCreationState {
   workoutName: string
