@@ -113,6 +113,51 @@ O núcleo do IronFlow é sua resiliência. A arquitetura foi projetada para forn
 
 ---
 
+## 🏋️ Configurando a API de Exercícios
+
+A busca de exercícios no aplicativo é feita através de uma API externa. Você pode usar a API padrão ou integrar a sua própria.
+
+### Usando a API Padrão (ExerciseDB via RapidAPI)
+
+1.  **Crie uma conta** no [RapidAPI](https://rapidapi.com/).
+2.  **Inscreva-se** no plano gratuito da [ExerciseDB API](https://rapidapi.com/justin-WFnsXH_t6/api/exercisedb).
+3.  **Obtenha suas chaves:** No painel da API, encontre sua `X-RapidAPI-Key` e `X-RapidAPI-Host`.
+4.  **Configure as variáveis de ambiente:** No seu arquivo `.env`, preencha as seguintes variáveis:
+    ```
+    EXPO_PUBLIC_RAPIDAPI_KEY="SUA_CHAVE_RAPIDAPI"
+    EXPO_PUBLIC_RAPIDAPI_HOST="exercisedb.p.rapidapi.com"
+    ```
+
+### Integrando uma API Alternativa
+
+Se desejar usar outra fonte de dados para os exercícios, você precisará modificar o serviço de API do aplicativo.
+
+1.  **Arquivo a ser Modificado:** `src/services/exerciseDB.ts`
+
+2.  **Contrato de Dados do Exercício:** Sua API deve retornar objetos de exercício que correspondam à seguinte estrutura JSON. O aplicativo depende desses campos para funcionar corretamente.
+
+    ```json
+    {
+      "id": "string",
+      "name": "string",
+      "bodyPart": "string",
+      "target": "string",
+      "equipment": "string",
+      "category": "string", // Essencial para diferenciar 'strength' de 'cardio'
+      "gifUrl": "string" // Opcional
+    }
+    ```
+
+3.  **Contrato de Serviço:** Dentro de `src/services/exerciseDB.ts`, você deve implementar a lógica para as seguintes funções no objeto `exerciseDB`. Cada função deve buscar os dados da sua API e formatá-los de acordo com o contrato de dados acima.
+
+    -   `getAll(limit, offset)`: Retorna uma lista paginada de todos os exercícios.
+    -   `searchByName(name, limit, offset)`: Retorna exercícios filtrados por nome.
+    -   `getByBodyPart(bodyPart, limit, offset)`: Retorna exercícios filtrados por grupo muscular.
+    -   `getBodyPartList()`: Retorna uma lista de strings com todos os grupos musculares disponíveis.
+    -   `getEquipmentList()`: Retorna uma lista de strings com todos os equipamentos disponíveis.
+
+---
+
 ## 📂 Estrutura do Projeto
 
 ```
@@ -124,6 +169,7 @@ O núcleo do IronFlow é sua resiliência. A arquitetura foi projetada para forn
 │   ├── hooks/        # Hooks customizados (useAuth, useUserProfile, etc.)
 │   ├── navigation/   # Stacks de navegação e tipos
 │   ├── screens/      # Telas do aplicativo, organizadas por fluxo
+│   ├── services/     # Lógica de integração com APIs externas (ExerciseDB)
 │   ├── state/        # Stores globais (Zustand)
 │   ├── sync/         # Lógica do motor de sincronização
 │   ├── theme/        # Sistema de design (cores, fontes, espaçamento)
