@@ -71,6 +71,32 @@ export function useWorkouts() {
     }
   }
 
+  const updateWorkout = async (
+    firestoreId: string,
+    name: string,
+    muscleGroup: string,
+    exercises: Exercise[],
+    lastModified: number,
+  ) => {
+    if (!user) throw new Error('Usuário não autenticado.')
+    setIsLoading(true)
+    try {
+      await DatabaseService.updateWorkout(
+        firestoreId,
+        name,
+        muscleGroup,
+        exercises,
+        lastModified,
+      )
+      await fetchLocalWorkouts() // Recarrega para refletir a atualização
+    } catch (error) {
+      console.error('Erro ao atualizar treino local:', error)
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const deleteWorkout = async (firestoreId: string) => {
     if (!user) throw new Error('Usuário não autenticado.')
     await DatabaseService.deleteWorkout(firestoreId)
@@ -201,6 +227,7 @@ export function useWorkouts() {
     workouts,
     isLoading,
     createWorkout,
+    updateWorkout,
     deleteWorkout,
     syncWorkouts,
     fetchLocalWorkouts,

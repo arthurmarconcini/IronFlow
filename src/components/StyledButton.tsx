@@ -61,7 +61,11 @@ const StyledButton: React.FC<StyledButtonProps> = ({
           <View style={styles.contentContainer}>
             {icon}
             <Text
-              style={[typeTextStyles, textStyle, icon && styles.textWithIcon]}
+              style={[
+                typeTextStyles,
+                textStyle,
+                icon != null && styles.textWithIcon,
+              ]}
             >
               {title}
             </Text>

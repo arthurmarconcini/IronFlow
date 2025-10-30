@@ -15,6 +15,7 @@ interface WorkoutCreationState {
   setWorkoutName: (name: string) => void
   setMuscleGroup: (group: string) => void
   addExercise: (exercise: Exercise) => void
+  setExercises: (exercises: Exercise[]) => void
   reset: () => void
 }
 
@@ -26,5 +27,6 @@ export const useWorkoutCreationStore = create<WorkoutCreationState>((set) => ({
   setMuscleGroup: (group) => set({ muscleGroup: group }),
   addExercise: (exercise) =>
     set((state) => ({ exercises: [...state.exercises, exercise] })),
+  setExercises: (exercises) => set({ exercises }),
   reset: () => set({ workoutName: '', muscleGroup: '', exercises: [] }),
 }))
