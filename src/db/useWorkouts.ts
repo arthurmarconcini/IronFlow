@@ -22,7 +22,7 @@ interface FirestoreWorkoutData {
   userId: string
   name: string
   muscleGroup: string
-  exercises: Exercise[]
+  exercises: Exercise[] // Agora usa o tipo Exercise[] da store
   lastModified: Timestamp
 }
 
