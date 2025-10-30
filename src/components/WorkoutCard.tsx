@@ -1,12 +1,5 @@
 import React from 'react'
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Alert,
-  GestureResponderEvent,
-} from 'react-native'
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { theme } from '../theme'
 import { Workout } from '../types/database'
@@ -14,7 +7,7 @@ import { Workout } from '../types/database'
 interface WorkoutCardProps {
   workout: Workout
   onPress: () => void
-  onDelete: () => void
+  onPlay: () => void
 }
 
 const getIconForMuscleGroup = (muscleGroup: string) => {
@@ -45,20 +38,8 @@ const getIconForMuscleGroup = (muscleGroup: string) => {
 const WorkoutCard: React.FC<WorkoutCardProps> = ({
   workout,
   onPress,
-  onDelete,
+  onPlay,
 }) => {
-  const handleDeletePress = (e: GestureResponderEvent) => {
-    e.stopPropagation() // Impede que o evento de clique se propague para o card principal
-    Alert.alert(
-      'Excluir Treino',
-      `Tem certeza que deseja excluir o treino "${workout.name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: onDelete },
-      ],
-    )
-  }
-
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardContent}>
@@ -85,12 +66,13 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
           </View>
         </View>
 
-        {/* Botão de Excluir */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDeletePress}
-        >
-          <Text style={styles.deleteButtonText}>🗑️</Text>
+        {/* Botão de Play */}
+        <TouchableOpacity style={styles.playButton} onPress={onPlay}>
+          <Ionicons
+            name="play-circle-outline"
+            size={32}
+            color={theme.colors.primary}
+          />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -115,6 +97,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   iconContainer: {
     backgroundColor: theme.colors.lightGray,
@@ -150,13 +133,9 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.small,
     color: theme.colors.secondary,
   },
-  deleteButton: {
+  playButton: {
     padding: theme.spacing.small,
     marginLeft: theme.spacing.medium,
-  },
-  deleteButtonText: {
-    fontSize: theme.fontSizes.large,
-    color: theme.colors.error,
   },
 })
 
