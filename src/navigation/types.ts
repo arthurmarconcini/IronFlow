@@ -29,7 +29,7 @@ export type AppTabParamList = {
 export type AppStackParamList = {
   AppTabs: { screen: keyof AppTabParamList }
   ProfileEdit: undefined
-  CreateWorkout: { newExercise?: WorkoutExercise }
+  CreateWorkout: { newExercise?: WorkoutExercise; workoutId?: string }
   AddExercise: undefined
   AddManualExercise: undefined
   CustomizeExercise: { selectedExercises: ApiExercise[] }

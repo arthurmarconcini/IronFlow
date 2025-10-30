@@ -20,6 +20,7 @@ interface StyledButtonProps {
   textStyle?: StyleProp<TextStyle>
   disabled?: boolean
   type?: 'primary' | 'secondary'
+  icon?: React.ReactNode
 }
 
 const StyledButton: React.FC<StyledButtonProps> = ({
@@ -31,6 +32,7 @@ const StyledButton: React.FC<StyledButtonProps> = ({
   textStyle,
   disabled = false,
   type = 'primary',
+  icon,
 }) => {
   // Define estilos com base no tipo
   const isSecondary = type === 'secondary'
@@ -56,7 +58,14 @@ const StyledButton: React.FC<StyledButtonProps> = ({
             color={isSecondary ? theme.colors.primary : '#FFFFFF'}
           />
         ) : (
-          <Text style={[typeTextStyles, textStyle]}>{title}</Text>
+          <View style={styles.contentContainer}>
+            {icon}
+            <Text
+              style={[typeTextStyles, textStyle, icon && styles.textWithIcon]}
+            >
+              {title}
+            </Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -74,6 +83,15 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textWithIcon: {
+    marginLeft: theme.spacing.small,
   },
   // Estilos do tipo 'primary'
   button: {
