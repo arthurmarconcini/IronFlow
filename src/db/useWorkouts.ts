@@ -137,18 +137,19 @@ export function useWorkouts() {
           })
         } else if (!local && remote) {
           // Download new remote workout
+          const remoteMillis = remote.lastModified?.toMillis() ?? Date.now()
           await DatabaseService.addWorkout(
             remote.firestoreId,
             user.uid,
             remote.name,
             remote.muscleGroup,
             remote.exercises,
-            remote.lastModified.toMillis(),
+            remoteMillis,
           )
           needsRefresh = true
         } else if (local && remote) {
           // Conflict resolution: compare timestamps
-          const remoteMillis = remote.lastModified.toMillis()
+          const remoteMillis = remote.lastModified?.toMillis() ?? Date.now()
           if (local.lastModified > remoteMillis) {
             // Local is newer, upload changes
             const docRef = doc(firestoreDb, 'workouts', id)
