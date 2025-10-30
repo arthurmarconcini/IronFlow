@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Workout } from '../types/database'
+import { Workout, StrengthExercise } from '../types/database'
 
 type TimerState = 'idle' | 'running' | 'paused' | 'resting'
 
@@ -64,10 +64,12 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
 
       const currentExercise = currentWorkout.exercises[currentExerciseIndex]
 
-      // Case 1: More sets in the current exercise
-      if (currentSetIndex < currentExercise.sets - 1) {
-        set({ currentSetIndex: currentSetIndex + 1 })
-        return
+      if (currentExercise.type === 'strength') {
+        // Case 1: More sets in the current exercise
+        if (currentSetIndex < (currentExercise as StrengthExercise).sets - 1) {
+          set({ currentSetIndex: currentSetIndex + 1 })
+          return
+        }
       }
 
       // Case 2: Last set, but more exercises left
@@ -96,11 +98,20 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       // Case 2: First set, but not the first exercise
       if (currentExerciseIndex > 0) {
         const prevExerciseIndex = currentExerciseIndex - 1
-        const prevExercise = currentWorkout.exercises[prevExerciseIndex]
-        set({
-          currentExerciseIndex: prevExerciseIndex,
-          currentSetIndex: prevExercise.sets - 1, // Go to the last set of the previous exercise
-        })
+        const prevExercise = currentWorkout.exercises[
+          prevExerciseIndex
+        ] as StrengthExercise
+        if (prevExercise.type === 'strength') {
+          set({
+            currentExerciseIndex: prevExerciseIndex,
+            currentSetIndex: prevExercise.sets - 1, // Go to the last set of the previous exercise
+          })
+        } else {
+          set({
+            currentExerciseIndex: prevExerciseIndex,
+            currentSetIndex: 0,
+          })
+        }
       }
     },
 
@@ -156,14 +167,18 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       const { currentWorkout, currentExerciseIndex } = get()
       if (!currentWorkout) return
 
-      const currentExercise = currentWorkout.exercises[currentExerciseIndex]
-      const restTime = currentExercise.rest ?? 60 // Default to 60s if not set
+      const currentExercise = currentWorkout.exercises[
+        currentExerciseIndex
+      ] as StrengthExercise
+      if (currentExercise.type === 'strength') {
+        const restTime = currentExercise.rest ?? 60 // Default to 60s if not set
 
-      set({
-        timerState: 'resting',
-        timerValue: restTime,
-        restTimeTarget: restTime,
-      })
+        set({
+          timerState: 'resting',
+          timerValue: restTime,
+          restTimeTarget: restTime,
+        })
+      }
     },
 
     tickTimer: () => {

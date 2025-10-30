@@ -18,7 +18,7 @@ import { AppStackParamList, AppNavigationProp } from '../../navigation/types'
 import ScreenContainer from '../../components/ScreenContainer'
 import { theme } from '../../theme'
 import { useWorkouts } from '../../db/useWorkouts'
-import { Workout } from '../../types/database'
+import { Workout, StrengthExercise, CardioExercise } from '../../types/database'
 import StyledButton from '../../components/StyledButton'
 import { Ionicons } from '@expo/vector-icons'
 
@@ -127,10 +127,19 @@ export default function WorkoutDetailsScreen() {
             <Text style={styles.exerciseName}>
               {index + 1}. {item.name}
             </Text>
-            <Text style={styles.exerciseDetails}>
-              {item.sets} séries de {item.reps} repetições
-              {item.weight ? ` com ${item.weight}kg` : ''}
-            </Text>
+            {item.type === 'strength' ? (
+              <Text style={styles.exerciseDetails}>
+                {(item as StrengthExercise).sets} séries de
+                {(item as StrengthExercise).reps} repetições
+                {(item as StrengthExercise).weight
+                  ? ` com ${(item as StrengthExercise).weight}kg`
+                  : ''}
+              </Text>
+            ) : (
+              <Text style={styles.exerciseDetails}>
+                Duração: {(item as CardioExercise).durationMinutes} minutos
+              </Text>
+            )}
           </View>
         )}
         contentContainerStyle={styles.exercisesList}

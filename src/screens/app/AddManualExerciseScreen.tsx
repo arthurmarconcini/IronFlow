@@ -37,6 +37,7 @@ export default function AddManualExerciseScreen() {
       equipment: equipment,
       target: bodyPart,
       gifUrl: '',
+      category: 'strength', // Adicionado para satisfazer o tipo ApiExercise
     }
 
     navigation.navigate('CustomizeExercise', {

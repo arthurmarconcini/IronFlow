@@ -19,6 +19,7 @@ import StyledInput from '../../components/StyledInput'
 import { DatabaseService, ExerciseRecord } from '../../db/DatabaseService'
 import { useAuth } from '../../hooks/useAuth'
 import CircularProgress from '../../components/CircularProgress'
+import { StrengthExercise, CardioExercise } from '../../types/database'
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60)
@@ -124,11 +125,15 @@ export default function WorkoutExecutionScreen() {
     const fetchRecord = async () => {
       if (currentWorkout && user) {
         const exercise = currentWorkout.exercises[currentExerciseIndex]
-        const record = await DatabaseService.getExerciseRecord(
-          user.uid,
-          exercise.name,
-        )
-        setCurrentExerciseRecord(record)
+        if (exercise.type === 'strength') {
+          const record = await DatabaseService.getExerciseRecord(
+            user.uid,
+            exercise.name,
+          )
+          setCurrentExerciseRecord(record)
+        } else {
+          setCurrentExerciseRecord(null)
+        }
       }
     }
     fetchRecord()
@@ -136,13 +141,17 @@ export default function WorkoutExecutionScreen() {
 
   useEffect(() => {
     if (currentWorkout) {
-      if (isSetCompleted) {
-        setCurrentRepsInput(completedLog.reps?.toString() ?? '')
-        setCurrentWeightInput(completedLog.weight?.toString() ?? '')
-      } else {
-        const exercise = currentWorkout.exercises[currentExerciseIndex]
-        setCurrentRepsInput(exercise.reps?.toString() ?? '')
-        setCurrentWeightInput(exercise.weight?.toString() ?? '')
+      const exercise = currentWorkout.exercises[
+        currentExerciseIndex
+      ] as StrengthExercise
+      if (exercise.type === 'strength') {
+        if (isSetCompleted) {
+          setCurrentRepsInput(completedLog.reps?.toString() ?? '')
+          setCurrentWeightInput(completedLog.weight?.toString() ?? '')
+        } else {
+          setCurrentRepsInput(exercise.reps?.toString() ?? '')
+          setCurrentWeightInput(exercise.weight?.toString() ?? '')
+        }
       }
     }
   }, [
@@ -167,7 +176,9 @@ export default function WorkoutExecutionScreen() {
   const isFirstSet = currentExerciseIndex === 0 && currentSetIndex === 0
   const isLastSet =
     currentExerciseIndex === currentWorkout.exercises.length - 1 &&
-    currentSetIndex === currentExercise.sets - 1
+    (currentExercise.type === 'strength'
+      ? currentSetIndex === (currentExercise as StrengthExercise).sets - 1
+      : true)
 
   const handleNextPress = async () => {
     if (isSetCompleted) {
@@ -189,39 +200,44 @@ export default function WorkoutExecutionScreen() {
       return
     }
 
-    const actualReps = parseInt(currentRepsInput, 10)
-    const actualWeight = parseFloat(currentWeightInput)
-    const logData = {
-      reps: !isNaN(actualReps) ? actualReps : null,
-      weight: !isNaN(actualWeight) ? actualWeight : null,
-    }
+    if (currentExercise.type === 'strength') {
+      const actualReps = parseInt(currentRepsInput, 10)
+      const actualWeight = parseFloat(currentWeightInput)
+      const logData = {
+        reps: !isNaN(actualReps) ? actualReps : null,
+        weight: !isNaN(actualWeight) ? actualWeight : null,
+      }
 
-    logSet(logData)
-    await DatabaseService.logSetData({
-      workoutLogId,
-      exerciseName: currentExercise.name,
-      exerciseDbId: currentExercise.dbId ?? null,
-      setIndex: currentSetIndex,
-      targetReps: currentExercise.reps ?? null,
-      actualReps: logData.reps,
-      targetWeight: currentExercise.weight ?? null,
-      actualWeight: logData.weight,
-      restTime: currentExercise.rest ?? null,
-      completedAt: Date.now(),
-    })
-
-    if (logData.weight && logData.reps) {
-      await DatabaseService.saveOrUpdateExerciseRecord({
-        userId: user.uid,
+      logSet(logData)
+      await DatabaseService.logSetData({
+        workoutLogId,
         exerciseName: currentExercise.name,
-        actualWeight: logData.weight,
+        exerciseDbId: currentExercise.dbId ?? null,
+        setIndex: currentSetIndex,
+        targetReps: (currentExercise as StrengthExercise).reps ?? null,
         actualReps: logData.reps,
+        targetWeight: (currentExercise as StrengthExercise).weight ?? null,
+        actualWeight: logData.weight,
+        restTime: (currentExercise as StrengthExercise).rest ?? null,
+        completedAt: Date.now(),
       })
-      const record = await DatabaseService.getExerciseRecord(
-        user.uid,
-        currentExercise.name,
-      )
-      setCurrentExerciseRecord(record)
+
+      if (logData.weight && logData.reps) {
+        await DatabaseService.saveOrUpdateExerciseRecord({
+          userId: user.uid,
+          exerciseName: currentExercise.name,
+          actualWeight: logData.weight,
+          actualReps: logData.reps,
+        })
+        const record = await DatabaseService.getExerciseRecord(
+          user.uid,
+          currentExercise.name,
+        )
+        setCurrentExerciseRecord(record)
+      }
+    } else {
+      // Lógica para cardio
+      logSet({ reps: null, weight: null }) // Log vazio para marcar como completo
     }
 
     if (isLastSet) {
@@ -234,8 +250,81 @@ export default function WorkoutExecutionScreen() {
         onHide: () => navigation.goBack(),
       })
     } else {
-      startRestTimer()
+      if (currentExercise.type === 'strength') {
+        startRestTimer()
+      } else {
+        nextSet() // Cardio não tem descanso, vai para o próximo
+      }
     }
+  }
+
+  const renderStrengthControls = () => (
+    <View style={styles.controlPanel}>
+      <View style={styles.logInputContainer}>
+        <StyledInput
+          label="Repetições"
+          value={currentRepsInput}
+          onChangeText={setCurrentRepsInput}
+          keyboardType="numeric"
+          containerStyle={styles.input}
+          editable={!isSetCompleted}
+        />
+        <StyledInput
+          label="Peso (kg)"
+          value={currentWeightInput}
+          onChangeText={setCurrentWeightInput}
+          keyboardType="numeric"
+          containerStyle={styles.input}
+          editable={!isSetCompleted}
+        />
+      </View>
+      <View style={styles.timerActionContainer}>
+        <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+        {timerState === 'idle' && !isSetCompleted && (
+          <StyledButton title="Iniciar Série" onPress={startTimer} />
+        )}
+        {timerState === 'running' && (
+          <StyledButton title="Pausar" onPress={pauseTimer} type="secondary" />
+        )}
+        {timerState === 'paused' && (
+          <StyledButton title="Retomar" onPress={resumeTimer} />
+        )}
+      </View>
+    </View>
+  )
+
+  const renderCardioControls = () => {
+    const exercise = currentExercise as CardioExercise
+    const progress =
+      exercise.durationMinutes > 0
+        ? timerValue / (exercise.durationMinutes * 60)
+        : 0
+    return (
+      <View style={styles.timerContainer}>
+        <View style={styles.circularProgressWrapper}>
+          <CircularProgress size={200} strokeWidth={15} progress={progress} />
+          <View style={styles.timerTextContainer}>
+            <Text style={styles.timerTextLabel}>Duração</Text>
+            <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
+          </View>
+        </View>
+        <View style={styles.cardioActions}>
+          {timerState === 'idle' && !isSetCompleted && (
+            <StyledButton title="Iniciar" onPress={startTimer} />
+          )}
+          {timerState === 'running' && (
+            <StyledButton
+              title="Pausar"
+              onPress={pauseTimer}
+              type="secondary"
+            />
+          )}
+          {timerState === 'paused' && (
+            <StyledButton title="Retomar" onPress={resumeTimer} />
+          )}
+        </View>
+      </View>
+    )
   }
 
   const renderTimerControls = () => {
@@ -257,44 +346,9 @@ export default function WorkoutExecutionScreen() {
       )
     }
 
-    return (
-      <View style={styles.controlPanel}>
-        <View style={styles.logInputContainer}>
-          <StyledInput
-            label="Repetições"
-            value={currentRepsInput}
-            onChangeText={setCurrentRepsInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-            editable={!isSetCompleted}
-          />
-          <StyledInput
-            label="Peso (kg)"
-            value={currentWeightInput}
-            onChangeText={setCurrentWeightInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-            editable={!isSetCompleted}
-          />
-        </View>
-        <View style={styles.timerActionContainer}>
-          <Text style={styles.timerText}>{formatTime(timerValue)}</Text>
-          {timerState === 'idle' && !isSetCompleted && (
-            <StyledButton title="Iniciar Série" onPress={startTimer} />
-          )}
-          {timerState === 'running' && (
-            <StyledButton
-              title="Pausar"
-              onPress={pauseTimer}
-              type="secondary"
-            />
-          )}
-          {timerState === 'paused' && (
-            <StyledButton title="Retomar" onPress={resumeTimer} />
-          )}
-        </View>
-      </View>
-    )
+    return currentExercise.type === 'strength'
+      ? renderStrengthControls()
+      : renderCardioControls()
   }
 
   return (
@@ -340,15 +394,18 @@ export default function WorkoutExecutionScreen() {
 
           <View style={styles.exerciseInfoContainer}>
             <Text style={styles.exerciseName}>{currentExercise.name}</Text>
-            {currentExerciseRecord && (
+            {currentExercise.type === 'strength' && currentExerciseRecord && (
               <Text style={styles.recordText}>
                 Recorde: {currentExerciseRecord.weight}kg para{' '}
                 {currentExerciseRecord.reps} reps
               </Text>
             )}
-            <Text style={styles.setText}>
-              Série {currentSetIndex + 1} de {currentExercise.sets}
-            </Text>
+            {currentExercise.type === 'strength' && (
+              <Text style={styles.setText}>
+                Série {currentSetIndex + 1} de{' '}
+                {(currentExercise as StrengthExercise).sets}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -371,7 +428,7 @@ export default function WorkoutExecutionScreen() {
                   ? 'Finalizar Treino'
                   : isSetCompleted
                     ? 'Próximo'
-                    : 'Finalizar Série'
+                    : 'Finalizar'
             }
             onPress={handleNextPress}
             type="primary"
@@ -487,6 +544,10 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: theme.fontSizes.medium,
     fontWeight: 'bold',
+  },
+  cardioActions: {
+    marginTop: theme.spacing.medium,
+    width: '60%',
   },
   navigationContainer: {
     flexDirection: 'row',

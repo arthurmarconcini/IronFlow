@@ -8,6 +8,7 @@ const exerciseSchema = z.object({
   target: z.string(),
   gifUrl: z.string().optional(),
   equipment: z.string(),
+  category: z.string(), // Adicionado para determinar o tipo de exercício (força/cardio)
 })
 
 export type Exercise = z.infer<typeof exerciseSchema>

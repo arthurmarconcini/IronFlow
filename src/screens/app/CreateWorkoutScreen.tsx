@@ -12,6 +12,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import {
   Exercise,
   useWorkoutCreationStore,
+  StrengthExercise,
+  CardioExercise,
 } from '../../state/workoutCreationStore'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
@@ -134,18 +136,35 @@ export default function CreateWorkoutScreen() {
     <View style={styles.exerciseItem}>
       <Text style={styles.exerciseName}>{item.name}</Text>
       <View style={styles.exerciseDetails}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailValue}>{item.sets}</Text>
-          <Text style={styles.detailLabel}>Séries</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailValue}>{item.reps}</Text>
-          <Text style={styles.detailLabel}>Reps</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailValue}>{item.rest ?? 0}</Text>
-          <Text style={styles.detailLabel}>Descanso (s)</Text>
-        </View>
+        {item.type === 'strength' ? (
+          <>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailValue}>
+                {(item as StrengthExercise).sets}
+              </Text>
+              <Text style={styles.detailLabel}>Séries</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailValue}>
+                {(item as StrengthExercise).reps}
+              </Text>
+              <Text style={styles.detailLabel}>Reps</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailValue}>
+                {(item as StrengthExercise).rest ?? 0}
+              </Text>
+              <Text style={styles.detailLabel}>Descanso (s)</Text>
+            </View>
+          </>
+        ) : (
+          <View style={styles.detailItem}>
+            <Text style={styles.detailValue}>
+              {(item as CardioExercise).durationMinutes}
+            </Text>
+            <Text style={styles.detailLabel}>Duração (min)</Text>
+          </View>
+        )}
       </View>
     </View>
   )

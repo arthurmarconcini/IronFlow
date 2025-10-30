@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, StyleSheet, FlatList } from 'react-native'
 import { useRoute, useNavigation } from '@react-navigation/native'
 import Toast from 'react-native-toast-message'
@@ -6,19 +6,28 @@ import {
   CustomizeExerciseScreenRouteProp,
   AppNavigationProp,
 } from '../../navigation/types'
-import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
+import {
+  useWorkoutCreationStore,
+  StrengthExercise,
+  CardioExercise,
+} from '../../state/workoutCreationStore'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
-import { Exercise as ApiExercise } from '../../services/exerciseDB'
 
 // Interface para gerenciar o estado de customização de cada exercício
-interface CustomExerciseState extends ApiExercise {
-  sets: string
-  reps: string
-  rest: string
-}
+// Esta interface agora reflete a união discriminada de Exercise
+type CustomExerciseState =
+  | (Omit<StrengthExercise, 'sets' | 'reps' | 'rest' | 'weight'> & {
+      sets: string
+      reps: string
+      rest: string
+      weight: string
+    })
+  | ((Omit<CardioExercise, 'durationMinutes'> & { durationMinutes: string }) & {
+      dbId: string
+    })
 
 export default function CustomizeExerciseScreen() {
   const route = useRoute<CustomizeExerciseScreenRouteProp>()
@@ -29,63 +38,130 @@ export default function CustomizeExerciseScreen() {
 
   // Inicializa o estado local com os exercícios selecionados e valores padrão
   const [customExercises, setCustomExercises] = useState<CustomExerciseState[]>(
-    selectedExercises.map((ex) => ({
-      ...ex,
-      sets: '3', // Valor padrão
-      reps: '10', // Valor padrão
-      rest: '60', // Valor padrão
-    })),
+    selectedExercises.map((apiEx) => {
+      const isCardio = apiEx.category.toLowerCase() === 'cardio'
+
+      if (isCardio) {
+        return {
+          type: 'cardio',
+          name: apiEx.name,
+          dbId: apiEx.id,
+          durationMinutes: '30', // Valor padrão para cardio
+        } as CustomExerciseState
+      } else {
+        return {
+          type: 'strength',
+          name: apiEx.name,
+          dbId: apiEx.id,
+          sets: '3', // Valor padrão para força
+          reps: '10', // Valor padrão para força
+          rest: '60', // Valor padrão para força
+          weight: '0', // Valor padrão para peso
+        } as CustomExerciseState
+      }
+    }),
   )
 
-  // Função para atualizar o valor de um campo (séries, reps, descanso) para um exercício específico
+  // Função para atualizar o valor de um campo (séries, reps, descanso, duração) para um exercício específico
   const handleUpdateField = (
     exerciseId: string,
-    field: 'sets' | 'reps' | 'rest',
+    field: 'sets' | 'reps' | 'rest' | 'durationMinutes' | 'weight',
     value: string,
   ) => {
     setCustomExercises((prev) =>
-      prev.map((ex) =>
-        ex.id === exerciseId
-          ? { ...ex, [field]: value.replace(/[^0-9]/g, '') }
-          : ex,
-      ),
+      prev.map((ex) => {
+        if (ex.dbId === exerciseId) {
+          // Garante que o valor seja numérico para campos numéricos
+          const cleanedValue = value.replace(/[^0-9]/g, '')
+          return { ...ex, [field]: cleanedValue }
+        }
+        return ex
+      }),
     )
   }
 
   const handleConfirmAndAdd = () => {
     // Validação
     for (const ex of customExercises) {
-      if (!ex.sets.trim() || !ex.reps.trim() || !ex.rest.trim()) {
-        Toast.show({
-          type: 'error',
-          text1: 'Campos Incompletos',
-          text2: `Preencha todos os campos para o exercício "${ex.name}".`,
-        })
-        return
-      }
-      if (
-        parseInt(ex.sets, 10) <= 0 ||
-        parseInt(ex.reps, 10) <= 0 ||
-        parseInt(ex.rest, 10) < 0
-      ) {
-        Toast.show({
-          type: 'error',
-          text1: 'Valores Inválidos',
-          text2: `Séries e repetições devem ser maiores que zero.`,
-        })
-        return
+      if (ex.type === 'strength') {
+        const strengthEx = ex as Omit<
+          StrengthExercise,
+          'sets' | 'reps' | 'rest' | 'weight'
+        > & {
+          sets: string
+          reps: string
+          rest: string
+          weight: string
+        }
+        if (
+          !strengthEx.sets.trim() ||
+          !strengthEx.reps.trim() ||
+          !strengthEx.rest.trim() ||
+          !strengthEx.weight.trim()
+        ) {
+          Toast.show({
+            type: 'error',
+            text1: 'Campos Incompletos',
+            text2: `Preencha todos os campos para o exercício "${strengthEx.name}".`,
+          })
+          return
+        }
+        if (
+          parseInt(strengthEx.sets, 10) <= 0 ||
+          parseInt(strengthEx.reps, 10) <= 0 ||
+          parseInt(strengthEx.rest, 10) < 0 ||
+          parseInt(strengthEx.weight, 10) < 0
+        ) {
+          Toast.show({
+            type: 'error',
+            text1: 'Valores Inválidos',
+            text2: `Séries e repetições devem ser maiores que zero, e peso/descanso não negativos.`,
+          })
+          return
+        }
+      } else if (ex.type === 'cardio') {
+        const cardioEx = ex as Omit<CardioExercise, 'durationMinutes'> & {
+          durationMinutes: string
+        }
+        if (!cardioEx.durationMinutes.trim()) {
+          Toast.show({
+            type: 'error',
+            text1: 'Campos Incompletos',
+            text2: `Preencha a duração para o exercício "${cardioEx.name}".`,
+          })
+          return
+        }
+        if (parseInt(cardioEx.durationMinutes, 10) <= 0) {
+          Toast.show({
+            type: 'error',
+            text1: 'Valores Inválidos',
+            text2: `A duração deve ser maior que zero.`,
+          })
+          return
+        }
       }
     }
 
     // Adiciona os exercícios customizados ao store
     customExercises.forEach((ex) => {
-      addExercise({
-        name: ex.name,
-        sets: parseInt(ex.sets, 10),
-        reps: parseInt(ex.reps, 10),
-        rest: parseInt(ex.rest, 10),
-        dbId: ex.id,
-      })
+      if (ex.type === 'strength') {
+        addExercise({
+          type: 'strength',
+          name: ex.name,
+          sets: parseInt(ex.sets, 10),
+          reps: parseInt(ex.reps, 10),
+          rest: parseInt(ex.rest, 10),
+          weight: parseInt(ex.weight, 10),
+          dbId: ex.dbId,
+        })
+      } else if (ex.type === 'cardio') {
+        addExercise({
+          type: 'cardio',
+          name: ex.name,
+          durationMinutes: parseInt(ex.durationMinutes, 10),
+          dbId: ex.dbId,
+        })
+      }
     })
 
     // Navega de volta para a tela de criação de treino
@@ -95,32 +171,58 @@ export default function CustomizeExerciseScreen() {
   const renderItem = ({ item }: { item: CustomExerciseState }) => (
     <View style={styles.exerciseContainer}>
       <Text style={styles.exerciseName}>{item.name}</Text>
-      <View style={styles.inputsRow}>
-        <StyledInput
-          label="Séries"
-          containerStyle={styles.inputContainer}
-          value={item.sets}
-          onChangeText={(val) => handleUpdateField(item.id, 'sets', val)}
-          keyboardType="numeric"
-          textAlign="center"
-        />
-        <StyledInput
-          label="Reps"
-          containerStyle={styles.inputContainer}
-          value={item.reps}
-          onChangeText={(val) => handleUpdateField(item.id, 'reps', val)}
-          keyboardType="numeric"
-          textAlign="center"
-        />
-        <StyledInput
-          label="Descanso (s)"
-          containerStyle={styles.inputContainer}
-          value={item.rest}
-          onChangeText={(val) => handleUpdateField(item.id, 'rest', val)}
-          keyboardType="numeric"
-          textAlign="center"
-        />
-      </View>
+      {item.type === 'strength' ? (
+        <View style={styles.inputsRow}>
+          <StyledInput
+            label="Séries"
+            containerStyle={styles.inputContainer}
+            value={(item as CustomExerciseState & { sets: string }).sets}
+            onChangeText={(val) => handleUpdateField(item.dbId!, 'sets', val)}
+            keyboardType="numeric"
+            textAlign="center"
+          />
+          <StyledInput
+            label="Reps"
+            containerStyle={styles.inputContainer}
+            value={(item as CustomExerciseState & { reps: string }).reps}
+            onChangeText={(val) => handleUpdateField(item.dbId!, 'reps', val)}
+            keyboardType="numeric"
+            textAlign="center"
+          />
+          <StyledInput
+            label="Descanso (s)"
+            containerStyle={styles.inputContainer}
+            value={(item as CustomExerciseState & { rest: string }).rest}
+            onChangeText={(val) => handleUpdateField(item.dbId!, 'rest', val)}
+            keyboardType="numeric"
+            textAlign="center"
+          />
+          <StyledInput
+            label="Peso (kg)"
+            containerStyle={styles.inputContainer}
+            value={(item as CustomExerciseState & { weight: string }).weight}
+            onChangeText={(val) => handleUpdateField(item.dbId!, 'weight', val)}
+            keyboardType="numeric"
+            textAlign="center"
+          />
+        </View>
+      ) : (
+        <View style={styles.inputsRow}>
+          <StyledInput
+            label="Duração (min)"
+            containerStyle={styles.fullWidthInputContainer}
+            value={
+              (item as CustomExerciseState & { durationMinutes: string })
+                .durationMinutes
+            }
+            onChangeText={(val) =>
+              handleUpdateField(item.dbId!, 'durationMinutes', val)
+            }
+            keyboardType="numeric"
+            textAlign="center"
+          />
+        </View>
+      )}
     </View>
   )
 
@@ -129,7 +231,7 @@ export default function CustomizeExerciseScreen() {
       <FlatList
         data={customExercises}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.dbId!}
         contentContainerStyle={styles.listContent}
       />
       <StyledButton
@@ -174,5 +276,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flex: 1,
     marginHorizontal: theme.spacing.small / 2,
+  },
+  fullWidthInputContainer: {
+    flex: 1,
   },
 })
