@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -8,7 +8,12 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native'
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native'
+import {
+  useRoute,
+  useNavigation,
+  RouteProp,
+  useFocusEffect,
+} from '@react-navigation/native'
 import { AppStackParamList, AppNavigationProp } from '../../navigation/types'
 import ScreenContainer from '../../components/ScreenContainer'
 import { theme } from '../../theme'
@@ -44,9 +49,11 @@ export default function WorkoutDetailsScreen() {
     }
   }, [workoutId, getWorkoutById])
 
-  useEffect(() => {
-    fetchWorkoutDetails()
-  }, [fetchWorkoutDetails])
+  useFocusEffect(
+    useCallback(() => {
+      fetchWorkoutDetails()
+    }, [fetchWorkoutDetails]),
+  )
 
   const handleDeleteWorkout = useCallback(() => {
     Alert.alert(
