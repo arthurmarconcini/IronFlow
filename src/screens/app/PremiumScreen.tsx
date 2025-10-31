@@ -1,10 +1,14 @@
-import React from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
+import { AppNavigationProp } from '../../navigation/types'
+import { useAuth } from '../../hooks/useAuth'
+import { useProfileStore } from '../../state/profileStore'
+import { DatabaseService } from '../../db/DatabaseService'
 
 const BenefitRow = ({ text }: { text: string }) => (
   <View style={styles.benefitRow}>
@@ -13,10 +17,46 @@ const BenefitRow = ({ text }: { text: string }) => (
   </View>
 )
 
-export default function PremiumScreen() {
-  const handleUpgrade = () => {
-    // A lógica de upgrade será implementada no próximo prompt
-    console.log('Botão de upgrade pressionado!')
+type Props = {
+  navigation: AppNavigationProp
+}
+
+export default function PremiumScreen({ navigation }: Props) {
+  const { user } = useAuth()
+  const { profile, setProfile } = useProfileStore()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleUpgrade = async () => {
+    if (!user || !profile) return
+
+    setIsLoading(true)
+    try {
+      const updatedProfileFields = {
+        planType: 'premium' as const,
+        syncStatus: 'dirty' as const,
+        lastModifiedLocally: Date.now(),
+      }
+
+      // 1. Atualiza o banco de dados local
+      await DatabaseService.updateUserProfile(profile.id!, updatedProfileFields)
+
+      // 2. Atualiza o estado global
+      const updatedProfile = { ...profile, ...updatedProfileFields }
+      setProfile(updatedProfile)
+
+      // 3. Navega de volta
+      Alert.alert('Sucesso!', 'Seu plano foi atualizado para Premium.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ])
+    } catch (error) {
+      console.error('Erro ao fazer upgrade do plano:', error)
+      Alert.alert(
+        'Erro',
+        'Não foi possível atualizar seu plano. Tente novamente.',
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -44,6 +84,7 @@ export default function PremiumScreen() {
           <StyledButton
             title="Tornar-se Premium"
             onPress={handleUpgrade}
+            isLoading={isLoading}
             icon={<Ionicons name="star" size={20} color="#FFFFFF" />}
           />
           <Text style={styles.footerText}>
@@ -94,7 +135,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.medium,
     color: theme.colors.text,
     marginLeft: theme.spacing.medium,
-    flex: 1, // Garante que o texto quebre a linha corretamente
+    flex: 1,
   },
   footer: {
     paddingBottom: theme.spacing.medium,
