@@ -7,6 +7,8 @@ import WelcomeScreen from '../screens/onboarding/WelcomeScreen'
 import GoalScreen from '../screens/onboarding/GoalScreen'
 import BiometricsScreen from '../screens/onboarding/BiometricsScreen'
 import ConfirmationScreen from '../screens/onboarding/ConfirmationScreen'
+import LoginScreen from '../screens/auth/LoginScreen'
+import RegisterScreen from '../screens/auth/RegisterScreen'
 import { theme } from '../theme'
 
 const Stack = createStackNavigator<OnboardingStackParamList>()
@@ -31,6 +33,16 @@ export default function OnboardingStack() {
       <Stack.Screen name="Goal" component={GoalScreen} />
       <Stack.Screen name="Biometrics" component={BiometricsScreen} />
       <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   )
 }
