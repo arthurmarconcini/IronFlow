@@ -12,6 +12,11 @@ let db: SQLite.SQLiteDatabase
 interface UserProfileFromDB {
   id: number
   user_id: string
+  display_name: string | null
+  dob: string | null
+  sex: 'male' | 'female' | 'other' | null
+  experience_level: 'beginner' | 'intermediate' | 'advanced' | null
+  availability: '1-2' | '3-4' | '5+' | null
   goal: string | null
   height_cm: number | null
   current_weight_kg: number | null
@@ -39,6 +44,11 @@ interface WorkoutFromDb {
 const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
   id: record.id,
   userId: record.user_id,
+  displayName: record.display_name,
+  dob: record.dob,
+  sex: record.sex,
+  experienceLevel: record.experience_level,
+  availability: record.availability,
   goal: record.goal,
   heightCm: record.height_cm,
   currentWeightKg: record.current_weight_kg,
@@ -75,6 +85,11 @@ const initDB = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS user_profile (
       id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
       user_id TEXT NOT NULL UNIQUE,
+      display_name TEXT,
+      dob TEXT,
+      sex TEXT,
+      experience_level TEXT,
+      availability TEXT,
       goal TEXT,
       height_cm REAL,
       current_weight_kg REAL,
@@ -142,6 +157,11 @@ const saveUserProfile = async (
 ): Promise<number> => {
   const {
     userId,
+    displayName,
+    dob,
+    sex,
+    experienceLevel,
+    availability,
     goal,
     heightCm,
     currentWeightKg,
@@ -154,8 +174,13 @@ const saveUserProfile = async (
   const onboardingCompletedInt =
     onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
   await db.runAsync(
-    'INSERT INTO user_profile (user_id, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
+    'INSERT INTO user_profile (user_id, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
     userId,
+    displayName ?? null,
+    dob ?? null,
+    sex ?? null,
+    experienceLevel ?? null,
+    availability ?? null,
     goal ?? null,
     heightCm ?? null,
     currentWeightKg ?? null,

@@ -1,6 +1,11 @@
 export interface UserProfile {
   id?: number
   userId: string
+  displayName: string | null
+  dob: string | null
+  sex: 'male' | 'female' | 'other' | null
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
+  availability: '1-2' | '3-4' | '5+' | null
   goal: string | null
   heightCm: number | null
   currentWeightKg: number | null
