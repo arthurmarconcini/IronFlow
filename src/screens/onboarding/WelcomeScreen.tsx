@@ -30,12 +30,6 @@ const WelcomeScreen = ({ navigation }: Props) => {
       <View style={styles.footer}>
         <Text style={styles.progressIndicator}>Passo 1 de 5</Text>
         <StyledButton title="Vamos Começar" onPress={handleStart} />
-        <StyledButton
-          title="Já tenho uma conta"
-          onPress={() => navigation.navigate('Login')}
-          type="secondary"
-          containerStyle={{ marginTop: theme.spacing.small }}
-        />
       </View>
     </SafeAreaView>
   )

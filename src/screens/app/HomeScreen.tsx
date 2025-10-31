@@ -17,9 +17,11 @@ import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import WorkoutCard from '../../components/WorkoutCard'
 import { useNetworkStore } from '../../state/networkStore'
+import { useProfileStore } from '../../state/profileStore'
 
 export default function HomeScreen() {
   const { user } = useAuth()
+  const { profile } = useProfileStore()
   const { workouts, isLoading, syncWorkouts, fetchLocalWorkouts } =
     useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
@@ -56,9 +58,11 @@ export default function HomeScreen() {
 
       {/* Greeting */}
       <View style={styles.greetingContainer}>
-        <Text style={styles.greeting}>Olá,</Text>
-        <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-          {user?.displayName || user?.email}
+        <Text style={styles.greeting} numberOfLines={2} ellipsizeMode="tail">
+          Olá,{' '}
+          <Text style={styles.userName}>
+            {profile?.displayName || user?.email}
+          </Text>
         </Text>
       </View>
 
@@ -145,13 +149,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.large,
   },
   greeting: {
-    fontSize: theme.fontSizes.xlarge,
-    color: theme.colors.secondary,
+    fontSize: 32, // Aumenta o tamanho da fonte base da saudação
+    color: theme.colors.text,
   },
   userName: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: theme.colors.text,
+    fontWeight: 'bold', // Mantém apenas o nome em negrito
   },
   listTitleContainer: {
     flexDirection: 'row',

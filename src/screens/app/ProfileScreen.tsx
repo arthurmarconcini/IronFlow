@@ -84,6 +84,26 @@ export default function ProfileScreen({ navigation }: Props) {
     GAIN_MASS: 'Ganhar Massa',
     LOSE_FAT: 'Perder Gordura',
     MAINTAIN: 'Manter a Forma',
+    RECOMPOSITION: 'Recomposição Corporal',
+    ENDURANCE: 'Resistência',
+  }
+
+  const experienceMap = {
+    beginner: 'Iniciante',
+    intermediate: 'Intermediário',
+    advanced: 'Avançado',
+  }
+
+  const availabilityMap = {
+    '1-2': '1-2 dias/semana',
+    '3-4': '3-4 dias/semana',
+    '5+': '5+ dias/semana',
+  }
+
+  const sexMap = {
+    male: 'Masculino',
+    female: 'Feminino',
+    other: 'Outro',
   }
 
   const bmiCategoryMap = {
@@ -134,7 +154,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={styles.header}>
           <AvatarInput />
           <Text style={styles.displayName}>
-            {user?.displayName || 'Usuário'}
+            {profile?.displayName || user?.email}
           </Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
@@ -185,13 +205,44 @@ export default function ProfileScreen({ navigation }: Props) {
                 : null
             }
           />
+          <DataRow
+            label="Nível"
+            value={
+              profile?.experienceLevel
+                ? experienceMap[
+                    profile.experienceLevel as keyof typeof experienceMap
+                  ]
+                : null
+            }
+          />
+          <DataRow
+            label="Disponibilidade"
+            value={
+              profile?.availability
+                ? availabilityMap[
+                    profile.availability as keyof typeof availabilityMap
+                  ]
+                : null
+            }
+          />
           <DataRow label="Altura" value={displayHeight} />
           <DataRow label="Peso Atual" value={displayWeight} />
+          <DataRow label="Data de Nasc." value={profile?.dob} />
+          <DataRow
+            label="Sexo"
+            value={
+              profile?.sex ? sexMap[profile.sex as keyof typeof sexMap] : null
+            }
+          />
           <DataRow
             label="IMC"
             value={
               profile?.bmi && profile.bmiCategory
-                ? `${profile.bmi.toFixed(1)} (${bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]})`
+                ? `${profile.bmi.toFixed(1)} (${
+                    bmiCategoryMap[
+                      profile.bmiCategory as keyof typeof bmiCategoryMap
+                    ]
+                  })`
                 : null
             }
           />

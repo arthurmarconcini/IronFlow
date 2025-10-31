@@ -4,19 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
-import { useOnboardingStore } from '../../state/onboardingStore'
-import { useProfileStore } from '../../state/profileStore'
-import { DatabaseService } from '../../db/DatabaseService'
-import { SyncService } from '../../sync/SyncService'
-import { calculateBMI, getBMICategory } from '../../utils/bmiUtils'
-import { UserProfile } from '../../types/database'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
 import { theme } from '../../theme'
-import { OnboardingNavigationProp } from '../../navigation/types'
+import { AuthNavigationProp } from '../../navigation/types'
 
 type Props = {
-  navigation: OnboardingNavigationProp
+  navigation: AuthNavigationProp
 }
 
 const RegisterScreen = ({ navigation }: Props) => {
@@ -25,70 +19,18 @@ const RegisterScreen = ({ navigation }: Props) => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const onboardingData = useOnboardingStore((state) => state)
-  const resetOnboardingData = useOnboardingStore(
-    (state) => state.resetOnboardingData,
-  )
-  const setProfile = useProfileStore((state) => state.setProfile)
-
   const handleRegister = async () => {
     if (password !== confirmPassword) {
       Alert.alert('Erro', 'As senhas não coincidem.')
       return
     }
-    if (!onboardingData.displayName) {
-      Alert.alert(
-        'Erro',
-        'Dados do onboarding não encontrados. Por favor, comece novamente.',
-      )
-      navigation.navigate('Welcome')
-      return
-    }
 
     setIsLoading(true)
     try {
-      // 1. Criar usuário no Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      )
-      const user = userCredential.user
-
-      // 2. Preparar dados do perfil
-      const { heightCm, weightKg } = onboardingData
-      const bmi = calculateBMI(weightKg!, heightCm!)
-      const bmiCategory = getBMICategory(bmi)
-
-      const userProfileData: Omit<UserProfile, 'id'> = {
-        userId: user.uid,
-        displayName: onboardingData.displayName,
-        dob: onboardingData.dob,
-        sex: onboardingData.sex,
-        experienceLevel: onboardingData.experienceLevel,
-        availability: onboardingData.availability,
-        goal: onboardingData.goal,
-        heightCm: heightCm,
-        currentWeightKg: weightKg,
-        bmi,
-        bmiCategory,
-        onboardingCompleted: true,
-        syncStatus: 'dirty',
-        lastModifiedLocally: Date.now(),
-      }
-
-      // 3. Salvar perfil no banco de dados local
-      const newId = await DatabaseService.saveUserProfile(userProfileData)
-      const finalProfile = { ...userProfileData, id: newId }
-
-      // 4. Atualizar o estado global do perfil (isso acionará a navegação)
-      setProfile(finalProfile)
-
-      // 5. Limpar o store de onboarding
-      resetOnboardingData()
-
-      // 6. Disparar a sincronização em segundo plano (não precisa esperar)
-      SyncService.syncUserProfile(user)
+      // Apenas cria o usuário. O listener global onAuthStateChanged
+      // irá detectar a mudança, e o RootNavigator irá direcionar
+      // para o OnboardingStack, pois o perfil ainda não existe.
+      await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: unknown) {
       console.error('Erro no registro:', error)
       let errorMessage = 'Ocorreu um erro desconhecido.'

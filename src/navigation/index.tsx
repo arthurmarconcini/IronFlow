@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { useProfileStore } from '../state/profileStore'
 
+import AuthStack from './AuthStack'
 import AppStack from './AppStack'
 import OnboardingStack from './OnboardingStack'
 import SplashScreen from '../screens/SplashScreen'
@@ -25,13 +26,7 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {!user ? (
-        <OnboardingStack />
-      ) : !profile ? (
-        <OnboardingStack />
-      ) : (
-        <AppStack />
-      )}
+      {!user ? <AuthStack /> : !profile ? <OnboardingStack /> : <AppStack />}
     </NavigationContainer>
   )
 }

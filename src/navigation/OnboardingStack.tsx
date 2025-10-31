@@ -9,8 +9,6 @@ import DemographicsScreen from '../screens/onboarding/DemographicsScreen'
 import ExperienceScreen from '../screens/onboarding/ExperienceScreen'
 import BiometricsScreen from '../screens/onboarding/BiometricsScreen'
 import ConfirmationScreen from '../screens/onboarding/ConfirmationScreen'
-import LoginScreen from '../screens/auth/LoginScreen'
-import RegisterScreen from '../screens/auth/RegisterScreen'
 import { theme } from '../theme'
 
 const Stack = createStackNavigator<OnboardingStackParamList>()
@@ -37,16 +35,6 @@ export default function OnboardingStack() {
       <Stack.Screen name="Experience" component={ExperienceScreen} />
       <Stack.Screen name="Biometrics" component={BiometricsScreen} />
       <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Register"
-        component={RegisterScreen}
-        options={{ headerShown: false }}
-      />
     </Stack.Navigator>
   )
 }
