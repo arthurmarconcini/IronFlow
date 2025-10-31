@@ -19,7 +19,8 @@ type Props = {
 type UnitSystem = 'metric' | 'imperial'
 
 const BiometricsScreen = ({ navigation, route }: Props) => {
-  const { goal } = route.params
+  const { goal, displayName, dob, sex, experienceLevel, availability } =
+    route.params
   const [height, setHeight] = useState(175) // cm
   const [weight, setWeight] = useState(70) // kg
   const [units, setUnits] = useState<UnitSystem>('metric')
@@ -27,6 +28,11 @@ const BiometricsScreen = ({ navigation, route }: Props) => {
   const handleFinish = () => {
     navigation.navigate('Confirmation', {
       goal,
+      displayName,
+      dob,
+      sex,
+      experienceLevel,
+      availability,
       heightCm: height,
       weightKg: weight,
     })

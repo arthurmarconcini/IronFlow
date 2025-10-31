@@ -21,7 +21,16 @@ const ConfirmationScreen = ({ route }: Props) => {
   const { user } = useAuth()
   const setProfile = useProfileStore((state) => state.setProfile)
 
-  const { goal, heightCm, weightKg } = route.params
+  const {
+    goal,
+    displayName,
+    dob,
+    sex,
+    experienceLevel,
+    availability,
+    heightCm,
+    weightKg,
+  } = route.params
 
   const { bmi, bmiCategory } = useMemo(() => {
     const calculatedBmi = calculateBMI(weightKg, heightCm)
@@ -33,6 +42,20 @@ const ConfirmationScreen = ({ route }: Props) => {
     GAIN_MASS: 'Ganhar Massa',
     LOSE_FAT: 'Perder Gordura',
     MAINTAIN: 'Manter a Forma',
+    RECOMPOSITION: 'Recomposição Corporal',
+    ENDURANCE: 'Resistência',
+  }
+
+  const experienceMap = {
+    beginner: 'Iniciante',
+    intermediate: 'Intermediário',
+    advanced: 'Avançado',
+  }
+
+  const availabilityMap = {
+    '1-2': '1-2 dias/semana',
+    '3-4': '3-4 dias/semana',
+    '5+': '5+ dias/semana',
   }
 
   const bmiCategoryMap = {
@@ -52,6 +75,11 @@ const ConfirmationScreen = ({ route }: Props) => {
     try {
       const userProfileData: Omit<UserProfile, 'id'> = {
         userId: user.uid,
+        displayName,
+        dob,
+        sex,
+        experienceLevel,
+        availability,
         goal,
         heightCm,
         currentWeightKg: weightKg,
@@ -85,8 +113,24 @@ const ConfirmationScreen = ({ route }: Props) => {
         <Text style={styles.title}>Confirme seus dados</Text>
         <View style={styles.summaryContainer}>
           <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Nome</Text>
+            <Text style={styles.summaryValue}>{displayName}</Text>
+          </View>
+          <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Objetivo</Text>
             <Text style={styles.summaryValue}>{goalMap[goal]}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Experiência</Text>
+            <Text style={styles.summaryValue}>
+              {experienceMap[experienceLevel]}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Disponibilidade</Text>
+            <Text style={styles.summaryValue}>
+              {availabilityMap[availability]}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Altura</Text>

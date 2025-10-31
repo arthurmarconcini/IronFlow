@@ -5,7 +5,10 @@ import { StatusBar } from 'expo-status-bar'
 import { Picker } from '@react-native-picker/picker'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { OnboardingNavigationProp } from '../../navigation/types'
+import {
+  OnboardingNavigationProp,
+  OnboardingStackParamList,
+} from '../../navigation/types'
 import { RouteProp } from '@react-navigation/native'
 
 type Props = {

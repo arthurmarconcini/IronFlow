@@ -34,7 +34,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
           title="Já tenho uma conta"
           onPress={() => navigation.navigate('Login')}
           type="secondary"
-          style={{ marginTop: theme.spacing.small }}
+          containerStyle={{ marginTop: theme.spacing.small }}
         />
       </View>
     </SafeAreaView>
