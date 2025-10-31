@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 
 import HomeScreen from '../screens/app/HomeScreen'
 import ProfileScreen from '../screens/app/ProfileScreen'
+import StatsScreen from '../screens/app/StatsScreen' // Importar a nova tela
 import { theme } from '../theme'
 import { AppTabParamList } from './types'
 
@@ -33,6 +34,16 @@ export default function AppTabs() {
           tabBarLabel: 'Início',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="StatsTab"
+        component={StatsScreen}
+        options={{
+          tabBarLabel: 'Estatísticas',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
         }}
       />

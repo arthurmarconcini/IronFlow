@@ -42,6 +42,7 @@ export type OnboardingStackParamList = {
 
 export type AppTabParamList = {
   HomeTab: undefined
+  StatsTab: undefined
   ProfileTab: undefined
 }
 
