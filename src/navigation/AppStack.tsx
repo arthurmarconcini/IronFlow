@@ -9,6 +9,7 @@ import CustomizeExerciseScreen from '../screens/app/CustomizeExerciseScreen'
 import WorkoutExecutionScreen from '../screens/app/WorkoutExecutionScreen'
 import ProfileEditScreen from '../screens/app/ProfileEditScreen'
 import WorkoutDetailsScreen from '../screens/app/WorkoutDetailsScreen'
+import PremiumScreen from '../screens/app/PremiumScreen'
 
 const Stack = createStackNavigator<AppStackParamList>()
 
@@ -54,6 +55,15 @@ export default function AppStack() {
         name="WorkoutDetails"
         component={WorkoutDetailsScreen}
         options={{ title: 'Detalhes do Treino', headerShown: true }}
+      />
+      <Stack.Screen
+        name="Premium"
+        component={PremiumScreen}
+        options={{
+          presentation: 'modal',
+          title: 'Seja Premium',
+          headerShown: true,
+        }}
       />
     </Stack.Navigator>
   )

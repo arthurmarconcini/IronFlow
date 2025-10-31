@@ -10,6 +10,7 @@ import { useSubscription } from '../../hooks/useSubscription'
 import { useAuth } from '../../hooks/useAuth'
 import { DatabaseService } from '../../db/DatabaseService'
 import { Ionicons } from '@expo/vector-icons'
+import { AppNavigationProp } from '../../navigation/types'
 
 const StatCard = ({
   label,
@@ -27,7 +28,11 @@ const StatCard = ({
   </View>
 )
 
-export default function StatsScreen() {
+type Props = {
+  navigation: AppNavigationProp
+}
+
+export default function StatsScreen({ navigation }: Props) {
   const { isPremium } = useSubscription()
   const { user } = useAuth()
 
@@ -70,11 +75,7 @@ export default function StatsScreen() {
             style={styles.premiumSection}
           >
             <View style={styles.premiumHeader}>
-              <Ionicons
-                name="sparkles"
-                size={24}
-                color="#FFD700" // Cor de ouro para o ícone
-              />
+              <Ionicons name="sparkles" size={24} color="#FFD700" />
               <Text style={styles.premiumTitle}>Estatísticas Premium</Text>
             </View>
             <Text style={styles.premiumDescription}>
@@ -83,7 +84,7 @@ export default function StatsScreen() {
             </Text>
             <StyledButton
               title="Fazer Upgrade Agora"
-              onPress={() => {}} // Ação será implementada no futuro
+              onPress={() => navigation.navigate('Premium')}
               icon={
                 <Ionicons name="arrow-up-circle" size={20} color="#FFFFFF" />
               }
