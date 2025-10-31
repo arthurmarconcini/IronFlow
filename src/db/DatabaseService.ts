@@ -440,6 +440,24 @@ const getExerciseRecord = async (
   }
 }
 
+// --- Funções de Estatísticas ---
+const getWorkoutLogsCount = async (userId: string): Promise<number> => {
+  const result = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM workout_logs WHERE user_id = ? AND status = 'completed'",
+    userId,
+  )
+  return result?.count ?? 0
+}
+
+const getTotalSetsCompleted = async (userId: string): Promise<number> => {
+  // Junta com workout_logs para garantir que estamos contando apenas séries de treinos do usuário correto.
+  const result = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(s.id) as count FROM set_logs s JOIN workout_logs w ON s.workout_log_id = w.id WHERE w.user_id = ?',
+    userId,
+  )
+  return result?.count ?? 0
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -459,4 +477,6 @@ export const DatabaseService = {
   saveOrUpdateExerciseRecord,
   finishWorkoutLog,
   getExerciseRecord,
+  getWorkoutLogsCount,
+  getTotalSetsCompleted,
 }
