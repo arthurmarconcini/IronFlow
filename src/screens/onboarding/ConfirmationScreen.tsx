@@ -11,6 +11,8 @@ import { ConfirmationScreenRouteProp } from '../../navigation/types'
 import { useProfileStore } from '../../state/profileStore'
 import { useAuth } from '../../hooks/useAuth'
 import { SyncService } from '../../sync/SyncService'
+import { useWorkouts } from '../../db/useWorkouts'
+import { WorkoutGeneratorService } from '../../services/WorkoutGeneratorService'
 
 type Props = {
   route: ConfirmationScreenRouteProp
@@ -20,6 +22,7 @@ const ConfirmationScreen = ({ route }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
   const setProfile = useProfileStore((state) => state.setProfile)
+  const { createWorkout } = useWorkouts()
 
   const {
     goal,
@@ -92,9 +95,27 @@ const ConfirmationScreen = ({ route }: Props) => {
       }
 
       const newId = await DatabaseService.saveUserProfile(userProfileData)
+      const finalProfile = { ...userProfileData, id: newId }
+
+      // Gera e salva os treinos bônus
+      try {
+        const previewWorkouts =
+          WorkoutGeneratorService.generatePreviewWorkout(finalProfile)
+        if (previewWorkouts && previewWorkouts.length > 0) {
+          for (const workout of previewWorkouts) {
+            await createWorkout(
+              workout.name,
+              workout.muscleGroup,
+              workout.exercises,
+            )
+          }
+        }
+      } catch (workoutError) {
+        console.error('Erro ao gerar ou salvar treinos bônus:', workoutError)
+        // Não impede o fluxo principal de registro
+      }
 
       // Atualiza o estado global. O RootNavigator irá reagir e trocar a tela.
-      const finalProfile = { ...userProfileData, id: newId }
       setProfile(finalProfile)
 
       // Dispara a sincronização em segundo plano
