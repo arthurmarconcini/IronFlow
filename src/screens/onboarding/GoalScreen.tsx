@@ -17,7 +17,7 @@ type Props = {
 }
 
 type Goal = {
-  id: 'GAIN_MASS' | 'LOSE_FAT' | 'MAINTAIN'
+  id: 'GAIN_MASS' | 'LOSE_FAT' | 'MAINTAIN' | 'RECOMPOSITION' | 'ENDURANCE'
   title: string
   description: string
 }
@@ -38,6 +38,17 @@ const GOALS_DATA: Goal[] = [
     title: 'Manter a Forma',
     description: 'Foco em consistência e manutenção da saúde.',
   },
+  {
+    id: 'RECOMPOSITION',
+    title: 'Recomposição Corporal',
+    description: 'Foco em ganhar músculo e perder gordura simultaneamente.',
+  },
+  {
+    id: 'ENDURANCE',
+    title: 'Resistência',
+    description:
+      'Foco em melhorar a capacidade cardiorrespiratória e a estamina.',
+  },
 ]
 
 const GoalScreen = ({ navigation }: Props) => {
@@ -45,7 +56,7 @@ const GoalScreen = ({ navigation }: Props) => {
 
   const handleNext = () => {
     if (selectedGoal) {
-      navigation.navigate('Biometrics', { goal: selectedGoal })
+      navigation.navigate('Demographics', { goal: selectedGoal })
     }
   }
 
