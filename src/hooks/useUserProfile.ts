@@ -7,6 +7,10 @@ import { SyncService } from '../sync/SyncService'
 import { UserProfile } from '../types/database'
 import { Timestamp } from 'firebase/firestore'
 
+/**
+ * Hook para gerenciar o perfil do usuário com uma estratégia "local-first"
+ * e "hydrate-from-cloud" como fallback.
+ */
 export const useUserProfile = () => {
   const { user } = useAuth()
   const { setProfile, setInitializationStatus } = useProfileStore()
@@ -21,50 +25,55 @@ export const useUserProfile = () => {
 
     setInitializationStatus('loading')
 
-    if (isOnline) {
-      // ONLINE: Firestore é a fonte da verdade.
-      const serverProfileData = await SyncService.getProfileFromFirestore(
-        user.uid,
-      )
+    try {
+      // 1. Tenta carregar do banco de dados local primeiro.
+      let localProfile = await DatabaseService.getUserProfileByUserId(user.uid)
 
-      if (serverProfileData) {
-        // Usuário existente: Baixa o perfil, salva localmente e finaliza.
-        const serverTimestamp = (
-          serverProfileData.last_updated_server as Timestamp
-        )?.toMillis()
-        const profileToSave: Omit<UserProfile, 'id'> = {
-          userId: user.uid,
-          goal: serverProfileData.goal,
-          heightCm: serverProfileData.heightCm,
-          currentWeightKg: serverProfileData.currentWeightKg,
-          bmi: serverProfileData.bmi,
-          bmiCategory: serverProfileData.bmiCategory,
-          onboardingCompleted: serverProfileData.onboardingCompleted,
-          syncStatus: 'synced',
-          lastModifiedLocally: serverProfileData.lastModifiedLocally,
-          lastUpdatedServer: serverTimestamp,
+      // 2. Se não houver perfil local, mas estiver online, tente hidratar do Firestore.
+      if (!localProfile && isOnline) {
+        const serverProfileData = await SyncService.getProfileFromFirestore(
+          user.uid,
+        )
+
+        if (serverProfileData) {
+          // Transforma os dados do servidor para o formato do banco de dados local
+          const serverTimestamp = (
+            serverProfileData.last_updated_server as Timestamp
+          )?.toMillis()
+          const profileToSave: Omit<UserProfile, 'id'> = {
+            userId: user.uid,
+            displayName: serverProfileData.displayName,
+            dob: serverProfileData.dob,
+            sex: serverProfileData.sex,
+            experienceLevel: serverProfileData.experienceLevel,
+            availability: serverProfileData.availability,
+            goal: serverProfileData.goal,
+            heightCm: serverProfileData.heightCm,
+            currentWeightKg: serverProfileData.currentWeightKg,
+            bmi: serverProfileData.bmi,
+            bmiCategory: serverProfileData.bmiCategory,
+            onboardingCompleted: serverProfileData.onboardingCompleted,
+            syncStatus: 'synced', // O perfil está sincronizado com o que acabamos de baixar
+            lastModifiedLocally: serverProfileData.lastModifiedLocally,
+            lastUpdatedServer: serverTimestamp,
+          }
+          // Salva no banco de dados local
+          const savedId = await DatabaseService.saveUserProfile(profileToSave)
+          // Atualiza a variável localProfile para ser usada no passo final
+          localProfile = { ...profileToSave, id: savedId }
         }
-        const savedId = await DatabaseService.saveUserProfile(profileToSave)
-        setProfile({ ...profileToSave, id: savedId })
-      } else {
-        // Usuário genuinamente novo (não existe no servidor).
-        setProfile(null)
       }
+
+      // 3. Define o perfil no estado global.
+      // Se encontrou localmente, usa isso.
+      // Se hidratou da nuvem, usa isso.
+      // Se não encontrou em lugar nenhum, será `null` e o app irá para o onboarding.
+      setProfile(localProfile)
+    } catch (error) {
+      console.error('Erro ao inicializar o perfil do usuário:', error)
+      setProfile(null)
+    } finally {
       setInitializationStatus('ready')
-    } else {
-      // OFFLINE: O banco de dados local é a única fonte.
-      const localProfile = await DatabaseService.getUserProfileByUserId(
-        user.uid,
-      )
-      if (localProfile) {
-        // Usuário existente em dispositivo conhecido.
-        setProfile(localProfile)
-        setInitializationStatus('ready')
-      } else {
-        // AMBIGUIDADE: Usuário logado, offline, sem perfil local.
-        // Não podemos prosseguir. Requer conexão para a primeira sincronização.
-        setInitializationStatus('needs-online-sync')
-      }
     }
   }, [user, isOnline, setProfile, setInitializationStatus])
 

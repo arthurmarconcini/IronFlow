@@ -173,27 +173,35 @@ const saveUserProfile = async (
   } = profile
   const onboardingCompletedInt =
     onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
-  await db.runAsync(
-    'INSERT INTO user_profile (user_id, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
-    userId,
-    displayName ?? null,
-    dob ?? null,
-    sex ?? null,
-    experienceLevel ?? null,
-    availability ?? null,
-    goal ?? null,
-    heightCm ?? null,
-    currentWeightKg ?? null,
-    bmi ?? null,
-    bmiCategory ?? null,
-    onboardingCompletedInt,
-    syncStatus,
-    lastModifiedLocally,
-  )
-  const savedProfile = await getUserProfileByUserId(userId)
-  if (!savedProfile)
-    throw new Error('Failed to save or find user profile after upsert.')
-  return savedProfile.id!
+  try {
+    await db.runAsync(
+      'INSERT INTO user_profile (user_id, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
+      userId,
+      displayName ?? null,
+      dob ?? null,
+      sex ?? null,
+      experienceLevel ?? null,
+      availability ?? null,
+      goal ?? null,
+      heightCm ?? null,
+      currentWeightKg ?? null,
+      bmi ?? null,
+      bmiCategory ?? null,
+      onboardingCompletedInt,
+      syncStatus,
+      lastModifiedLocally,
+    )
+    const savedProfile = await getUserProfileByUserId(userId)
+    if (!savedProfile) {
+      throw new Error(
+        'Falha ao salvar ou encontrar o perfil do usuário após o upsert.',
+      )
+    }
+    return savedProfile.id!
+  } catch (error) {
+    console.error('Erro ao executar saveUserProfile:', error)
+    throw error
+  }
 }
 
 const getUserProfileByUserId = async (

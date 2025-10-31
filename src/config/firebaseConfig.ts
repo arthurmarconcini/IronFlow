@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app'
-
-// @ts-expect-error - Firebase SDK has a mismatch between its TypeScript definitions and its package structure.
+// @ts-expect-error - O SDK do Firebase tem uma incompatibilidade conhecida em suas definições de tipo para esta importação específica do React Native.
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth'
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -14,11 +13,12 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
-export { app }
-
+// Esta é a inicialização correta para garantir a persistência no React Native,
+// apesar do erro de tipo conhecido no SDK.
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage),
 })
+
+export { app }

@@ -13,6 +13,8 @@ import AvatarInput from '../../components/AvatarInput'
 import { useProfileStore } from '../../state/profileStore'
 import { Ionicons } from '@expo/vector-icons'
 import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
+import { signOut } from 'firebase/auth'
+import { auth } from '../../config/firebaseConfig'
 import { AppNavigationProp } from '../../navigation/types'
 
 const DataRow = ({
@@ -64,8 +66,19 @@ type Props = {
 }
 
 export default function ProfileScreen({ navigation }: Props) {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      // O listener onAuthStateChanged no hook useAuth irá detectar a mudança
+      // e atualizar o authStore, o que fará com que o RootNavigator
+      // redirecione para a tela de login.
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error)
+    }
+  }
 
   const goalMap = {
     GAIN_MASS: 'Ganhar Massa',
@@ -222,7 +235,7 @@ export default function ProfileScreen({ navigation }: Props) {
           <ActionButton
             icon="log-out-outline"
             label="Sair"
-            onPress={logout}
+            onPress={handleLogout}
             isLogout
           />
         </View>
