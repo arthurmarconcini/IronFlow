@@ -10,7 +10,7 @@ import {
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
 import { styles } from './styles'
-import { OnboardingNavigationProp } from '../../navigation/types'
+import { AuthNavigationProp } from '../../navigation/types'
 
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
@@ -18,7 +18,7 @@ import StyledButton from '../../components/StyledButton'
 export default function LoginScreen({
   navigation,
 }: {
-  navigation: OnboardingNavigationProp
+  navigation: AuthNavigationProp
 }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

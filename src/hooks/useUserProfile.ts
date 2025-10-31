@@ -42,6 +42,7 @@ export const useUserProfile = () => {
           )?.toMillis()
           const profileToSave: Omit<UserProfile, 'id'> = {
             userId: user.uid,
+            planType: serverProfileData.planType,
             displayName: serverProfileData.displayName,
             dob: serverProfileData.dob,
             sex: serverProfileData.sex,

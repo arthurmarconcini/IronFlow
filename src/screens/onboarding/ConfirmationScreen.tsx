@@ -42,11 +42,10 @@ const ConfirmationScreen = ({ route }: Props) => {
   }, [heightCm, weightKg])
 
   const goalMap = {
-    GAIN_MASS: 'Ganhar Massa',
-    LOSE_FAT: 'Perder Gordura',
+    GAIN_MASS: 'Hipertrofia',
+    FAT_LOSS: 'Emagrecimento / Definição',
+    STRENGTH: 'Força',
     MAINTAIN: 'Manter a Forma',
-    RECOMPOSITION: 'Recomposição Corporal',
-    ENDURANCE: 'Resistência',
   }
 
   const experienceMap = {

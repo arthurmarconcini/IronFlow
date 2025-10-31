@@ -6,21 +6,35 @@ import { theme } from '../theme'
 interface CircularProgressProps {
   size: number
   strokeWidth: number
-  progress: number // 0 to 1
+  progress: number // 0 to 100
+  children?: React.ReactNode
 }
 
 const CircularProgress: React.FC<CircularProgressProps> = ({
   size,
   strokeWidth,
   progress,
+  children,
 }) => {
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
-  const strokeDashoffset = circumference - progress * circumference
+  const strokeDashoffset = circumference - (progress / 100) * circumference
 
   return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ position: 'absolute' }}
+      >
         {/* Background Circle */}
         <Circle
           stroke={theme.colors.lightGray}
@@ -44,6 +58,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
+      {children}
     </View>
   )
 }
