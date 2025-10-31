@@ -1,5 +1,6 @@
-import { create } from 'zustand'
 import { Workout, StrengthExercise } from '../types/database'
+import { DatabaseService } from '../db/DatabaseService'
+import { useAuthStore } from './authStore'
 
 // Define o formato de um log de série individual
 export interface SetLog {
@@ -27,7 +28,7 @@ interface WorkoutExecutionState {
   isFinished: boolean
 
   // Ações para controlar o fluxo do treino
-  startWorkout: (workout: Workout) => void
+  startWorkout: (workout: Workout) => Promise<void>
   completeSet: (log: { weightKg: number; reps: number }) => void
   startRest: () => void
   tickRestTimer: () => void
@@ -51,7 +52,21 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
   (set, get) => ({
     ...initialState,
 
-    startWorkout: (workout) => {
+    startWorkout: async (workout) => {
+      const userId = useAuthStore.getState().user?.uid
+      if (!userId) {
+        console.error(
+          'Usuário não autenticado, não é possível iniciar o log do treino.',
+        )
+        return
+      }
+
+      // Inicia o log no banco de dados
+      const workoutLogId = await DatabaseService.startWorkoutLog(
+        workout.firestoreId,
+        userId,
+      )
+
       // Prepara os logs para cada exercício do treino
       const initialLogs: { [exerciseName: string]: SetLog[] } = {}
       workout.exercises.forEach((exercise) => {
@@ -73,12 +88,19 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
         currentExerciseIndex: 0,
         currentSetIndex: 0,
         isFinished: false,
+        workoutLogId, // Armazena o ID do log
       })
     },
 
     completeSet: (log) => {
-      const { workout, currentExerciseIndex, currentSetIndex, setLogs } = get()
-      if (!workout) return
+      const {
+        workout,
+        currentExerciseIndex,
+        currentSetIndex,
+        setLogs,
+        workoutLogId,
+      } = get()
+      if (!workout || !workoutLogId) return
 
       const exercise = workout.exercises[
         currentExerciseIndex
@@ -92,6 +114,31 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       }
 
       set({ setLogs: newLogs })
+
+      // Salva o log da série no banco de dados
+      const userId = useAuthStore.getState().user?.uid
+      if (userId) {
+        DatabaseService.logSetData({
+          workoutLogId,
+          exerciseName: exercise.name,
+          exerciseDbId: exercise.dbId || null,
+          setIndex: currentSetIndex + 1,
+          targetReps: exercise.reps,
+          actualReps: log.reps,
+          targetWeight: exercise.weight || null,
+          actualWeight: log.weightKg,
+          restTime: exercise.rest,
+          completedAt: Date.now(),
+        })
+
+        // Salva o recorde do exercício
+        DatabaseService.saveOrUpdateExerciseRecord({
+          userId,
+          exerciseName: exercise.name,
+          actualWeight: log.weightKg,
+          actualReps: log.reps,
+        })
+      }
     },
 
     startRest: () => {
@@ -157,9 +204,12 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     },
 
     finishWorkout: () => {
+      const { workoutLogId } = get()
+      if (workoutLogId) {
+        DatabaseService.finishWorkoutLog(workoutLogId)
+      }
       set({ isFinished: true })
     },
-
     reset: () => {
       set(initialState)
     },
