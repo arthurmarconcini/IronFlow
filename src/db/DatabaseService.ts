@@ -18,7 +18,7 @@ interface UserProfileFromDB {
   sex: 'male' | 'female' | 'other' | null
   experience_level: 'beginner' | 'intermediate' | 'advanced' | null
   availability: '1-2' | '3-4' | '5+' | null
-  goal: string | null
+  goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN' | null
   height_cm: number | null
   current_weight_kg: number | null
   bmi: number | null

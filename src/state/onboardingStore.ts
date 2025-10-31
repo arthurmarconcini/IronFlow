@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 interface OnboardingState {
   displayName: string
-  goal: string
+  goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN' | null
   dob: string | null
   sex: 'male' | 'female' | 'other' | null
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
@@ -15,7 +15,7 @@ interface OnboardingState {
 
 const initialState: OnboardingState = {
   displayName: '',
-  goal: '',
+  goal: null,
   dob: null,
   sex: null,
   experienceLevel: null,

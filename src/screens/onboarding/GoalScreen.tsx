@@ -17,37 +17,44 @@ type Props = {
 }
 
 type Goal = {
-  id: 'GAIN_MASS' | 'LOSE_FAT' | 'MAINTAIN' | 'RECOMPOSITION' | 'ENDURANCE'
+  id: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN'
+
   title: string
+
   description: string
 }
 
 const GOALS_DATA: Goal[] = [
   {
     id: 'GAIN_MASS',
-    title: 'Ganhar Massa Muscular',
-    description: 'Foco em hipertrofia e ganho de força.',
+
+    title: 'Hipertrofia (Ganhar Músculo)',
+
+    description: 'Foco em maximizar o ganho de massa muscular.',
   },
+
   {
-    id: 'LOSE_FAT',
-    title: 'Perder Gordura',
-    description: 'Foco em queima calórica e definição muscular.',
+    id: 'FAT_LOSS',
+
+    title: 'Emagrecimento / Definição',
+
+    description: 'Foco em maximizar o gasto calórico e preservar músculos.',
   },
+
+  {
+    id: 'STRENGTH',
+
+    title: 'Força',
+
+    description: 'Foco em maximizar sua capacidade de carga (1RM).',
+  },
+
   {
     id: 'MAINTAIN',
+
     title: 'Manter a Forma',
+
     description: 'Foco em consistência e manutenção da saúde.',
-  },
-  {
-    id: 'RECOMPOSITION',
-    title: 'Recomposição Corporal',
-    description: 'Foco em ganhar músculo e perder gordura simultaneamente.',
-  },
-  {
-    id: 'ENDURANCE',
-    title: 'Resistência',
-    description:
-      'Foco em melhorar a capacidade cardiorrespiratória e a estamina.',
   },
 ]
 

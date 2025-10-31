@@ -7,7 +7,7 @@ export interface UserProfile {
   sex: 'male' | 'female' | 'other' | null
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
   availability: '1-2' | '3-4' | '5+' | null
-  goal: string | null
+  goal: 'GAIN_MASS' | 'FAT_LOSS' | 'MAINTAIN' | 'STRENGTH' | null
   heightCm: number | null
   currentWeightKg: number | null
   bmi: number | null
