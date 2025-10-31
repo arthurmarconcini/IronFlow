@@ -1,50 +1,50 @@
 import { create } from 'zustand'
 import { Workout, StrengthExercise } from '../types/database'
 
-type TimerState = 'idle' | 'running' | 'paused' | 'resting'
-
-type SetLog = {
-  exerciseIndex: number
+// Define o formato de um log de série individual
+export interface SetLog {
   setIndex: number
+  weightKg: number | null
   reps: number | null
-  weight: number | null
-  completedAt: number // timestamp
+  completed: boolean
 }
 
+// Define o estado do cronômetro de descanso
+interface RestTimer {
+  isActive: boolean
+  duration: number
+  remaining: number
+}
+
+// Define a estrutura completa do estado de execução do treino
 interface WorkoutExecutionState {
-  currentWorkout: Workout | null
+  workout: Workout | null
   currentExerciseIndex: number
   currentSetIndex: number
-  setLogs: SetLog[]
-  timerState: TimerState
-  timerValue: number // in seconds
-  restTimeTarget: number // in seconds
+  setLogs: { [exerciseName: string]: SetLog[] }
+  restTimer: RestTimer
+  workoutLogId: number | null // ID do log principal no DB
+  isFinished: boolean
 
-  // Actions
+  // Ações para controlar o fluxo do treino
   startWorkout: (workout: Workout) => void
-  nextSet: () => void
-  previousSet: () => void
+  completeSet: (log: { weightKg: number; reps: number }) => void
+  startRest: () => void
+  tickRestTimer: () => void
+  finishRest: () => void
   nextExercise: () => void
-  previousExercise: () => void
-  skipRest: () => void
-  logSet: (log: { reps: number | null; weight: number | null }) => void
-  startTimer: () => void
-  pauseTimer: () => void
-  resumeTimer: () => void
-  startRestTimer: () => void
-  tickTimer: () => void
-  resetTimer: () => void
-  endWorkout: () => void
+  finishWorkout: () => void
+  reset: () => void
 }
 
 const initialState = {
-  currentWorkout: null,
+  workout: null,
   currentExerciseIndex: 0,
   currentSetIndex: 0,
-  setLogs: [],
-  timerState: 'idle' as TimerState,
-  timerValue: 0,
-  restTimeTarget: 0,
+  setLogs: {},
+  restTimer: { isActive: false, duration: 0, remaining: 0 },
+  workoutLogId: null,
+  isFinished: false,
 }
 
 export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
@@ -52,148 +52,115 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     ...initialState,
 
     startWorkout: (workout) => {
+      // Prepara os logs para cada exercício do treino
+      const initialLogs: { [exerciseName: string]: SetLog[] } = {}
+      workout.exercises.forEach((exercise) => {
+        if (exercise.type === 'strength') {
+          initialLogs[exercise.name] = Array.from(
+            { length: exercise.sets },
+            (_, i) => ({
+              setIndex: i + 1,
+              weightKg: null,
+              reps: null,
+              completed: false,
+            }),
+          )
+        }
+      })
       set({
-        ...initialState,
-        currentWorkout: workout,
+        workout,
+        setLogs: initialLogs,
+        currentExerciseIndex: 0,
+        currentSetIndex: 0,
+        isFinished: false,
       })
     },
 
-    nextSet: () => {
-      const { currentWorkout, currentExerciseIndex, currentSetIndex } = get()
-      if (!currentWorkout) return
+    completeSet: (log) => {
+      const { workout, currentExerciseIndex, currentSetIndex, setLogs } = get()
+      if (!workout) return
 
-      const currentExercise = currentWorkout.exercises[currentExerciseIndex]
-
-      if (currentExercise.type === 'strength') {
-        // Case 1: More sets in the current exercise
-        if (currentSetIndex < (currentExercise as StrengthExercise).sets - 1) {
-          set({ currentSetIndex: currentSetIndex + 1 })
-          return
-        }
+      const exercise = workout.exercises[
+        currentExerciseIndex
+      ] as StrengthExercise
+      const newLogs = { ...setLogs }
+      newLogs[exercise.name][currentSetIndex] = {
+        ...newLogs[exercise.name][currentSetIndex],
+        weightKg: log.weightKg,
+        reps: log.reps,
+        completed: true,
       }
 
-      // Case 2: Last set, but more exercises left
-      if (currentExerciseIndex < currentWorkout.exercises.length - 1) {
-        set({
-          currentExerciseIndex: currentExerciseIndex + 1,
-          currentSetIndex: 0,
-        })
-        return
-      }
-
-      // Case 3: Last set of the last exercise (workout ends)
-      // The UI will handle the completion logic
+      set({ setLogs: newLogs })
     },
 
-    previousSet: () => {
-      const { currentWorkout, currentExerciseIndex, currentSetIndex } = get()
-      if (!currentWorkout) return
-
-      // Case 1: Not the first set of the current exercise
-      if (currentSetIndex > 0) {
-        set({ currentSetIndex: currentSetIndex - 1 })
-        return
+    startRest: () => {
+      const { workout, currentExerciseIndex } = get()
+      if (!workout) return
+      const exercise = workout.exercises[currentExerciseIndex]
+      if (exercise.type === 'strength') {
+        set({
+          restTimer: {
+            isActive: true,
+            duration: exercise.rest,
+            remaining: exercise.rest,
+          },
+        })
       }
+    },
 
-      // Case 2: First set, but not the first exercise
-      if (currentExerciseIndex > 0) {
-        const prevExerciseIndex = currentExerciseIndex - 1
-        const prevExercise = currentWorkout.exercises[
-          prevExerciseIndex
-        ] as StrengthExercise
-        if (prevExercise.type === 'strength') {
-          set({
-            currentExerciseIndex: prevExerciseIndex,
-            currentSetIndex: prevExercise.sets - 1, // Go to the last set of the previous exercise
-          })
-        } else {
-          set({
-            currentExerciseIndex: prevExerciseIndex,
-            currentSetIndex: 0,
-          })
-        }
+    tickRestTimer: () => {
+      const { restTimer } = get()
+      if (restTimer.isActive && restTimer.remaining > 0) {
+        set({
+          restTimer: { ...restTimer, remaining: restTimer.remaining - 1 },
+        })
+      } else if (restTimer.isActive) {
+        get().finishRest()
+      }
+    },
+
+    finishRest: () => {
+      const { workout, currentExerciseIndex, currentSetIndex } = get()
+      if (!workout) return
+
+      const exercise = workout.exercises[
+        currentExerciseIndex
+      ] as StrengthExercise
+      const isLastSetOfExercise = currentSetIndex === exercise.sets - 1
+
+      if (isLastSetOfExercise) {
+        get().nextExercise()
+      } else {
+        set({
+          currentSetIndex: currentSetIndex + 1,
+          restTimer: { isActive: false, duration: 0, remaining: 0 },
+        })
       }
     },
 
     nextExercise: () => {
-      const { currentWorkout, currentExerciseIndex } = get()
-      if (
-        !currentWorkout ||
-        currentExerciseIndex >= currentWorkout.exercises.length - 1
-      ) {
-        return
-      }
-      set({
-        currentExerciseIndex: currentExerciseIndex + 1,
-        currentSetIndex: 0,
-      })
-    },
+      const { workout, currentExerciseIndex } = get()
+      if (!workout) return
 
-    previousExercise: () => {
-      const { currentExerciseIndex } = get()
-      if (currentExerciseIndex <= 0) {
-        return
-      }
-      set({
-        currentExerciseIndex: currentExerciseIndex - 1,
-        currentSetIndex: 0,
-      })
-    },
-
-    skipRest: () => {
-      const { nextSet, resetTimer } = get()
-      resetTimer()
-      nextSet()
-    },
-
-    logSet: (log) => {
-      const { currentExerciseIndex, currentSetIndex } = get()
-      const newLog: SetLog = {
-        ...log,
-        exerciseIndex: currentExerciseIndex,
-        setIndex: currentSetIndex,
-        completedAt: Date.now(),
-      }
-      set((state) => ({
-        setLogs: [...state.setLogs, newLog],
-      }))
-    },
-
-    startTimer: () => set({ timerState: 'running', timerValue: 0 }),
-    pauseTimer: () => set({ timerState: 'paused' }),
-    resumeTimer: () => set({ timerState: 'running' }),
-
-    startRestTimer: () => {
-      const { currentWorkout, currentExerciseIndex } = get()
-      if (!currentWorkout) return
-
-      const currentExercise = currentWorkout.exercises[
-        currentExerciseIndex
-      ] as StrengthExercise
-      if (currentExercise.type === 'strength') {
-        const restTime = currentExercise.rest ?? 60 // Default to 60s if not set
-
+      const isLastExercise =
+        currentExerciseIndex === workout.exercises.length - 1
+      if (isLastExercise) {
+        get().finishWorkout()
+      } else {
         set({
-          timerState: 'resting',
-          timerValue: restTime,
-          restTimeTarget: restTime,
+          currentExerciseIndex: currentExerciseIndex + 1,
+          currentSetIndex: 0,
+          restTimer: { isActive: false, duration: 0, remaining: 0 },
         })
       }
     },
 
-    tickTimer: () => {
-      const { timerState, timerValue } = get()
-      if (timerState === 'running') {
-        set({ timerValue: timerValue + 1 }) // Count up
-      } else if (timerState === 'resting') {
-        set({ timerValue: Math.max(0, timerValue - 1) }) // Count down, ensuring it doesn't go below 0
-      }
+    finishWorkout: () => {
+      set({ isFinished: true })
     },
 
-    resetTimer: () =>
-      set({ timerState: 'idle', timerValue: 0, restTimeTarget: 0 }),
-
-    endWorkout: () => {
+    reset: () => {
       set(initialState)
     },
   }),
