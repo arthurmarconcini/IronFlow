@@ -132,7 +132,7 @@ const BiometricsScreen = ({ navigation, route }: Props) => {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 3 de 3</Text>
+        <Text style={styles.progressIndicator}>Passo 5 de 5</Text>
         <StyledButton title="Próximo" onPress={handleFinish} />
       </View>
     </SafeAreaView>

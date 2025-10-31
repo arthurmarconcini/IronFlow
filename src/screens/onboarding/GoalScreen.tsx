@@ -97,7 +97,7 @@ const GoalScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 2 de 3</Text>
+        <Text style={styles.progressIndicator}>Passo 2 de 5</Text>
         <StyledButton
           title="Próximo"
           onPress={handleNext}

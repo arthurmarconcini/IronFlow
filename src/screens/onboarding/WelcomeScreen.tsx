@@ -28,7 +28,7 @@ const WelcomeScreen = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 1 de 3</Text>
+        <Text style={styles.progressIndicator}>Passo 1 de 5</Text>
         <StyledButton title="Vamos Começar" onPress={handleStart} />
         <StyledButton
           title="Já tenho uma conta"

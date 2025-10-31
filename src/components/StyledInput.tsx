@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useImperativeHandle, useRef } from 'react'
 import {
   View,
   TextInput,
@@ -8,58 +8,92 @@ import {
   Text,
   Pressable,
 } from 'react-native'
+import MaskInput, { Mask, MaskInputProps } from 'react-native-mask-input'
 import { theme } from '../theme'
 
-// Estendendo as props para incluir a label opcional
-interface StyledInputProps extends TextInputProps {
+// Props que são comuns ou que queremos expor
+type CustomInputProps = {
   isPassword?: boolean
   label?: string
-  containerStyle?: object // Para permitir estilos customizados no container
+  containerStyle?: object
+  mask?: Mask
 }
 
-const StyledInput: React.FC<StyledInputProps> = ({
-  isPassword,
-  label,
-  containerStyle,
-  style, // Extrai o style para aplicar ao TextInput
-  ...props
-}) => {
-  const [isSecure, setIsSecure] = useState(true)
-  const textInputRef = useRef<TextInput>(null)
+// Unindo as props de ambos os componentes de input com as nossas props customizadas
+type StyledInputProps = CustomInputProps & TextInputProps & MaskInputProps
 
-  const handlePress = () => {
-    textInputRef.current?.focus()
-  }
+// O que o nosso ref vai expor: a função focus
+export interface StyledInputRef {
+  focus: () => void
+}
 
-  const secureText = isPassword ? isSecure : false
+const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
+  ({ isPassword, label, containerStyle, style, mask, ...props }, ref) => {
+    const [isSecure, setIsSecure] = useState(true)
+    // O ref interno pode ser de qualquer um dos dois tipos
+    const innerRef = useRef<TextInput | MaskInput | null>(null)
 
-  return (
-    // O Pressable envolve tudo, tornando a área inteira clicável
-    <Pressable
-      onPress={handlePress}
-      style={[styles.pressableContainer, containerStyle]}
-    >
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputWrapper}>
+    // Expõe a função focus através do ref encaminhado
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        innerRef.current?.focus()
+      },
+    }))
+
+    const handlePress = () => {
+      innerRef.current?.focus()
+    }
+
+    const secureText = isPassword ? isSecure : false
+
+    // Renderiza o componente apropriado com as props corretas
+    const renderInput = () => {
+      const inputStyles = [styles.input, style]
+
+      if (mask) {
+        return (
+          <MaskInput
+            ref={innerRef as React.Ref<MaskInput>}
+            style={inputStyles}
+            placeholderTextColor={theme.colors.textMuted}
+            mask={mask}
+            {...props}
+          />
+        )
+      }
+
+      return (
         <TextInput
-          ref={textInputRef}
-          style={[styles.input, style]} // Combina estilos
+          ref={innerRef as React.Ref<TextInput>}
+          style={inputStyles}
           secureTextEntry={secureText}
           placeholderTextColor={theme.colors.textMuted}
           {...props}
         />
-        {isPassword && (
-          <TouchableOpacity
-            style={styles.eyeButton}
-            onPress={() => setIsSecure((prev) => !prev)}
-          >
-            <Text>{isSecure ? '👁️' : '🙈'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </Pressable>
-  )
-}
+      )
+    }
+
+    return (
+      <Pressable
+        onPress={handlePress}
+        style={[styles.pressableContainer, containerStyle]}
+      >
+        {label && <Text style={styles.label}>{label}</Text>}
+        <View style={styles.inputWrapper}>
+          {renderInput()}
+          {isPassword && (
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setIsSecure((prev) => !prev)}
+            >
+              <Text>{isSecure ? '👁️' : '🙈'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Pressable>
+    )
+  },
+)
 
 const styles = StyleSheet.create({
   pressableContainer: {
