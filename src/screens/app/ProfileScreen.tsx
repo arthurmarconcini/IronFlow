@@ -16,6 +16,7 @@ import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
 import { signOut } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
 import { AppNavigationProp } from '../../navigation/types'
+import { useSubscription } from '../../hooks/useSubscription'
 
 const DataRow = ({
   label,
@@ -68,6 +69,7 @@ type Props = {
 export default function ProfileScreen({ navigation }: Props) {
   const { user } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
+  const { planType } = useSubscription()
 
   const handleLogout = async () => {
     try {
@@ -104,6 +106,11 @@ export default function ProfileScreen({ navigation }: Props) {
     male: 'Masculino',
     female: 'Feminino',
     other: 'Outro',
+  }
+
+  const planMap = {
+    free: 'Gratuito',
+    premium: 'Premium',
   }
 
   const bmiCategoryMap = {
@@ -197,6 +204,7 @@ export default function ProfileScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
+          <DataRow label="Plano" value={planType ? planMap[planType] : 'N/A'} />
           <DataRow
             label="Objetivo"
             value={
