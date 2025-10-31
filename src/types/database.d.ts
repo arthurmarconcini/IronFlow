@@ -1,6 +1,7 @@
 export interface UserProfile {
   id?: number
   userId: string
+  planType: 'free' | 'premium' | null
   displayName: string | null
   dob: string | null
   sex: 'male' | 'female' | 'other' | null

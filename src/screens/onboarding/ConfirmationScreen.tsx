@@ -75,6 +75,7 @@ const ConfirmationScreen = ({ route }: Props) => {
     try {
       const userProfileData: Omit<UserProfile, 'id'> = {
         userId: user.uid,
+        planType: 'free', // Adiciona o valor padrão no momento da criação
         displayName,
         dob,
         sex,

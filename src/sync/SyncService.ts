@@ -51,6 +51,7 @@ const syncUserProfile = async (user: User | null) => {
               `Conflito detectado para o perfil ${user.uid}. O servidor tem dados mais recentes. Atualizando localmente.`,
             )
             await DatabaseService.updateUserProfile(profile.id!, {
+              planType: serverData.planType,
               displayName: serverData.displayName,
               dob: serverData.dob,
               sex: serverData.sex,
@@ -71,6 +72,7 @@ const syncUserProfile = async (user: User | null) => {
         // Prepara um objeto limpo para o Firestore, sem metadados locais.
         const profileDataForFirestore = {
           userId: profile.userId,
+          planType: profile.planType,
           displayName: profile.displayName,
           dob: profile.dob,
           sex: profile.sex,

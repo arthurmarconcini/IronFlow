@@ -12,6 +12,7 @@ let db: SQLite.SQLiteDatabase
 interface UserProfileFromDB {
   id: number
   user_id: string
+  plan_type: 'free' | 'premium' | null
   display_name: string | null
   dob: string | null
   sex: 'male' | 'female' | 'other' | null
@@ -44,6 +45,7 @@ interface WorkoutFromDb {
 const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
   id: record.id,
   userId: record.user_id,
+  planType: record.plan_type,
   displayName: record.display_name,
   dob: record.dob,
   sex: record.sex,
@@ -85,6 +87,7 @@ const initDB = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS user_profile (
       id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
       user_id TEXT NOT NULL UNIQUE,
+      plan_type TEXT DEFAULT 'free',
       display_name TEXT,
       dob TEXT,
       sex TEXT,
@@ -157,6 +160,7 @@ const saveUserProfile = async (
 ): Promise<number> => {
   const {
     userId,
+    planType,
     displayName,
     dob,
     sex,
@@ -175,8 +179,9 @@ const saveUserProfile = async (
     onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
   try {
     await db.runAsync(
-      'INSERT INTO user_profile (user_id, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
+      'INSERT INTO user_profile (user_id, plan_type, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET plan_type=excluded.plan_type, display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
       userId,
+      planType ?? 'free',
       displayName ?? null,
       dob ?? null,
       sex ?? null,
