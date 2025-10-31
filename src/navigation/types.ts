@@ -19,6 +19,8 @@ export type OnboardingStackParamList = {
     heightCm: number
     weightKg: number
   }
+  Login: undefined
+  Register: undefined
 }
 
 export type AppTabParamList = {
