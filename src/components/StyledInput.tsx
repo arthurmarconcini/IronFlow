@@ -1,4 +1,9 @@
-import React, { useState, useImperativeHandle, useRef } from 'react'
+import React, {
+  useState,
+  useImperativeHandle,
+  useRef,
+  ComponentRef,
+} from 'react'
 import {
   View,
   TextInput,
@@ -11,7 +16,6 @@ import {
 import MaskInput, { Mask, MaskInputProps } from 'react-native-mask-input'
 import { theme } from '../theme'
 
-// Props que são comuns ou que queremos expor
 type CustomInputProps = {
   isPassword?: boolean
   label?: string
@@ -19,10 +23,8 @@ type CustomInputProps = {
   mask?: Mask
 }
 
-// Unindo as props de ambos os componentes de input com as nossas props customizadas
 type StyledInputProps = CustomInputProps & TextInputProps & MaskInputProps
 
-// O que o nosso ref vai expor: a função focus
 export interface StyledInputRef {
   focus: () => void
 }
@@ -30,30 +32,36 @@ export interface StyledInputRef {
 const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
   ({ isPassword, label, containerStyle, style, mask, ...props }, ref) => {
     const [isSecure, setIsSecure] = useState(true)
-    // O ref interno pode ser de qualquer um dos dois tipos
-    const innerRef = useRef<TextInput | MaskInput | null>(null)
+    const textInputRef = useRef<TextInput>(null)
+    const maskInputRef = useRef<ComponentRef<typeof MaskInput>>(null)
 
-    // Expõe a função focus através do ref encaminhado
     useImperativeHandle(ref, () => ({
       focus: () => {
-        innerRef.current?.focus()
+        if (mask) {
+          maskInputRef.current?.focus()
+        } else {
+          textInputRef.current?.focus()
+        }
       },
     }))
 
     const handlePress = () => {
-      innerRef.current?.focus()
+      if (mask) {
+        maskInputRef.current?.focus()
+      } else {
+        textInputRef.current?.focus()
+      }
     }
 
     const secureText = isPassword ? isSecure : false
 
-    // Renderiza o componente apropriado com as props corretas
     const renderInput = () => {
       const inputStyles = [styles.input, style]
 
       if (mask) {
         return (
           <MaskInput
-            ref={innerRef as React.Ref<MaskInput>}
+            ref={maskInputRef}
             style={inputStyles}
             placeholderTextColor={theme.colors.textMuted}
             mask={mask}
@@ -64,7 +72,7 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
 
       return (
         <TextInput
-          ref={innerRef as React.Ref<TextInput>}
+          ref={textInputRef}
           style={inputStyles}
           secureTextEntry={secureText}
           placeholderTextColor={theme.colors.textMuted}
