@@ -1,25 +1,25 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { DatabaseService } from '../../db/DatabaseService'
 import { calculateBMI, getBMICategory } from '../../utils/bmiUtils'
-import { UserProfile } from '../../types/database'
-import { ConfirmationScreenRouteProp } from '../../navigation/types'
-import { useProfileStore } from '../../state/profileStore'
-import { useAuth } from '../../hooks/useAuth'
-import { SyncService } from '../../sync/SyncService'
+import {
+  ConfirmationScreenRouteProp,
+  OnboardingNavigationProp,
+} from '../../navigation/types'
+import { useOnboardingStore } from '../../state/onboardingStore'
 
 type Props = {
   route: ConfirmationScreenRouteProp
+  navigation: OnboardingNavigationProp
 }
 
-const ConfirmationScreen = ({ route }: Props) => {
-  const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
-  const setProfile = useProfileStore((state) => state.setProfile)
+const ConfirmationScreen = ({ route, navigation }: Props) => {
+  const setOnboardingData = useOnboardingStore(
+    (state) => state.setOnboardingData,
+  )
 
   const {
     goal,
@@ -65,44 +65,21 @@ const ConfirmationScreen = ({ route }: Props) => {
     OBESITY: 'Obesidade',
   }
 
-  const handleSaveProfile = async () => {
-    if (!user) {
-      console.error('Usuário não autenticado. Não é possível salvar o perfil.')
-      return
-    }
+  const handleConfirmAndRegister = () => {
+    // Salva todos os dados coletados no store Zustand temporário
+    setOnboardingData({
+      displayName,
+      goal,
+      dob,
+      sex,
+      experienceLevel,
+      availability,
+      heightCm,
+      weightKg,
+    })
 
-    setIsLoading(true)
-    try {
-      const userProfileData: Omit<UserProfile, 'id'> = {
-        userId: user.uid,
-        displayName,
-        dob,
-        sex,
-        experienceLevel,
-        availability,
-        goal,
-        heightCm,
-        currentWeightKg: weightKg,
-        bmi,
-        bmiCategory,
-        onboardingCompleted: true,
-        syncStatus: 'dirty',
-        lastModifiedLocally: Date.now(),
-      }
-
-      const newId = await DatabaseService.saveUserProfile(userProfileData)
-
-      // Atualiza o estado global. O RootNavigator irá reagir e trocar a tela.
-      const finalProfile = { ...userProfileData, id: newId }
-      setProfile(finalProfile)
-
-      // Dispara a sincronização em segundo plano
-      SyncService.syncUserProfile(user)
-    } catch (error) {
-      console.error('Erro ao salvar o perfil:', error)
-    } finally {
-      setIsLoading(false)
-    }
+    // Navega para a tela de registro para criar a conta de usuário
+    navigation.navigate('Register')
   }
 
   return (
@@ -151,9 +128,8 @@ const ConfirmationScreen = ({ route }: Props) => {
 
       <View style={styles.footer}>
         <StyledButton
-          title="Salvar Perfil"
-          onPress={handleSaveProfile}
-          isLoading={isLoading}
+          title="Confirmar e Criar Conta"
+          onPress={handleConfirmAndRegister}
         />
       </View>
     </SafeAreaView>

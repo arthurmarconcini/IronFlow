@@ -3,10 +3,10 @@ import { create } from 'zustand'
 interface OnboardingState {
   displayName: string
   goal: string
-  dob: Date | null
+  dob: string | null
   sex: 'male' | 'female' | 'other' | null
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
-  availability: 'daily' | '3-4_times_week' | '1-2_times_week' | null
+  availability: '1-2' | '3-4' | '5+' | null
   heightCm: number | null
   weightKg: number | null
   setOnboardingData: (data: Partial<OnboardingState>) => void
