@@ -1,3 +1,7 @@
+import { Dimensions } from 'react-native'
+
+const { width: screenWidth } = Dimensions.get('window')
+
 const colors = {
   primary: '#007BFF',
   secondary: '#6C757D',
@@ -36,4 +40,5 @@ export const theme = {
   fontSizes,
   spacing,
   borderRadius,
+  screenWidth,
 }

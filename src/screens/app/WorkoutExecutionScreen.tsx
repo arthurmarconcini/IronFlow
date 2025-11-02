@@ -1,16 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, StyleSheet, Modal, ScrollView, Alert } from 'react-native'
+import React, { useEffect, useCallback, useRef, useState } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  FlatList,
+  TouchableOpacity,
+} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppRouteProp } from '../../navigation/types'
-import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
+import {
+  SetData,
+  useWorkoutExecutionStore,
+} from '../../state/workoutExecutionStore'
 import { DatabaseService } from '../../db/DatabaseService'
 import { theme } from '../../theme'
 import { StrengthExercise } from '../../types/database'
-import ScreenContainer from '../../components/ScreenContainer'
-import StyledInput from '../../components/StyledInput'
-import StyledButton from '../../components/StyledButton'
-import CircularProgress from '../../components/CircularProgress'
+import ExerciseSetRow from '../../components/ExerciseSetRow'
+import ExerciseSelectionModal from '../../components/ExerciseSelectionModal'
+import CompletionOverlay from '../../components/CompletionOverlay'
 
 type Props = {
   route: AppRouteProp<'WorkoutExecution'>
@@ -19,26 +29,28 @@ type Props = {
 export default function WorkoutExecutionScreen({ route }: Props) {
   const { workoutId } = route.params
   const navigation = useNavigation()
+  const flatListRef = useRef<FlatList>(null)
+  const [isModalVisible, setModalVisible] = useState(false)
 
-  // Local state for user inputs
-  const [weightInput, setWeightInput] = useState('')
-  const [repsInput, setRepsInput] = useState('')
-
-  // Zustand store state and actions
   const {
     workout,
     currentExerciseIndex,
     currentSetIndex,
     restTimer,
     isFinished,
+    completedSets,
     startWorkout,
     completeSet,
     startRest,
     tickRestTimer,
     reset,
+    goToExercise,
   } = useWorkoutExecutionStore()
 
-  // Effect to initialize the workout in the store
+  const onTimerFinish = useCallback(() => {
+    useWorkoutExecutionStore.getState().finishRest()
+  }, [])
+
   useFocusEffect(
     useCallback(() => {
       const loadWorkout = async () => {
@@ -48,13 +60,10 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         }
       }
       loadWorkout()
-
-      // Reset the store when the screen loses focus
       return () => reset()
     }, [workoutId, startWorkout, reset]),
   )
 
-  // Effect for the rest timer countdown
   useEffect(() => {
     if (restTimer.isActive) {
       const interval = setInterval(() => {
@@ -64,7 +73,6 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     }
   }, [restTimer.isActive, tickRestTimer])
 
-  // Effect to handle workout completion
   useEffect(() => {
     if (isFinished) {
       Alert.alert(
@@ -75,115 +83,138 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     }
   }, [isFinished, navigation])
 
-  const handleCompleteSet = () => {
-    const weight = parseFloat(weightInput)
-    const reps = parseInt(repsInput, 10)
-
-    if (isNaN(weight) || isNaN(reps)) {
-      Alert.alert(
-        'Erro',
-        'Por favor, insira valores válidos para peso e repetições.',
-      )
-      return
+  useEffect(() => {
+    if (workout && flatListRef.current) {
+      flatListRef.current.scrollToIndex({
+        index: currentExerciseIndex,
+        animated: true,
+      })
     }
+  }, [currentExerciseIndex, workout])
 
-    completeSet({ weightKg: weight, reps })
-    startRest()
-    // Clear inputs for the next set
-    setWeightInput('')
-    setRepsInput('')
+  const handleCompleteSet = (setIndex: number, setData: SetData) => {
+    completeSet(setData)
+    const currentExercise = workout!.exercises[
+      currentExerciseIndex
+    ] as StrengthExercise
+    if (
+      currentExerciseIndex < workout!.exercises.length - 1 ||
+      setIndex < currentExercise.sets - 1
+    ) {
+      startRest()
+    } else {
+      useWorkoutExecutionStore.getState().finishWorkout()
+    }
+  }
+
+  const handleSelectExercise = (index: number) => {
+    goToExercise(index)
+    setModalVisible(false)
   }
 
   if (!workout) {
     return (
-      <ScreenContainer>
+      <SafeAreaView style={styles.safeArea}>
         <Text>Carregando treino...</Text>
-      </ScreenContainer>
+      </SafeAreaView>
     )
   }
 
-  const currentExercise = workout.exercises[
-    currentExerciseIndex
-  ] as StrengthExercise
+  const renderExercise = ({
+    item: exercise,
+    index,
+  }: {
+    item: StrengthExercise
+    index: number
+  }) => {
+    const setsArray = Array.from({ length: exercise.sets }, (_, i) => i)
+    const lastCompletedSet =
+      completedSets[`${index}-${currentSetIndex - 1}`] ||
+      completedSets[`${index - 1}-${exercise.sets - 1}`]
+
+    const isExerciseCompleted =
+      index < currentExerciseIndex ||
+      (index === currentExerciseIndex && currentSetIndex >= exercise.sets)
+
+    return (
+      <View style={styles.exerciseContainer}>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <View style={styles.exerciseCard}>
+            <View style={styles.exerciseHeader}>
+              <Text style={styles.exerciseName}>{exercise.name}</Text>
+              <Ionicons
+                name="chevron-down-outline"
+                size={24}
+                color={theme.colors.secondary}
+              />
+            </View>
+            <View style={styles.detailsRow}>
+              <Text style={styles.detailsText}>Séries: {exercise.sets}</Text>
+              <Text style={styles.detailsText}>Reps Alvo: {exercise.reps}</Text>
+              <Text style={styles.detailsText}>Descanso: {exercise.rest}s</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <View>
+          {isExerciseCompleted && <CompletionOverlay />}
+          {setsArray.map((setIndex) => {
+            const isCompleted =
+              index < currentExerciseIndex ||
+              (index === currentExerciseIndex && setIndex < currentSetIndex)
+            const setData = completedSets[`${index}-${setIndex}`]
+
+            const isResting =
+              restTimer.isActive &&
+              index === currentExerciseIndex &&
+              setIndex === currentSetIndex - 1
+
+            return (
+              <ExerciseSetRow
+                key={setIndex}
+                setNumber={setIndex + 1}
+                targetReps={setData?.reps ?? exercise.reps}
+                targetWeight={setData?.weightKg ?? lastCompletedSet?.weightKg}
+                isCompleted={isCompleted}
+                isResting={isResting}
+                restDuration={exercise.rest}
+                onComplete={(data) => handleCompleteSet(setIndex, data)}
+                onTimerFinish={onTimerFinish}
+              />
+            )
+          })}
+        </View>
+      </View>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.workoutName}>{workout.name}</Text>
-          <Text style={styles.progressText}>
-            Exercício {currentExerciseIndex + 1} de {workout.exercises.length}
-          </Text>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.workoutName}>{workout.name}</Text>
+        <Text style={styles.progressText}>
+          Exercício {currentExerciseIndex + 1} de {workout.exercises.length}
+        </Text>
+      </View>
 
-        {/* Current Exercise */}
-        <View style={styles.exerciseCard}>
-          <Text style={styles.exerciseName}>{currentExercise.name}</Text>
-          <View style={styles.detailsRow}>
-            <Text style={styles.detailsText}>
-              Série: {currentSetIndex + 1} / {currentExercise.sets}
-            </Text>
-            <Text style={styles.detailsText}>
-              Reps Alvo: {currentExercise.reps}
-            </Text>
-            <Text style={styles.detailsText}>
-              Descanso: {currentExercise.rest}s
-            </Text>
-          </View>
-        </View>
+      <FlatList
+        ref={flatListRef}
+        data={workout.exercises as StrengthExercise[]}
+        renderItem={renderExercise}
+        keyExtractor={(item, index) => `${item.name}-${index}`}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEnabled={false}
+      />
 
-        {/* Inputs */}
-        <View style={styles.inputContainer}>
-          <StyledInput
-            label="Peso (kg)"
-            value={weightInput}
-            onChangeText={setWeightInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-          />
-          <StyledInput
-            label="Repetições"
-            value={repsInput}
-            onChangeText={setRepsInput}
-            keyboardType="numeric"
-            containerStyle={styles.input}
-          />
-        </View>
-
-        {/* Action Button */}
-        <StyledButton
-          title="Concluir Série"
-          onPress={handleCompleteSet}
-          containerStyle={styles.actionButton}
-        />
-
-        {/* Rest Timer Modal */}
-        <Modal
-          visible={restTimer.isActive}
-          transparent={true}
-          animationType="fade"
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.timerTitle}>Descanso</Text>
-              <CircularProgress
-                size={150}
-                strokeWidth={15}
-                progress={(restTimer.remaining / restTimer.duration) * 100}
-              >
-                <Text style={styles.timerText}>{restTimer.remaining}</Text>
-              </CircularProgress>
-              <StyledButton
-                title="Pular Descanso"
-                onPress={() => useWorkoutExecutionStore.getState().finishRest()}
-                type="secondary"
-                containerStyle={{ marginTop: 20 }}
-              />
-            </View>
-          </View>
-        </Modal>
-      </ScrollView>
+      <ExerciseSelectionModal
+        isVisible={isModalVisible}
+        exercises={workout.exercises}
+        currentExerciseIndex={currentExerciseIndex}
+        onClose={() => setModalVisible(false)}
+        onSelectExercise={handleSelectExercise}
+      />
     </SafeAreaView>
   )
 }
@@ -193,11 +224,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  container: {
-    padding: theme.spacing.medium,
-  },
   header: {
-    marginBottom: theme.spacing.large,
+    padding: theme.spacing.medium,
   },
   workoutName: {
     fontSize: 28,
@@ -211,22 +239,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.small / 2,
   },
+  exerciseContainer: {
+    width: theme.screenWidth,
+    paddingHorizontal: theme.spacing.medium,
+  },
   exerciseCard: {
     backgroundColor: theme.colors.white,
     borderRadius: 12,
     padding: theme.spacing.medium,
-    marginBottom: theme.spacing.large,
+    marginBottom: theme.spacing.medium,
     elevation: 3,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
+  exerciseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.medium,
+  },
   exerciseName: {
     fontSize: 24,
     fontWeight: '600',
     color: theme.colors.text,
-    textAlign: 'center',
-    marginBottom: theme.spacing.medium,
+    marginRight: theme.spacing.small,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -235,38 +272,5 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  input: {
-    width: '48%',
-  },
-  actionButton: {
-    marginTop: theme.spacing.medium,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.white,
-    borderRadius: 20,
-    padding: theme.spacing.large,
-    alignItems: 'center',
-    width: '80%',
-  },
-  timerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.large,
-  },
-  timerText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: theme.colors.primary,
   },
 })
