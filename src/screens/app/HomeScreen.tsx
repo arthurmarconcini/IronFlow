@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
 import { useWorkouts } from '../../db/useWorkouts'
@@ -18,6 +19,7 @@ import ScreenContainer from '../../components/ScreenContainer'
 import WorkoutCard from '../../components/WorkoutCard'
 import { useNetworkStore } from '../../state/networkStore'
 import { useProfileStore } from '../../state/profileStore'
+import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 
 export default function HomeScreen() {
   const { user } = useAuth()
@@ -26,6 +28,8 @@ export default function HomeScreen() {
     useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
   const isOnline = useNetworkStore((state) => state.isOnline)
+  const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
+  const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
 
   useEffect(() => {
     syncWorkouts()
@@ -36,6 +40,38 @@ export default function HomeScreen() {
       fetchLocalWorkouts()
     }, [fetchLocalWorkouts]),
   )
+
+  const handlePlayWorkout = (workoutId: string) => {
+    if (activeWorkout && activeWorkout.firestoreId !== workoutId) {
+      Alert.alert(
+        'Treino em Andamento',
+        `Você já tem um treino "${activeWorkout.name}" em andamento. O que deseja fazer?`,
+        [
+          {
+            text: 'Continuar Treino',
+            onPress: () =>
+              navigation.navigate('WorkoutExecution', {
+                workoutId: activeWorkout.firestoreId,
+              }),
+          },
+          {
+            text: 'Abandonar e Iniciar Novo',
+            style: 'destructive',
+            onPress: () => {
+              resetWorkout()
+              navigation.navigate('WorkoutExecution', { workoutId })
+            },
+          },
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+        ],
+      )
+    } else {
+      navigation.navigate('WorkoutExecution', { workoutId })
+    }
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -100,11 +136,7 @@ export default function HomeScreen() {
                   workoutId: item.firestoreId,
                 })
               }
-              onPlay={() =>
-                navigation.navigate('WorkoutExecution', {
-                  workoutId: item.firestoreId,
-                })
-              }
+              onPlay={() => handlePlayWorkout(item.firestoreId)}
             />
           )}
           ListEmptyComponent={() => (

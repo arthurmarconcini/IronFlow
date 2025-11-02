@@ -49,6 +49,11 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     ...initialState,
 
     startWorkout: async (workout) => {
+      // Se o treino já estiver na store, não faça nada.
+      if (get().workout?.id === workout.id) {
+        return
+      }
+
       const userId = useAuthStore.getState().user?.uid
       if (!userId) return
 
@@ -171,9 +176,23 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     },
 
     goToExercise: (exerciseIndex: number) => {
+      const { workout, completedSets } = get()
+      if (!workout) return
+
+      const exercise = workout.exercises[exerciseIndex] as StrengthExercise
+      let nextSetIndex = 0
+      for (let i = 0; i < exercise.sets; i++) {
+        if (!completedSets[`${exerciseIndex}-${i}`]) {
+          nextSetIndex = i
+          break
+        }
+        // If all sets are completed, it will default to the last set index + 1
+        nextSetIndex = i + 1
+      }
+
       set({
         currentExerciseIndex: exerciseIndex,
-        currentSetIndex: 0,
+        currentSetIndex: nextSetIndex,
         restTimer: { isActive: false, duration: 0, remaining: 0 },
       })
     },

@@ -45,6 +45,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     tickRestTimer,
     reset,
     goToExercise,
+    goToNextExercise,
   } = useWorkoutExecutionStore()
 
   const onTimerFinish = useCallback(() => {
@@ -60,8 +61,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         }
       }
       loadWorkout()
-      return () => reset()
-    }, [workoutId, startWorkout, reset]),
+      // A função de limpeza que chamava reset() foi removida daqui.
+    }, [workoutId, startWorkout]),
   )
 
   useEffect(() => {
@@ -74,14 +75,49 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   }, [restTimer.isActive, tickRestTimer])
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Se o treino não estiver finalizado, mostre o alerta.
+      if (!isFinished && workout) {
+        e.preventDefault() // Previne a ação de sair da tela
+
+        Alert.alert(
+          'Abandonar Treino?',
+          'Você tem um treino em andamento. Tem certeza que deseja abandoná-lo? Seu progresso será perdido.',
+          [
+            { text: 'Não', style: 'cancel', onPress: () => {} },
+            {
+              text: 'Sim, Abandonar',
+              style: 'destructive',
+              onPress: () => {
+                reset()
+                navigation.dispatch(e.data.action)
+              },
+            },
+          ],
+        )
+      }
+    })
+
+    return unsubscribe
+  }, [navigation, isFinished, workout, reset])
+
+  useEffect(() => {
     if (isFinished) {
       Alert.alert(
         'Treino Concluído!',
         'Você finalizou seu treino com sucesso.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              reset()
+              navigation.goBack()
+            },
+          },
+        ],
       )
     }
-  }, [isFinished, navigation])
+  }, [isFinished, navigation, reset])
 
   useEffect(() => {
     if (workout && flatListRef.current) {
@@ -112,6 +148,15 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     setModalVisible(false)
   }
 
+  const getItemLayout = (
+    data: ArrayLike<StrengthExercise> | null | undefined,
+    index: number,
+  ) => ({
+    length: theme.screenWidth,
+    offset: theme.screenWidth * index,
+    index,
+  })
+
   if (!workout) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -136,6 +181,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
       index < currentExerciseIndex ||
       (index === currentExerciseIndex && currentSetIndex >= exercise.sets)
 
+    const isLastExercise = index === workout!.exercises.length - 1
+
     return (
       <View style={styles.exerciseContainer}>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
@@ -157,12 +204,14 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         </TouchableOpacity>
 
         <View>
-          {isExerciseCompleted && <CompletionOverlay />}
+          {isExerciseCompleted && (
+            <CompletionOverlay
+              onPressNext={!isLastExercise ? goToNextExercise : undefined}
+            />
+          )}
           {setsArray.map((setIndex) => {
-            const isCompleted =
-              index < currentExerciseIndex ||
-              (index === currentExerciseIndex && setIndex < currentSetIndex)
             const setData = completedSets[`${index}-${setIndex}`]
+            const isCompleted = !!setData
 
             const isResting =
               restTimer.isActive &&
@@ -206,6 +255,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         scrollEnabled={false}
+        getItemLayout={getItemLayout}
       />
 
       <ExerciseSelectionModal
