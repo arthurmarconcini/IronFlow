@@ -18,7 +18,6 @@ import { theme } from '../theme'
 
 type CustomInputProps = {
   isPassword?: boolean
-  label?: string
   containerStyle?: object
   mask?: Mask
 }
@@ -30,7 +29,7 @@ export interface StyledInputRef {
 }
 
 const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
-  ({ isPassword, label, containerStyle, style, mask, ...props }, ref) => {
+  ({ isPassword, containerStyle, style, mask, ...props }, ref) => {
     const [isSecure, setIsSecure] = useState(true)
     const textInputRef = useRef<TextInput>(null)
     const maskInputRef = useRef<ComponentRef<typeof MaskInput>>(null)
@@ -86,7 +85,6 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
         onPress={handlePress}
         style={[styles.pressableContainer, containerStyle]}
       >
-        {label && <Text style={styles.label}>{label}</Text>}
         <View style={styles.inputWrapper}>
           {renderInput()}
           {isPassword && (

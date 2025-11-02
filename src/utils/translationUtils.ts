@@ -47,6 +47,44 @@ const equipmentTranslations: { [key: string]: string } = {
   'wheel roller': 'Roda Abdominal',
 }
 
+export const goalMap = {
+  GAIN_MASS: 'Ganhar Massa',
+  LOSE_FAT: 'Perder Gordura',
+  MAINTAIN: 'Manter a Forma',
+  RECOMPOSITION: 'Recomposição Corporal',
+  ENDURANCE: 'Resistência',
+}
+
+export const experienceMap = {
+  beginner: 'Iniciante',
+  intermediate: 'Intermediário',
+  advanced: 'Avançado',
+}
+
+export const availabilityMap = {
+  '1-2': '1-2 dias/semana',
+  '3-4': '3-4 dias/semana',
+  '5+': '5+ dias/semana',
+}
+
+export const sexMap = {
+  male: 'Masculino',
+  female: 'Feminino',
+  other: 'Outro',
+}
+
+export const planMap = {
+  free: 'Gratuito',
+  premium: 'Premium',
+}
+
+export const bmiCategoryMap = {
+  UNDERWEIGHT: 'Abaixo do Peso',
+  HEALTHY_WEIGHT: 'Peso Saudável',
+  OVERWEIGHT: 'Sobrepeso',
+  OBESITY: 'Obesidade',
+}
+
 type TranslationCategory = 'bodyPart' | 'equipment'
 
 /**

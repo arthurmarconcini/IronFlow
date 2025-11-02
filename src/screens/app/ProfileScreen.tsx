@@ -17,19 +17,16 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
 import { AppNavigationProp } from '../../navigation/types'
 import { useSubscription } from '../../hooks/useSubscription'
-
-const DataRow = ({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number | null | undefined
-}) => (
-  <View style={styles.dataRow}>
-    <Text style={styles.dataLabel}>{label}</Text>
-    <Text style={styles.dataValue}>{value || 'N/A'}</Text>
-  </View>
-)
+import ProfileCard from '../../components/ProfileCard'
+import InfoRow from '../../components/InfoRow'
+import {
+  availabilityMap,
+  bmiCategoryMap,
+  experienceMap,
+  goalMap,
+  planMap,
+  sexMap,
+} from '../../utils/translationUtils'
 
 const ActionButton = ({
   icon,
@@ -74,50 +71,9 @@ export default function ProfileScreen({ navigation }: Props) {
   const handleLogout = async () => {
     try {
       await signOut(auth)
-      // O listener onAuthStateChanged no hook useAuth irá detectar a mudança
-      // e atualizar o authStore, o que fará com que o RootNavigator
-      // redirecione para a tela de login.
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
     }
-  }
-
-  const goalMap = {
-    GAIN_MASS: 'Ganhar Massa',
-    LOSE_FAT: 'Perder Gordura',
-    MAINTAIN: 'Manter a Forma',
-    RECOMPOSITION: 'Recomposição Corporal',
-    ENDURANCE: 'Resistência',
-  }
-
-  const experienceMap = {
-    beginner: 'Iniciante',
-    intermediate: 'Intermediário',
-    advanced: 'Avançado',
-  }
-
-  const availabilityMap = {
-    '1-2': '1-2 dias/semana',
-    '3-4': '3-4 dias/semana',
-    '5+': '5+ dias/semana',
-  }
-
-  const sexMap = {
-    male: 'Masculino',
-    female: 'Feminino',
-    other: 'Outro',
-  }
-
-  const planMap = {
-    free: 'Gratuito',
-    premium: 'Premium',
-  }
-
-  const bmiCategoryMap = {
-    UNDERWEIGHT: 'Abaixo do Peso',
-    HEALTHY_WEIGHT: 'Peso Saudável',
-    OVERWEIGHT: 'Sobrepeso',
-    OBESITY: 'Obesidade',
   }
 
   const syncStatusMap = {
@@ -155,6 +111,29 @@ export default function ProfileScreen({ navigation }: Props) {
       ? `${profile?.currentWeightKg?.toFixed(1) ?? 'N/A'} kg`
       : `${convertKgToLbs(profile?.currentWeightKg ?? 0).toFixed(1)} lbs`
 
+  const BmiInfo = () => {
+    if (!profile?.bmi || !profile.bmiCategory) return null
+    const category =
+      bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]
+    return (
+      <View style={styles.bmiContainer}>
+        <Text style={styles.bmiValue}>{profile.bmi.toFixed(1)}</Text>
+        <Text style={styles.bmiCategory}>({category})</Text>
+      </View>
+    )
+  }
+
+  const SyncStatusInfo = () => (
+    <View style={styles.statusContainer}>
+      <Ionicons name={syncDisplay.icon} size={18} color={syncDisplay.color} />
+      <Text
+        style={[styles.dataValue, { color: syncDisplay.color, marginLeft: 6 }]}
+      >
+        {syncDisplay.text}
+      </Text>
+    </View>
+  )
+
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -166,9 +145,9 @@ export default function ProfileScreen({ navigation }: Props) {
           <Text style={styles.email}>{user?.email}</Text>
         </View>
 
-        <View style={styles.card}>
+        <ProfileCard title="Métricas Corporais">
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Meu Perfil</Text>
+            <Text style={styles.cardSubtitle}>Unidades</Text>
             <View style={styles.unitSelector}>
               <TouchableOpacity
                 onPress={() => setUnitSystem('metric')}
@@ -204,78 +183,71 @@ export default function ProfileScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
-          <DataRow label="Plano" value={planType ? planMap[planType] : 'N/A'} />
-          <DataRow
+          <InfoRow label="Altura" value={displayHeight} icon="body-outline" />
+          <InfoRow label="Peso" value={displayWeight} icon="barbell-outline" />
+          <InfoRow label="IMC" value={<BmiInfo />} icon="calculator-outline" />
+        </ProfileCard>
+
+        <ProfileCard title="Meu Plano de Treino">
+          <InfoRow
             label="Objetivo"
             value={
               profile?.goal
                 ? goalMap[profile.goal as keyof typeof goalMap]
-                : null
+                : 'N/A'
             }
+            icon="trophy-outline"
           />
-          <DataRow
+          <InfoRow
             label="Nível"
             value={
               profile?.experienceLevel
                 ? experienceMap[
                     profile.experienceLevel as keyof typeof experienceMap
                   ]
-                : null
+                : 'N/A'
             }
+            icon="analytics-outline"
           />
-          <DataRow
+          <InfoRow
             label="Disponibilidade"
             value={
               profile?.availability
                 ? availabilityMap[
                     profile.availability as keyof typeof availabilityMap
                   ]
-                : null
+                : 'N/A'
             }
+            icon="calendar-outline"
           />
-          <DataRow label="Altura" value={displayHeight} />
-          <DataRow label="Peso Atual" value={displayWeight} />
-          <DataRow label="Data de Nasc." value={profile?.dob} />
-          <DataRow
+        </ProfileCard>
+
+        <ProfileCard title="Minha Conta">
+          <InfoRow
+            label="Plano"
+            value={planType ? planMap[planType] : 'N/A'}
+            icon="ribbon-outline"
+          />
+          <InfoRow
+            label="Status"
+            value={<SyncStatusInfo />}
+            icon="sync-outline"
+          />
+          <InfoRow
             label="Sexo"
             value={
-              profile?.sex ? sexMap[profile.sex as keyof typeof sexMap] : null
+              profile?.sex ? sexMap[profile.sex as keyof typeof sexMap] : 'N/A'
             }
+            icon="transgender-outline"
           />
-          <DataRow
-            label="IMC"
-            value={
-              profile?.bmi && profile.bmiCategory
-                ? `${profile.bmi.toFixed(1)} (${
-                    bmiCategoryMap[
-                      profile.bmiCategory as keyof typeof bmiCategoryMap
-                    ]
-                  })`
-                : null
-            }
+          <InfoRow
+            label="Data de Nasc."
+            value={profile?.dob}
+            icon="calendar-number-outline"
           />
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>Status</Text>
-            <View style={styles.statusContainer}>
-              <Ionicons
-                name={syncDisplay.icon}
-                size={18}
-                color={syncDisplay.color}
-              />
-              <Text
-                style={[
-                  styles.dataValue,
-                  { color: syncDisplay.color, marginLeft: 6 },
-                ]}
-              >
-                {syncDisplay.text}
-              </Text>
-            </View>
-          </View>
-        </View>
+        </ProfileCard>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ações</Text>
+        <ProfileCard title="Ações">
           <ActionButton
             icon="create-outline"
             label="Editar Perfil"
@@ -284,7 +256,9 @@ export default function ProfileScreen({ navigation }: Props) {
           <ActionButton
             icon="stats-chart-outline"
             label="Estatísticas"
-            onPress={() => {}}
+            onPress={() =>
+              navigation.navigate('AppTabs', { screen: 'StatsTab' })
+            }
           />
           <ActionButton
             icon="settings-outline"
@@ -297,7 +271,7 @@ export default function ProfileScreen({ navigation }: Props) {
             onPress={handleLogout}
             isLogout
           />
-        </View>
+        </ProfileCard>
       </ScrollView>
     </ScreenContainer>
   )
@@ -307,7 +281,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     paddingVertical: theme.spacing.medium,
-    // O paddingHorizontal agora é gerenciado pelo ScreenContainer
   },
   displayName: {
     fontSize: theme.fontSizes.xlarge,
@@ -320,28 +293,18 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     marginTop: theme.spacing.small / 2,
   },
-  card: {
-    backgroundColor: theme.colors.white,
-    borderRadius: 12,
-    padding: theme.spacing.medium,
-    marginBottom: theme.spacing.large,
-    // O marginHorizontal foi removido para alinhar com o padding do ScreenContainer
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
+    paddingBottom: theme.spacing.small,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.lightGray,
   },
-  cardTitle: {
-    fontSize: theme.fontSizes.large,
-    fontWeight: '600',
-    color: theme.colors.text,
+  cardSubtitle: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.secondary,
   },
   unitSelector: {
     flexDirection: 'row',
@@ -364,18 +327,6 @@ const styles = StyleSheet.create({
   unitTextActive: {
     color: theme.colors.white,
   },
-  dataRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.small,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightGray,
-  },
-  dataLabel: {
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.secondary,
-  },
   dataValue: {
     fontSize: theme.fontSizes.medium,
     fontWeight: '500',
@@ -385,6 +336,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  bmiContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  bmiValue: {
+    fontSize: theme.fontSizes.medium,
+    fontWeight: '500',
+    color: theme.colors.text,
+  },
+  bmiCategory: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.secondary,
+    marginLeft: theme.spacing.small,
+  },
+
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
