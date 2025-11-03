@@ -30,7 +30,7 @@ interface BaseExercise {
 export interface StrengthExercise extends BaseExercise {
   type: 'strength'
   sets: number
-  reps: number
+  reps: string
   rest: number
   weight?: number
 }

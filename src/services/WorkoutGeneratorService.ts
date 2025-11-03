@@ -64,7 +64,7 @@ const createExercise = (
 ): StrengthExercise => ({
   ...exercise,
   sets,
-  reps: Number(reps), // Garante que reps seja um número
+  reps: String(reps), // Garante que reps seja uma string
   rest,
 })
 

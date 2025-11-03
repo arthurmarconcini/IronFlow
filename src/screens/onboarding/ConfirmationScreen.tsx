@@ -1,29 +1,21 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { DatabaseService } from '../../db/DatabaseService'
 import { calculateBMI, getBMICategory } from '../../utils/bmiUtils'
-import { UserProfile } from '../../types/database'
-import { ConfirmationScreenRouteProp } from '../../navigation/types'
-import { useProfileStore } from '../../state/profileStore'
-import { useAuth } from '../../hooks/useAuth'
-import { SyncService } from '../../sync/SyncService'
-import { useWorkouts } from '../../db/useWorkouts'
-import { WorkoutGeneratorService } from '../../services/WorkoutGeneratorService'
+import {
+  ConfirmationScreenRouteProp,
+  OnboardingNavigationProp,
+} from '../../navigation/types'
 
 type Props = {
   route: ConfirmationScreenRouteProp
+  navigation: OnboardingNavigationProp
 }
 
-const ConfirmationScreen = ({ route }: Props) => {
-  const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
-  const setProfile = useProfileStore((state) => state.setProfile)
-  const { createWorkout } = useWorkouts()
-
+const ConfirmationScreen = ({ route, navigation }: Props) => {
   const {
     goal,
     displayName,
@@ -67,63 +59,20 @@ const ConfirmationScreen = ({ route }: Props) => {
     OBESITY: 'Obesidade',
   }
 
-  const handleSaveProfile = async () => {
-    if (!user) {
-      console.error('Usuário não autenticado. Não é possível salvar o perfil.')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const userProfileData: Omit<UserProfile, 'id'> = {
-        userId: user.uid,
-        planType: 'free', // Adiciona o valor padrão no momento da criação
-        displayName,
-        dob,
-        sex,
-        experienceLevel,
-        availability,
-        goal,
-        heightCm,
-        currentWeightKg: weightKg,
-        bmi,
-        bmiCategory,
-        onboardingCompleted: true,
-        syncStatus: 'dirty',
-        lastModifiedLocally: Date.now(),
-      }
-
-      const newId = await DatabaseService.saveUserProfile(userProfileData)
-      const finalProfile = { ...userProfileData, id: newId }
-
-      // Gera e salva os treinos bônus
-      try {
-        const previewWorkouts =
-          WorkoutGeneratorService.generatePreviewWorkout(finalProfile)
-        if (previewWorkouts && previewWorkouts.length > 0) {
-          for (const workout of previewWorkouts) {
-            await createWorkout(
-              workout.name,
-              workout.muscleGroup,
-              workout.exercises,
-            )
-          }
-        }
-      } catch (workoutError) {
-        console.error('Erro ao gerar ou salvar treinos bônus:', workoutError)
-        // Não impede o fluxo principal de registro
-      }
-
-      // Atualiza o estado global. O RootNavigator irá reagir e trocar a tela.
-      setProfile(finalProfile)
-
-      // Dispara a sincronização em segundo plano
-      SyncService.syncUserProfile(user)
-    } catch (error) {
-      console.error('Erro ao salvar o perfil:', error)
-    } finally {
-      setIsLoading(false)
-    }
+  // Esta é a nova função de navegação
+  const handleNavigateToOffer = () => {
+    navigation.navigate('FreeWorkoutOffer', {
+      goal,
+      displayName,
+      dob,
+      sex,
+      experienceLevel,
+      availability,
+      heightCm,
+      weightKg,
+      bmi,
+      bmiCategory,
+    })
   }
 
   return (
@@ -172,9 +121,8 @@ const ConfirmationScreen = ({ route }: Props) => {
 
       <View style={styles.footer}>
         <StyledButton
-          title="Salvar Perfil e Começar"
-          onPress={handleSaveProfile}
-          isLoading={isLoading}
+          title="Confirmar e Ver Meu Treino"
+          onPress={handleNavigateToOffer}
         />
       </View>
     </SafeAreaView>
@@ -190,7 +138,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: theme.spacing.medium,
-    paddingTop: 60, // Espaço para o header transparente
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
