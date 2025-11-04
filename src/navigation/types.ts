@@ -6,6 +6,7 @@ import { Exercise as ApiExercise } from '../services/exerciseDB'
 export type AuthStackParamList = {
   Login: undefined
   Register: undefined
+  ForgotPassword: undefined
 }
 
 export type OnboardingStackParamList = {

@@ -37,4 +37,19 @@ export const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: theme.fontSizes.medium,
   },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: theme.spacing.large,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  separatorText: {
+    marginHorizontal: theme.spacing.medium,
+    color: theme.colors.textMuted,
+    fontSize: theme.fontSizes.small,
+  },
 })

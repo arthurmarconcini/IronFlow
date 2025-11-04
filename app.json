@@ -13,9 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ironflow.app"
     },
     "android": {
+      "package": "com.ironflow.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -27,7 +29,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
-    ]
+      "expo-sqlite",
+      "expo-web-browser"
+    ],
+    "scheme": "com.ironflow.app",
+    "extra": {
+      "eas": {
+        "projectId": "05e68be8-e95a-4d82-8fbb-29ff81b3695d"
+      }
+    }
   }
 }
