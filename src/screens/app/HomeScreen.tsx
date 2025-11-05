@@ -156,13 +156,27 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreateWorkout', {})}
-      >
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('WorkoutPlans')}
+        >
+          <Ionicons
+            name="compass-outline"
+            size={24}
+            color={theme.colors.white}
+          />
+          <Text style={styles.actionButtonText}>Explorar Planos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('CreateWorkout', {})}
+        >
+          <Ionicons name="add-outline" size={24} color={theme.colors.white} />
+          <Text style={styles.actionButtonText}>Criar Treino</Text>
+        </TouchableOpacity>
+      </View>
     </ScreenContainer>
   )
 }
@@ -181,11 +195,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.large,
   },
   greeting: {
-    fontSize: 32, // Aumenta o tamanho da fonte base da saudação
+    fontSize: 32,
     color: theme.colors.text,
   },
   userName: {
-    fontWeight: 'bold', // Mantém apenas o nome em negrito
+    fontWeight: 'bold',
   },
   listTitleContainer: {
     flexDirection: 'row',
@@ -209,7 +223,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
-    flexGrow: 1, // Garante que o container possa crescer
+    flexGrow: 1,
   },
   emptyContainer: {
     flex: 1,
@@ -230,15 +244,20 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.small,
     textAlign: 'center',
   },
-  fab: {
+  fabContainer: {
     position: 'absolute',
-    right: 20,
     bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  actionButton: {
     backgroundColor: theme.colors.primary,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    flexDirection: 'row',
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
@@ -246,8 +265,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  fabIcon: {
-    fontSize: 30,
-    color: '#FFFFFF',
+  actionButtonText: {
+    color: theme.colors.white,
+    fontSize: theme.fontSizes.medium,
+    fontWeight: 'bold',
+    marginLeft: theme.spacing.small,
   },
 })

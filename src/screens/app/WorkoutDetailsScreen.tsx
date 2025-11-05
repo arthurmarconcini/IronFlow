@@ -86,12 +86,14 @@ export default function WorkoutDetailsScreen() {
   }, [navigation, workout])
 
   const handleStartWorkout = useCallback(() => {
+    // Usa o workoutId diretamente dos parâmetros da rota para garantir que não seja nulo.
+    // A verificação de `workout` ainda é útil para garantir que os dados foram carregados.
     if (workout) {
       navigation.navigate('WorkoutExecution', {
-        workoutId: workout.firestoreId,
+        workoutId: workoutId,
       })
     }
-  }, [navigation, workout])
+  }, [navigation, workout, workoutId])
 
   if (isLoading) {
     return (

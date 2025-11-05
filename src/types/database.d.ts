@@ -66,3 +66,16 @@ export interface Workout {
   lastModified: number
   deletedAt?: number
 }
+
+// --- Planos de Treino (Templates) ---
+
+// Representa um plano de treino (template) que os usuários podem importar
+export interface WorkoutPlan {
+  id: number // ID local do SQLite
+  firestoreId: string // ID do Firestore para sincronização
+  name: string
+  description: string
+  category: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  // Um plano é uma coleção de "templates de treino"
+  workouts: Omit<Workout, 'id' | 'firestoreId' | 'lastModified' | 'deletedAt'>[]
+}

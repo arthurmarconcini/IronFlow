@@ -1,13 +1,14 @@
-import * as SQLite from 'expo-sqlite'
+import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite'
 import {
   UserProfile,
   Workout,
   Exercise as WorkoutExercise,
   ExerciseDefinition,
+  WorkoutPlan,
 } from '../types/database'
 
 // --- Instância Única do Banco de Dados ---
-let db: SQLite.SQLiteDatabase
+let db: SQLiteDatabase
 
 // --- Interfaces de Mapeamento (snake_case do DB) ---
 interface UserProfileFromDB {
@@ -40,6 +41,15 @@ interface WorkoutFromDb {
   exercises_json: string
   last_modified: number
   deleted_at: number | null
+}
+
+interface WorkoutPlanFromDb {
+  id: number
+  firestore_id: string
+  name: string
+  description: string
+  category: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  workouts_json: string
 }
 
 interface ExerciseDefinitionFromDB {
@@ -89,10 +99,19 @@ const mapRecordToWorkout = (record: WorkoutFromDb): Workout => ({
   deletedAt: record.deleted_at ?? undefined,
 })
 
+const mapRecordToWorkoutPlan = (record: WorkoutPlanFromDb): WorkoutPlan => ({
+  id: record.id,
+  firestoreId: record.firestore_id,
+  name: record.name,
+  description: record.description,
+  category: record.category,
+  workouts: JSON.parse(record.workouts_json),
+})
+
 // --- Função de Inicialização ---
 const initDB = async (): Promise<void> => {
   if (db) return
-  db = await SQLite.openDatabaseAsync('ironflow.db')
+  db = await openDatabaseAsync('ironflow.db')
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
 
@@ -173,6 +192,15 @@ const initDB = async (): Promise<void> => {
       instructions_json TEXT,
       secondary_muscles_json TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS workout_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      firestore_id TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      workouts_json TEXT NOT NULL
+    );
   `)
   console.log('Database singleton initialized with all tables.')
 }
@@ -228,7 +256,7 @@ const getExerciseDefinitions = async (
     limit,
   ])
 
-  return results.map((row) => ({
+  return results.map((row: ExerciseDefinitionFromDB) => ({
     id: row.id,
     name: row.name,
     bodyPart: row.bodyPart,
@@ -418,6 +446,36 @@ const getWorkoutById = async (firestoreId: string): Promise<Workout | null> => {
   return record ? mapRecordToWorkout(record) : null
 }
 
+// --- Funções de Planos de Treino (Workout Plans) ---
+const addWorkoutPlan = async (plan: Omit<WorkoutPlan, 'id'>): Promise<void> => {
+  const workoutsJson = JSON.stringify(plan.workouts)
+  await db.runAsync(
+    'INSERT INTO workout_plans (firestore_id, name, description, category, workouts_json) VALUES (?, ?, ?, ?, ?) ON CONFLICT(firestore_id) DO UPDATE SET name=excluded.name, description=excluded.description, category=excluded.category, workouts_json=excluded.workouts_json',
+    plan.firestoreId,
+    plan.name,
+    plan.description,
+    plan.category,
+    workoutsJson,
+  )
+}
+
+const getWorkoutPlans = async (): Promise<WorkoutPlan[]> => {
+  const allRows = await db.getAllAsync<WorkoutPlanFromDb>(
+    'SELECT * FROM workout_plans',
+  )
+  return allRows.map(mapRecordToWorkoutPlan)
+}
+
+const getWorkoutPlanById = async (
+  firestoreId: string,
+): Promise<WorkoutPlan | null> => {
+  const record = await db.getFirstAsync<WorkoutPlanFromDb>(
+    'SELECT * FROM workout_plans WHERE firestore_id = ?',
+    firestoreId,
+  )
+  return record ? mapRecordToWorkoutPlan(record) : null
+}
+
 // --- Funções de Logging de Treino ---
 
 interface SetLogData {
@@ -559,6 +617,9 @@ export const DatabaseService = {
   getAllWorkoutsForSync,
   deleteWorkout,
   getWorkoutById,
+  addWorkoutPlan,
+  getWorkoutPlans,
+  getWorkoutPlanById,
   startWorkoutLog,
   logSetData,
   saveOrUpdateExerciseRecord,

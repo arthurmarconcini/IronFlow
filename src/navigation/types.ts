@@ -56,6 +56,8 @@ export type AppStackParamList = {
   CustomizeExercise: { exercise: WorkoutExercise; index: number }
   WorkoutExecution: { workoutId: string }
   WorkoutDetails: { workoutId: string }
+  WorkoutPlans: undefined
+  WorkoutPlanDetails: { planId: string }
   Premium: undefined
   ExerciseDetail: { exercise: ExerciseDefinition }
 }

@@ -6,8 +6,8 @@ import { useSyncTrigger } from './src/hooks/useSyncTrigger'
 import { useAuth } from './src/hooks/useAuth' // Importar o hook
 import SplashScreen from './src/screens/SplashScreen'
 import Toast from 'react-native-toast-message'
-
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { seedWorkoutPlans } from './src/utils/seedWorkoutPlans'
 
 export default function App() {
   const [isDbLoading, setIsDbLoading] = useState(true)
@@ -24,6 +24,8 @@ export default function App() {
       try {
         // Inicializa o banco de dados e as tabelas necessárias.
         await DatabaseService.initDB()
+        // Popula o banco de dados com planos de treino padrão, se necessário.
+        await seedWorkoutPlans()
       } catch (e) {
         console.error('Failed to initialize the database', e)
         // TODO: Tratar o erro de inicialização, talvez mostrando uma tela de erro.
