@@ -63,6 +63,7 @@ const createExercise = (
   rest: number,
 ): StrengthExercise => ({
   ...exercise,
+  exerciseId: exercise.name, // Usar o nome como ID para presets
   sets,
   reps: String(reps), // Garante que reps seja uma string
   rest,

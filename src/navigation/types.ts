@@ -13,10 +13,24 @@ export type AuthStackParamList = {
 
 export type OnboardingStackParamList = {
   Welcome: undefined
-  Demographics: undefined
-  Biometrics: undefined
-  Experience: undefined
   Goal: undefined
+  Demographics: {
+    goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN'
+  }
+  Experience: {
+    goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN'
+    displayName: string
+    dob: string
+    sex: 'male' | 'female' | 'other'
+  }
+  Biometrics: {
+    goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN'
+    displayName: string
+    dob: string
+    sex: 'male' | 'female' | 'other'
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced'
+    availability: '1-2' | '3-4' | '5+'
+  }
   Confirmation: {
     goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN'
     displayName: string

@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AppRouteProp } from '../../navigation/types'
+import { AppNavigationProp, AppRouteProp } from '../../navigation/types'
 import {
   SetData,
   useWorkoutExecutionStore,
@@ -28,7 +28,7 @@ type Props = {
 
 export default function WorkoutExecutionScreen({ route }: Props) {
   const { workoutId } = route.params
-  const navigation = useNavigation()
+  const navigation = useNavigation<AppNavigationProp>()
   const flatListRef = useRef<FlatList>(null)
   const [isModalVisible, setModalVisible] = useState(false)
   const { finishWorkout } = useWorkouts() // Obter a função do hook

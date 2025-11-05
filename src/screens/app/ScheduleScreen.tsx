@@ -107,6 +107,7 @@ export default function ScheduleScreen() {
         text2: 'O treino foi adicionado à sua agenda.',
       })
       fetchScheduledWorkouts(selectedDate)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.message.includes('UNIQUE constraint failed')) {
         Toast.show({
