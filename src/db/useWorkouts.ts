@@ -12,8 +12,7 @@ import {
 import { app } from '../config/firebaseConfig'
 import { useAuth } from '../hooks/useAuth'
 import { DatabaseService } from './DatabaseService'
-import { Workout } from '../types/database'
-import { Exercise } from '../state/workoutCreationStore'
+import { Workout, Exercise } from '../types/database'
 import * as Crypto from 'expo-crypto'
 
 const firestoreDb = getFirestore(app)

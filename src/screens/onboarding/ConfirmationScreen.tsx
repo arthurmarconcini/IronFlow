@@ -39,18 +39,21 @@ const ConfirmationScreen = ({ route, navigation }: Props) => {
     STRENGTH: 'Força',
     MAINTAIN: 'Manter a Forma',
   }
+  type Goal = keyof typeof goalMap
 
   const experienceMap = {
     beginner: 'Iniciante',
     intermediate: 'Intermediário',
     advanced: 'Avançado',
   }
+  type Experience = keyof typeof experienceMap
 
   const availabilityMap = {
     '1-2': '1-2 dias/semana',
     '3-4': '3-4 dias/semana',
     '5+': '5+ dias/semana',
   }
+  type Availability = keyof typeof availabilityMap
 
   const bmiCategoryMap = {
     UNDERWEIGHT: 'Abaixo do Peso',
@@ -58,8 +61,8 @@ const ConfirmationScreen = ({ route, navigation }: Props) => {
     OVERWEIGHT: 'Sobrepeso',
     OBESITY: 'Obesidade',
   }
+  type BmiCategory = keyof typeof bmiCategoryMap
 
-  // Esta é a nova função de navegação
   const handleNavigateToOffer = () => {
     navigation.navigate('FreeWorkoutOffer', {
       goal,
@@ -88,18 +91,18 @@ const ConfirmationScreen = ({ route, navigation }: Props) => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Objetivo</Text>
-            <Text style={styles.summaryValue}>{goalMap[goal]}</Text>
+            <Text style={styles.summaryValue}>{goalMap[goal as Goal]}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Experiência</Text>
             <Text style={styles.summaryValue}>
-              {experienceMap[experienceLevel]}
+              {experienceMap[experienceLevel as Experience]}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Disponibilidade</Text>
             <Text style={styles.summaryValue}>
-              {availabilityMap[availability]}
+              {availabilityMap[availability as Availability]}
             </Text>
           </View>
           <View style={styles.summaryRow}>
@@ -113,7 +116,7 @@ const ConfirmationScreen = ({ route, navigation }: Props) => {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>IMC (Aprox.)</Text>
             <Text style={styles.summaryValue}>
-              {bmi.toFixed(1)} ({bmiCategoryMap[bmiCategory]})
+              {bmi.toFixed(1)} ({bmiCategoryMap[bmiCategory as BmiCategory]})
             </Text>
           </View>
         </View>

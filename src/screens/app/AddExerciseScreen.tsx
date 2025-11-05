@@ -1,36 +1,34 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import {
   StyleSheet,
   FlatList,
   Text,
-  ActivityIndicator,
   TouchableOpacity,
   View,
   ScrollView,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
-import debounce from 'lodash.debounce'
 import Toast from 'react-native-toast-message'
+import { Ionicons } from '@expo/vector-icons'
 import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
-import { useExerciseStore } from '../../state/exerciseStore'
-import { Exercise } from '../../services/exerciseDB'
-import { translateTerm } from '../../utils/translationUtils'
+import { ExerciseDefinition } from '../../types/database'
+import { mockExercises } from '../../utils/mockExercises'
 
 const BODY_PART_FILTERS = [
-  'back',
-  'cardio',
-  'chest',
-  'lower arms',
-  'lower legs',
-  'neck',
-  'shoulders',
-  'upper arms',
-  'upper legs',
-  'waist',
+  'Costas',
+  'Cardio',
+  'Peito',
+  'Antebraços',
+  'Pernas (inferior)',
+  'Pescoço',
+  'Ombros',
+  'Braços (superior)',
+  'Pernas (superior)',
+  'Cintura',
 ]
 
 // --- Componente de Item Otimizado ---
@@ -38,21 +36,35 @@ const ExerciseListItem = React.memo(
   ({
     item,
     isSelected,
-    onPress,
+    onSelect,
+    onShowDetails,
   }: {
-    item: Exercise
+    item: ExerciseDefinition
     isSelected: boolean
-    onPress: (item: Exercise) => void
+    onSelect: (item: ExerciseDefinition) => void
+    onShowDetails: (item: ExerciseDefinition) => void
   }) => {
     return (
       <TouchableOpacity
         style={[styles.exerciseItem, isSelected && styles.exerciseItemSelected]}
-        onPress={() => onPress(item)}
+        onPress={() => onSelect(item)}
       >
-        <Text style={styles.exerciseName}>{item.name}</Text>
-        <Text style={styles.exerciseDetail}>
-          {item.bodyPart} - {item.equipment}
-        </Text>
+        <View style={styles.exerciseInfoContainer}>
+          <Text style={styles.exerciseName}>{item.name}</Text>
+          <Text style={styles.exerciseDetail}>
+            {item.bodyPart} - {item.equipment}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.infoButton}
+          onPress={() => onShowDetails(item)}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={24}
+            color={theme.colors.primary}
+          />
+        </TouchableOpacity>
       </TouchableOpacity>
     )
   },
@@ -60,52 +72,50 @@ const ExerciseListItem = React.memo(
 
 export default function AddExerciseScreen() {
   const navigation = useNavigation<AppNavigationProp>()
-  const {
-    exercises,
-    loading,
-    loadingMore,
-    error,
-    apiLimitError,
-    fetchInitialList,
-    searchByName,
-    fetchByBodyPart,
-    fetchMore,
-  } = useExerciseStore()
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([])
+  const [selectedExercises, setSelectedExercises] = useState<
+    ExerciseDefinition[]
+  >([])
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchInitialList()
-  }, [fetchInitialList])
+  const displayedExercises = useMemo(() => {
+    let exercises = mockExercises
+    if (activeFilter) {
+      exercises = exercises.filter(
+        (e) => e.bodyPart.toLowerCase() === activeFilter.toLowerCase(),
+      )
+    }
+    if (searchTerm) {
+      exercises = exercises.filter((e) =>
+        e.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+    }
+    return exercises
+  }, [searchTerm, activeFilter])
 
-  const debouncedSearch = useMemo(
-    () => debounce((term: string) => searchByName(term), 500),
-    [searchByName],
-  )
-
-  useEffect(() => {
-    debouncedSearch(searchTerm)
-    return () => debouncedSearch.cancel()
-  }, [searchTerm, debouncedSearch])
-
-  const handleFilterPress = useCallback(
-    (bodyPart: string) => {
-      setSearchTerm('') // Limpa a busca ao usar filtro
-      setActiveFilter(bodyPart)
-      fetchByBodyPart(bodyPart)
-    },
-    [fetchByBodyPart],
-  )
-
-  const toggleExerciseSelection = useCallback((exercise: Exercise) => {
-    setSelectedExercises((prev) =>
-      prev.find((e) => e.id === exercise.id)
-        ? prev.filter((e) => e.id !== exercise.id)
-        : [...prev, exercise],
-    )
+  const handleFilterPress = useCallback((bodyPart: string) => {
+    setSearchTerm('')
+    setActiveFilter((prev) => (prev === bodyPart ? null : bodyPart))
   }, [])
+
+  const toggleExerciseSelection = useCallback(
+    (exercise: ExerciseDefinition) => {
+      setSelectedExercises((prev) =>
+        prev.find((e) => e.id === exercise.id)
+          ? prev.filter((e) => e.id !== exercise.id)
+          : [...prev, exercise],
+      )
+    },
+    [],
+  )
+
+  const handleShowDetails = useCallback(
+    (exercise: ExerciseDefinition) => {
+      navigation.navigate('ExerciseDetail', { exercise })
+    },
+    [navigation],
+  )
 
   const handleProceedToCustomization = () => {
     if (selectedExercises.length === 0) {
@@ -116,27 +126,21 @@ export default function AddExerciseScreen() {
       })
       return
     }
-    navigation.navigate('CustomizeExercise', { selectedExercises })
+    Toast.show({
+      type: 'info',
+      text1: 'Funcionalidade em Desenvolvimento',
+      text2: 'A customização de exercícios será implementada em breve.',
+    })
   }
 
-  const renderFooter = () => {
-    if (!loadingMore) return null
-    return (
-      <ActivityIndicator
-        style={{ marginVertical: 20 }}
-        size="large"
-        color={theme.colors.primary}
-      />
-    )
-  }
-
-  const renderExerciseItem = ({ item }: { item: Exercise }) => {
+  const renderExerciseItem = ({ item }: { item: ExerciseDefinition }) => {
     const isSelected = selectedExercises.some((e) => e.id === item.id)
     return (
       <ExerciseListItem
         item={item}
         isSelected={isSelected}
-        onPress={toggleExerciseSelection}
+        onSelect={toggleExerciseSelection}
+        onShowDetails={handleShowDetails}
       />
     )
   }
@@ -147,7 +151,7 @@ export default function AddExerciseScreen() {
         placeholder="Buscar exercício por nome..."
         value={searchTerm}
         onChangeText={(text) => {
-          setActiveFilter(null) // Limpa o filtro ao digitar
+          setActiveFilter(null)
           setSearchTerm(text)
         }}
         containerStyle={styles.searchInput}
@@ -156,7 +160,7 @@ export default function AddExerciseScreen() {
       <StyledButton
         title="Adicionar Exercício Manualmente"
         onPress={() => navigation.navigate('AddManualExercise')}
-        type="secondary" // Um estilo diferente para ação secundária
+        type="secondary"
         containerStyle={styles.manualAddButton}
       />
 
@@ -177,56 +181,22 @@ export default function AddExerciseScreen() {
                   activeFilter === part && styles.filterButtonTextActive,
                 ]}
               >
-                {translateTerm(part, 'bodyPart').toUpperCase()}
+                {part.toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {loading && (
-        <ActivityIndicator
-          size="large"
-          color={theme.colors.primary}
-          style={styles.centered}
-        />
-      )}
-
-      {/* Mensagem de Erro Específica para Limite da API */}
-      {apiLimitError && !loading && (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>
-            O serviço de busca de exercícios atingiu o limite de requisições.
-            Por favor, adicione seu exercício manualmente.
-          </Text>
-        </View>
-      )}
-
-      {/* Mensagem de Erro Genérica (offline, etc.) */}
-      {error && !apiLimitError && !loading && (
-        <View style={styles.centered}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      {!loading && !error && !apiLimitError && (
-        <FlatList
-          data={exercises}
-          renderItem={renderExerciseItem}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          contentContainerStyle={styles.listContent}
-          onEndReached={() => {
-            if (!loadingMore) {
-              fetchMore()
-            }
-          }}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>Nenhum exercício encontrado.</Text>
-          }
-        />
-      )}
+      <FlatList
+        data={displayedExercises}
+        renderItem={renderExerciseItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>Nenhum exercício encontrado.</Text>
+        }
+      />
 
       <StyledButton
         title={`Adicionar ${selectedExercises.length} Exercícios`}
@@ -266,7 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   filterButtonTextActive: {
-    color: theme.colors.white, // Texto branco no botão ativo
+    color: theme.colors.white,
   },
   listContent: {
     paddingBottom: theme.spacing.large,
@@ -278,10 +248,16 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   exerciseItemSelected: {
     borderColor: theme.colors.primary,
     borderWidth: 2,
+  },
+  exerciseInfoContainer: {
+    flex: 1,
   },
   exerciseName: {
     fontSize: theme.fontSizes.medium,
@@ -293,15 +269,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: theme.spacing.small,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: theme.colors.error,
-    textAlign: 'center',
-    marginBottom: theme.spacing.large,
+  infoButton: {
+    paddingLeft: theme.spacing.medium,
   },
   emptyText: {
     color: theme.colors.textMuted,

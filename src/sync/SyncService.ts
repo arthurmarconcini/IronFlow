@@ -5,16 +5,23 @@ import {
   getDoc,
   serverTimestamp,
   Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { User } from 'firebase/auth'
 import { app } from '../config/firebaseConfig'
 import { DatabaseService } from '../db/DatabaseService'
 import { useNetworkStore } from '../state/networkStore'
 import { useSyncStore } from '../state/syncStore'
+import { ExerciseDefinition } from '../types/database'
 
 const firestoreDb = getFirestore(app)
 const BASE_RETRY_DELAY = 1000 * 60 // 1 minuto
 const MAX_RETRIES = 5
+const EXERCISES_LAST_SYNC_KEY = '@exercises_last_sync'
 
 const syncUserProfile = async (user: User | null) => {
   const isOnline = useNetworkStore.getState().isOnline
@@ -154,7 +161,69 @@ const getProfileFromFirestore = async (userId: string) => {
   }
 }
 
+const syncExercises = async () => {
+  const isOnline = useNetworkStore.getState().isOnline
+  if (!isOnline) {
+    console.log('Offline. Pulando sincronização de exercícios.')
+    return
+  }
+
+  console.log('Iniciando sincronização da biblioteca de exercícios...')
+
+  try {
+    const lastSyncString = await AsyncStorage.getItem(EXERCISES_LAST_SYNC_KEY)
+    const lastSyncTimestamp = lastSyncString
+      ? new Date(parseInt(lastSyncString, 10))
+      : new Date(0)
+
+    const exercisesCollection = collection(firestoreDb, 'exercises')
+    // Adicionamos um campo `lastModified` no Firestore para permitir a query
+    const q = query(
+      exercisesCollection,
+      where('lastModified', '>', lastSyncTimestamp),
+    )
+
+    const querySnapshot = await getDocs(q)
+
+    if (querySnapshot.empty) {
+      console.log('Biblioteca de exercícios já está atualizada.')
+      return
+    }
+
+    const exercisesToSave: ExerciseDefinition[] = querySnapshot.docs.map(
+      (doc) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          name: data.name,
+          bodyPart: data.bodyPart,
+          equipment: data.equipment,
+          gifUrl: data.gifUrl,
+          target: data.target,
+          instructions: data.instructions,
+          secondaryMuscles: data.secondaryMuscles,
+        }
+      },
+    )
+
+    await DatabaseService.saveExerciseDefinitions(exercisesToSave)
+
+    const newSyncTimestamp = Date.now().toString()
+    await AsyncStorage.setItem(EXERCISES_LAST_SYNC_KEY, newSyncTimestamp)
+
+    console.log(
+      `${exercisesToSave.length} exercícios foram sincronizados com sucesso.`,
+    )
+  } catch (error) {
+    console.error(
+      'Ocorreu um erro durante a sincronização de exercícios:',
+      error,
+    )
+  }
+}
+
 export const SyncService = {
   syncUserProfile,
   getProfileFromFirestore,
+  syncExercises,
 }

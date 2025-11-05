@@ -3,6 +3,7 @@ import {
   UserProfile,
   Workout,
   Exercise as WorkoutExercise,
+  ExerciseDefinition,
 } from '../types/database'
 
 // --- Instância Única do Banco de Dados ---
@@ -39,6 +40,17 @@ interface WorkoutFromDb {
   exercises_json: string
   last_modified: number
   deleted_at: number | null
+}
+
+interface ExerciseDefinitionFromDB {
+  id: string
+  name: string
+  bodyPart: string
+  equipment: string
+  gifUrl: string
+  target: string
+  instructions_json: string
+  secondary_muscles_json: string
 }
 
 // --- Funções de Mapeamento (DB -> App) ---
@@ -150,8 +162,82 @@ const initDB = async (): Promise<void> => {
       achieved_at INTEGER NOT NULL,
       UNIQUE(user_id, exercise_name)
     );
+
+    CREATE TABLE IF NOT EXISTS exercise_definitions (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      body_part TEXT,
+      equipment TEXT,
+      gif_url TEXT,
+      target_muscle TEXT,
+      instructions_json TEXT,
+      secondary_muscles_json TEXT
+    );
   `)
   console.log('Database singleton initialized with all tables.')
+}
+
+// --- Funções da Biblioteca de Exercícios ---
+const saveExerciseDefinitions = async (
+  exercises: ExerciseDefinition[],
+): Promise<void> => {
+  if (exercises.length === 0) return
+
+  const statement = await db.prepareAsync(
+    'INSERT INTO exercise_definitions (id, name, body_part, equipment, gif_url, target_muscle, instructions_json, secondary_muscles_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, body_part=excluded.body_part, equipment=excluded.equipment, gif_url=excluded.gif_url, target_muscle=excluded.target_muscle, instructions_json=excluded.instructions_json, secondary_muscles_json=excluded.secondary_muscles_json',
+  )
+
+  try {
+    for (const exercise of exercises) {
+      await statement.executeAsync(
+        exercise.id,
+        exercise.name,
+        exercise.bodyPart,
+        exercise.equipment,
+        exercise.gifUrl,
+        exercise.target,
+        JSON.stringify(exercise.instructions),
+        JSON.stringify(exercise.secondaryMuscles),
+      )
+    }
+  } finally {
+    await statement.finalizeAsync()
+  }
+}
+
+const getExerciseDefinitions = async (
+  searchTerm: string = '',
+  limit: number = 20,
+): Promise<ExerciseDefinition[]> => {
+  const query = `
+    SELECT 
+      id, 
+      name, 
+      body_part as bodyPart, 
+      equipment, 
+      gif_url as gifUrl, 
+      target_muscle as target, 
+      instructions_json, 
+      secondary_muscles_json 
+    FROM exercise_definitions 
+    WHERE name LIKE ? 
+    LIMIT ?
+  `
+  const results = await db.getAllAsync<ExerciseDefinitionFromDB>(query, [
+    `%${searchTerm}%`,
+    limit,
+  ])
+
+  return results.map((row) => ({
+    id: row.id,
+    name: row.name,
+    bodyPart: row.bodyPart,
+    equipment: row.equipment,
+    gifUrl: row.gifUrl,
+    target: row.target,
+    instructions: JSON.parse(row.instructions_json || '[]'),
+    secondaryMuscles: JSON.parse(row.secondary_muscles_json || '[]'),
+  }))
 }
 
 // --- Funções de Perfil de Usuário ---
@@ -450,7 +536,6 @@ const getWorkoutLogsCount = async (userId: string): Promise<number> => {
 }
 
 const getTotalSetsCompleted = async (userId: string): Promise<number> => {
-  // Junta com workout_logs para garantir que estamos contando apenas séries de treinos do usuário correto.
   const result = await db.getFirstAsync<{ count: number }>(
     'SELECT COUNT(s.id) as count FROM set_logs s JOIN workout_logs w ON s.workout_log_id = w.id WHERE w.user_id = ?',
     userId,
@@ -461,6 +546,8 @@ const getTotalSetsCompleted = async (userId: string): Promise<number> => {
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
+  saveExerciseDefinitions,
+  getExerciseDefinitions,
   saveUserProfile,
   getUserProfileByUserId,
   getRecordsToSync,

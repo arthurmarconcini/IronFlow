@@ -20,10 +20,22 @@ export interface UserProfile {
   lastUpdatedServer?: number
 }
 
-// Base interface for all exercises
+// Representa a definição de um exercício na nossa biblioteca principal
+export interface ExerciseDefinition {
+  id: string // ID original da ExerciseDB
+  name: string
+  bodyPart: string
+  equipment: string
+  gifUrl: string
+  target: string
+  instructions: string[]
+  secondaryMuscles: string[]
+}
+
+// Base interface for an exercise when it's part of a user's workout
 interface BaseExercise {
   name: string
-  dbId?: string // ID from ExerciseDB
+  exerciseId: string // ID que referencia a ExerciseDefinition
 }
 
 // Exercise type for strength-based activities

@@ -1,6 +1,9 @@
 import { StackNavigationProp } from '@react-navigation/stack'
 import { RouteProp } from '@react-navigation/native'
-import { Exercise as WorkoutExercise } from '../types/database' // Corrigido
+import {
+  Exercise as WorkoutExercise,
+  ExerciseDefinition,
+} from '../types/database'
 import { Exercise as ApiExercise } from '../services/exerciseDB'
 
 export type AuthStackParamList = {
@@ -55,6 +58,7 @@ export type AppStackParamList = {
   WorkoutExecution: { workoutId: string }
   WorkoutDetails: { workoutId: string }
   Premium: undefined
+  ExerciseDetail: { exercise: ExerciseDefinition }
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
