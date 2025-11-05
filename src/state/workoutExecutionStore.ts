@@ -16,14 +16,14 @@ interface RestTimer {
 
 interface WorkoutExecutionState {
   workout: Workout | null
+  logId: number | null // Renomeado de workoutLogId para consistência
   currentExerciseIndex: number
   currentSetIndex: number
   completedSets: { [key: string]: SetData } // key: `${exerciseIndex}-${setIndex}`
   restTimer: RestTimer
-  workoutLogId: number | null
   isFinished: boolean
 
-  startWorkout: (workout: Workout) => Promise<void>
+  initializeWorkout: (workoutId: string) => Promise<void>
   completeSet: (setData: SetData) => void
   startRest: () => void
   tickRestTimer: () => void
@@ -36,11 +36,11 @@ interface WorkoutExecutionState {
 
 const initialState = {
   workout: null,
+  logId: null,
   currentExerciseIndex: 0,
   currentSetIndex: 0,
   completedSets: {},
   restTimer: { isActive: false, duration: 0, remaining: 0 },
-  workoutLogId: null,
   isFinished: false,
 }
 
@@ -48,27 +48,31 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
   (set, get) => ({
     ...initialState,
 
-    startWorkout: async (workout) => {
-      // Se o treino já estiver na store, não faça nada.
-      if (get().workout?.id === workout.id) {
+    initializeWorkout: async (workoutId) => {
+      // Previne recarregamento se o treino já estiver ativo
+      if (get().workout?.firestoreId === workoutId && get().logId) {
         return
       }
 
       const userId = useAuthStore.getState().user?.uid
       if (!userId) return
 
-      const workoutLogId = await DatabaseService.startWorkoutLog(
-        workout.firestoreId,
-        userId,
-      )
-      set({
-        workout,
-        workoutLogId,
-        currentExerciseIndex: 0,
-        currentSetIndex: 0,
-        completedSets: {},
-        isFinished: false,
-      })
+      const workoutData = await DatabaseService.getWorkoutById(workoutId)
+      if (workoutData) {
+        const newLogId = await DatabaseService.startWorkoutLog(
+          workoutData.firestoreId,
+          userId,
+        )
+        set({
+          workout: workoutData,
+          logId: newLogId,
+          currentExerciseIndex: 0,
+          currentSetIndex: 0,
+          completedSets: {},
+          isFinished: false,
+          restTimer: { isActive: false, duration: 0, remaining: 0 },
+        })
+      }
     },
 
     completeSet: (setData) => {
@@ -77,9 +81,9 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
         currentExerciseIndex,
         currentSetIndex,
         completedSets,
-        workoutLogId,
+        logId,
       } = get()
-      if (!workout || !workoutLogId) return
+      if (!workout || !logId) return
 
       const exercise = workout.exercises[
         currentExerciseIndex
@@ -87,20 +91,16 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       const key = `${currentExerciseIndex}-${currentSetIndex}`
       const newCompletedSets = { ...completedSets, [key]: setData }
 
-      set({
-        completedSets: newCompletedSets,
-        currentSetIndex: currentSetIndex + 1,
-      })
-
+      // Loga os dados da série ANTES de avançar o índice
       const userId = useAuthStore.getState().user?.uid
       if (userId) {
         DatabaseService.logSetData({
-          workoutLogId,
+          workoutLogId: logId,
           exerciseName: exercise.name,
-          exerciseDbId: exercise.dbId || null,
-          setIndex: currentSetIndex + 1,
-          targetReps: exercise.reps,
-          actualReps: setData.reps,
+          exerciseDbId: exercise.exerciseId || null,
+          setIndex: currentSetIndex, // Usa o índice atual
+          targetReps: parseInt(exercise.reps, 10) || 0,
+          actualReps: setData.reps, // Corrigido de actualRps
           targetWeight: exercise.weight || null,
           actualWeight: setData.weightKg,
           restTime: exercise.rest,
@@ -113,6 +113,12 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
           actualReps: setData.reps,
         })
       }
+
+      // Avança para a próxima série DEPOIS de logar
+      set({
+        completedSets: newCompletedSets,
+        currentSetIndex: currentSetIndex + 1,
+      })
     },
 
     startRest: () => {
@@ -140,6 +146,7 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
             },
           }
         } else if (state.restTimer.isActive) {
+          get().finishRest()
           return { restTimer: { ...state.restTimer, isActive: false } }
         }
         return {}
@@ -155,12 +162,13 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
       const exercise = workout.exercises[
         currentExerciseIndex
       ] as StrengthExercise
-      const isLastSetOfExercise = currentSetIndex === exercise.sets
+      const isLastSetOfExercise = currentSetIndex >= exercise.sets
 
       if (isLastSetOfExercise) {
         const isLastExercise =
           currentExerciseIndex === workout.exercises.length - 1
         if (isLastExercise) {
+          // A finalização agora é tratada na UI para chamar o hook
           get().finishWorkout()
         } else {
           get().goToNextExercise()
@@ -186,7 +194,6 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
           nextSetIndex = i
           break
         }
-        // If all sets are completed, it will default to the last set index + 1
         nextSetIndex = i + 1
       }
 
@@ -198,10 +205,7 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
     },
 
     finishWorkout: () => {
-      const { workoutLogId } = get()
-      if (workoutLogId) {
-        DatabaseService.finishWorkoutLog(workoutLogId)
-      }
+      // A lógica do DB foi movida para o hook useWorkouts
       set({ isFinished: true })
     },
 

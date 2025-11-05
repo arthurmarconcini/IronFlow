@@ -9,9 +9,10 @@ import { SetData } from '../state/workoutExecutionStore'
 
 type ExerciseSetRowProps = {
   setNumber: number
-  targetReps: number
+  targetReps: string | number
   targetWeight?: number
   isCompleted: boolean
+  isActive: boolean
   isResting: boolean
   restDuration: number
   onComplete: (setData: SetData) => void
@@ -23,6 +24,7 @@ const ExerciseSetRow = ({
   targetReps,
   targetWeight,
   isCompleted,
+  isActive,
   isResting,
   restDuration,
   onComplete,
@@ -30,21 +32,37 @@ const ExerciseSetRow = ({
 }: ExerciseSetRowProps) => {
   const [weight, setWeight] = useState(targetWeight?.toString() || '')
   const [reps, setReps] = useState(targetReps.toString())
+  const [shakeWeight, setShakeWeight] = useState(0)
+  const [shakeReps, setShakeReps] = useState(0)
 
   const handleComplete = () => {
     const weightValue = parseFloat(weight)
     const repsValue = parseInt(reps, 10)
 
-    if (!isNaN(weightValue) && !isNaN(repsValue)) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-      onComplete({ weightKg: weightValue, reps: repsValue })
+    if (isNaN(weightValue) || weight.trim() === '') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      setShakeWeight((s) => s + 1) // Aciona o shake do input de peso
+      return
     }
+
+    if (isNaN(repsValue) || reps.trim() === '') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      setShakeReps((s) => s + 1) // Aciona o shake do input de reps
+      return
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+    onComplete({ weightKg: weightValue, reps: repsValue })
   }
 
   return (
     <View>
       <View
-        style={[styles.container, isCompleted && styles.completedContainer]}
+        style={[
+          styles.container,
+          isCompleted && styles.completedContainer,
+          isActive && styles.activeContainer,
+        ]}
       >
         <Text style={styles.setNumber}>{setNumber}</Text>
         <View style={styles.inputContainer}>
@@ -55,7 +73,8 @@ const ExerciseSetRow = ({
             placeholder="Peso"
             style={styles.input}
             containerStyle={styles.inputWrapper}
-            editable={!isCompleted}
+            editable={!isCompleted && isActive}
+            shake={shakeWeight}
           />
         </View>
         <View style={styles.inputContainer}>
@@ -66,18 +85,25 @@ const ExerciseSetRow = ({
             placeholder="Reps"
             style={styles.input}
             containerStyle={styles.inputWrapper}
-            editable={!isCompleted}
+            editable={!isCompleted && isActive}
+            shake={shakeReps}
           />
         </View>
         <TouchableOpacity
           onPress={handleComplete}
-          disabled={isCompleted}
+          disabled={isCompleted || !isActive}
           style={styles.checkButton}
         >
           <Ionicons
             name={isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
             size={32}
-            color={isCompleted ? theme.colors.primary : theme.colors.secondary}
+            color={
+              isCompleted
+                ? theme.colors.primary
+                : isActive
+                  ? theme.colors.primary
+                  : theme.colors.lightGray
+            }
           />
         </TouchableOpacity>
       </View>
@@ -100,9 +126,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: theme.spacing.small,
     paddingHorizontal: theme.spacing.medium,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  activeContainer: {
+    borderColor: theme.colors.primary,
   },
   completedContainer: {
-    backgroundColor: '#e9f5e9', // Um verde claro para indicar sucesso
+    backgroundColor: '#e9f5e9',
   },
   setNumber: {
     fontSize: theme.fontSizes.large,
@@ -114,7 +145,7 @@ const styles = StyleSheet.create({
     width: '30%',
   },
   inputWrapper: {
-    marginVertical: 0, // Sobrescreve o marginVertical padrão do StyledInput
+    marginVertical: 0,
   },
   input: {
     textAlign: 'center',

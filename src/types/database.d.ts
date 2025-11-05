@@ -79,3 +79,12 @@ export interface WorkoutPlan {
   // Um plano é uma coleção de "templates de treino"
   workouts: Omit<Workout, 'id' | 'firestoreId' | 'lastModified' | 'deletedAt'>[]
 }
+
+// --- Agendamento de Treinos ---
+
+// Representa um treino que foi agendado em uma data específica
+export interface ScheduledWorkout extends Workout {
+  scheduleId: number
+  status: 'scheduled' | 'completed' | 'skipped'
+  workoutLogId: number | null
+}

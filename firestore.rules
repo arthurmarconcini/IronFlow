@@ -16,8 +16,8 @@ service cloud.firestore {
       // desde que o 'userId' no documento seja o seu próprio.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
 
-      // Permite que um usuário leia ou apague um treino apenas se ele for o "dono".
-      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Permite que um usuário leia, atualize ou apague um treino apenas se ele for o "dono".
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }

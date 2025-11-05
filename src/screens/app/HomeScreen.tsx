@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useState } from 'react'
 import {
   View,
   Text,
@@ -20,6 +20,9 @@ import WorkoutCard from '../../components/WorkoutCard'
 import { useNetworkStore } from '../../state/networkStore'
 import { useProfileStore } from '../../state/profileStore'
 import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
+import { DatabaseService } from '../../db/DatabaseService'
+import { ScheduledWorkout } from '../../types/database'
+import { format } from 'date-fns'
 
 export default function HomeScreen() {
   const { user } = useAuth()
@@ -31,6 +34,22 @@ export default function HomeScreen() {
   const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
   const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
 
+  const [todaysWorkouts, setTodaysWorkouts] = useState<ScheduledWorkout[]>([])
+
+  const fetchTodaysWorkout = useCallback(async () => {
+    if (!user) return
+    try {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      const scheduled = await DatabaseService.getScheduleForDate(
+        user.uid,
+        todayStr,
+      )
+      setTodaysWorkouts(scheduled)
+    } catch (error) {
+      console.error("Failed to fetch today's workout:", error)
+    }
+  }, [user])
+
   useEffect(() => {
     syncWorkouts()
   }, [syncWorkouts])
@@ -38,7 +57,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchLocalWorkouts()
-    }, [fetchLocalWorkouts]),
+      fetchTodaysWorkout()
+    }, [fetchLocalWorkouts, fetchTodaysWorkout]),
   )
 
   const handlePlayWorkout = (workoutId: string) => {
@@ -62,10 +82,7 @@ export default function HomeScreen() {
               navigation.navigate('WorkoutExecution', { workoutId })
             },
           },
-          {
-            text: 'Cancelar',
-            style: 'cancel',
-          },
+          { text: 'Cancelar', style: 'cancel' },
         ],
       )
     } else {
@@ -73,10 +90,32 @@ export default function HomeScreen() {
     }
   }
 
+  const renderTodaysWorkouts = () => {
+    if (todaysWorkouts.length === 0) return null
+
+    return (
+      <View style={styles.todaysWorkoutContainer}>
+        <Text style={styles.sectionTitle}>Treino de Hoje</Text>
+        {todaysWorkouts.map((scheduledWorkout) => (
+          <WorkoutCard
+            key={scheduledWorkout.scheduleId}
+            workout={scheduledWorkout}
+            onPress={() =>
+              navigation.navigate('WorkoutDetails', {
+                workoutId: scheduledWorkout.firestoreId,
+              })
+            }
+            onPlay={() => handlePlayWorkout(scheduledWorkout.firestoreId)}
+            isCompleted={scheduledWorkout.status === 'completed'}
+          />
+        ))}
+      </View>
+    )
+  }
+
   return (
-    <ScreenContainer style={styles.container}>
+    <ScreenContainer>
       <StatusBar style="dark" />
-      {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.profileButton}
@@ -92,32 +131,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Greeting */}
       <View style={styles.greetingContainer}>
         <Text style={styles.greeting} numberOfLines={2} ellipsizeMode="tail">
-          Olá,{' '}
-          <Text style={styles.userName}>
-            {profile?.displayName || user?.email}
-          </Text>
+          Olá, <Text style={styles.userName}>{profile?.displayName || user?.email}</Text>
         </Text>
       </View>
 
-      {/* Workout List Title */}
-      <View style={styles.listTitleContainer}>
-        <Text style={styles.listTitle}>Meus Treinos</Text>
-        <View
-          style={[
-            styles.networkIndicator,
-            {
-              backgroundColor: isOnline
-                ? theme.colors.primary
-                : theme.colors.error,
-            },
-          ]}
-        />
-      </View>
-
-      {/* Workout List */}
       {isLoading ? (
         <ActivityIndicator
           size="large"
@@ -139,6 +158,24 @@ export default function HomeScreen() {
               onPlay={() => handlePlayWorkout(item.firestoreId)}
             />
           )}
+          ListHeaderComponent={
+            <>
+              {renderTodaysWorkouts()}
+              <View style={styles.listTitleContainer}>
+                <Text style={styles.sectionTitle}>Meus Treinos</Text>
+                <View
+                  style={[
+                    styles.networkIndicator,
+                    {
+                      backgroundColor: isOnline
+                        ? theme.colors.primary
+                        : theme.colors.error,
+                    },
+                  ]}
+                />
+              </View>
+            </>
+          }
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <Ionicons
@@ -148,7 +185,7 @@ export default function HomeScreen() {
               />
               <Text style={styles.emptyText}>Nenhum treino encontrado</Text>
               <Text style={styles.emptySubText}>
-                Clique no botão '+' para criar seu primeiro treino.
+                Crie um treino ou explore planos para começar.
               </Text>
             </View>
           )}
@@ -156,17 +193,12 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Action Buttons */}
       <View style={styles.fabContainer}>
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => navigation.navigate('WorkoutPlans')}
         >
-          <Ionicons
-            name="compass-outline"
-            size={24}
-            color={theme.colors.white}
-          />
+          <Ionicons name="compass-outline" size={24} color={theme.colors.white} />
           <Text style={styles.actionButtonText}>Explorar Planos</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -182,7 +214,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {},
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -201,18 +232,21 @@ const styles = StyleSheet.create({
   userName: {
     fontWeight: 'bold',
   },
+  todaysWorkoutContainer: {
+    marginBottom: theme.spacing.large,
+  },
+  sectionTitle: {
+    fontSize: theme.fontSizes.large,
+    fontWeight: '600',
+    color: theme.colors.text,
+    paddingBottom: theme.spacing.small,
+  },
   listTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.lightGray,
     marginBottom: theme.spacing.medium,
-  },
-  listTitle: {
-    fontSize: theme.fontSizes.large,
-    fontWeight: '600',
-    color: theme.colors.text,
-    paddingBottom: theme.spacing.small,
   },
   networkIndicator: {
     width: 10,
@@ -230,6 +264,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.large,
+    minHeight: 200,
   },
   emptyText: {
     fontSize: theme.fontSizes.large,

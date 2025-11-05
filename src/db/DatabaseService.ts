@@ -5,6 +5,7 @@ import {
   Exercise as WorkoutExercise,
   ExerciseDefinition,
   WorkoutPlan,
+  ScheduledWorkout,
 } from '../types/database'
 
 // --- Instância Única do Banco de Dados ---
@@ -41,6 +42,13 @@ interface WorkoutFromDb {
   exercises_json: string
   last_modified: number
   deleted_at: number | null
+}
+
+// Nova interface para o resultado do JOIN
+interface ScheduledWorkoutFromDb extends WorkoutFromDb {
+  schedule_id: number
+  status: 'scheduled' | 'completed' | 'skipped'
+  workout_log_id: number | null
 }
 
 interface WorkoutPlanFromDb {
@@ -97,6 +105,22 @@ const mapRecordToWorkout = (record: WorkoutFromDb): Workout => ({
   exercises: JSON.parse(record.exercises_json),
   lastModified: record.last_modified,
   deletedAt: record.deleted_at ?? undefined,
+})
+
+// Nova função de mapeamento para o ScheduledWorkout
+const mapRecordToScheduledWorkout = (
+  record: ScheduledWorkoutFromDb,
+): ScheduledWorkout => ({
+  id: record.id,
+  firestoreId: record.firestore_id,
+  name: record.name,
+  muscleGroup: record.muscle_group,
+  exercises: JSON.parse(record.exercises_json),
+  lastModified: record.last_modified,
+  deletedAt: record.deleted_at ?? undefined,
+  scheduleId: record.schedule_id,
+  status: record.status,
+  workoutLogId: record.workout_log_id,
 })
 
 const mapRecordToWorkoutPlan = (record: WorkoutPlanFromDb): WorkoutPlan => ({
@@ -200,6 +224,18 @@ const initDB = async (): Promise<void> => {
       description TEXT NOT NULL,
       category TEXT NOT NULL,
       workouts_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS workout_schedule (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      user_id TEXT NOT NULL,
+      workout_firestore_id TEXT NOT NULL,
+      scheduled_date TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('scheduled', 'completed', 'skipped')),
+      workout_log_id INTEGER,
+      FOREIGN KEY (workout_firestore_id) REFERENCES workouts (firestore_id) ON DELETE CASCADE,
+      FOREIGN KEY (workout_log_id) REFERENCES workout_logs (id) ON DELETE SET NULL,
+      UNIQUE(user_id, workout_firestore_id, scheduled_date)
     );
   `)
   console.log('Database singleton initialized with all tables.')
@@ -476,6 +512,59 @@ const getWorkoutPlanById = async (
   return record ? mapRecordToWorkoutPlan(record) : null
 }
 
+// --- Funções de Agendamento de Treino (Workout Schedule) ---
+const scheduleWorkout = async (
+  userId: string,
+  workoutFirestoreId: string,
+  date: string, // YYYY-MM-DD
+): Promise<void> => {
+  await db.runAsync(
+    'INSERT INTO workout_schedule (user_id, workout_firestore_id, scheduled_date, status) VALUES (?, ?, ?, ?)',
+    userId,
+    workoutFirestoreId,
+    date,
+    'scheduled',
+  )
+}
+
+const getScheduleForDate = async (
+  userId: string,
+  date: string, // YYYY-MM-DD
+): Promise<ScheduledWorkout[]> => {
+  const results = await db.getAllAsync<ScheduledWorkoutFromDb>(
+    `
+    SELECT 
+      w.*, 
+      ws.id as schedule_id, 
+      ws.status, 
+      ws.workout_log_id
+    FROM workouts w
+    INNER JOIN workout_schedule ws ON w.firestore_id = ws.workout_firestore_id
+    WHERE ws.user_id = ? AND ws.scheduled_date = ?
+  `,
+    userId,
+    date,
+  )
+  return results.map(mapRecordToScheduledWorkout)
+}
+
+const updateScheduleStatus = async (
+  userId: string,
+  workoutFirestoreId: string,
+  date: string, // YYYY-MM-DD
+  status: 'completed' | 'skipped',
+  workoutLogId?: number,
+): Promise<void> => {
+  await db.runAsync(
+    'UPDATE workout_schedule SET status = ?, workout_log_id = ? WHERE user_id = ? AND workout_firestore_id = ? AND scheduled_date = ?',
+    status,
+    workoutLogId ?? null,
+    userId,
+    workoutFirestoreId,
+    date,
+  )
+}
+
 // --- Funções de Logging de Treino ---
 
 interface SetLogData {
@@ -620,6 +709,9 @@ export const DatabaseService = {
   addWorkoutPlan,
   getWorkoutPlans,
   getWorkoutPlanById,
+  scheduleWorkout,
+  getScheduleForDate,
+  updateScheduleStatus,
   startWorkoutLog,
   logSetData,
   saveOrUpdateExerciseRecord,

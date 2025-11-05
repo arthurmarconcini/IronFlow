@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons'
 
 import HomeScreen from '../screens/app/HomeScreen'
 import ProfileScreen from '../screens/app/ProfileScreen'
-import StatsScreen from '../screens/app/StatsScreen' // Importar a nova tela
+import StatsScreen from '../screens/app/StatsScreen'
+import ScheduleScreen from '../screens/app/ScheduleScreen' // Importar a nova tela
 import { theme } from '../theme'
 import { AppTabParamList } from './types'
 
@@ -34,6 +35,16 @@ export default function AppTabs() {
           tabBarLabel: 'Início',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ScheduleTab"
+        component={ScheduleScreen}
+        options={{
+          tabBarLabel: 'Agenda',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
       />

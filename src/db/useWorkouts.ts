@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   getFirestore,
   collection,
@@ -21,7 +21,7 @@ interface FirestoreWorkoutData {
   userId: string
   name: string
   muscleGroup: string
-  exercises: Exercise[] // Agora usa o tipo Exercise[] da store
+  exercises: Exercise[]
   lastModified: Timestamp
 }
 
@@ -42,6 +42,11 @@ export function useWorkouts() {
       setIsLoading(false)
     }
   }, [user])
+
+  // Busca os treinos automaticamente quando o hook é usado pela primeira vez
+  useEffect(() => {
+    fetchLocalWorkouts()
+  }, [fetchLocalWorkouts])
 
   const createWorkout = async (
     name: string,
@@ -222,6 +227,30 @@ export function useWorkouts() {
     }
   }, [])
 
+  const finishWorkout = useCallback(
+    async (logId: number, workoutFirestoreId: string) => {
+      if (!user) throw new Error('Usuário não autenticado.')
+      try {
+        // 1. Finaliza o log do treino
+        await DatabaseService.finishWorkoutLog(logId)
+
+        // 2. Atualiza o status na agenda
+        const todayStr = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+        await DatabaseService.updateScheduleStatus(
+          user.uid,
+          workoutFirestoreId,
+          todayStr,
+          'completed',
+          logId,
+        )
+      } catch (error) {
+        console.error('Erro ao finalizar o treino e atualizar a agenda:', error)
+        // Mesmo com erro, tentamos não quebrar a experiência do usuário
+      }
+    },
+    [user],
+  )
+
   return {
     workouts,
     isLoading,
@@ -231,5 +260,6 @@ export function useWorkouts() {
     syncWorkouts,
     fetchLocalWorkouts,
     getWorkoutById,
+    finishWorkout,
   }
 }

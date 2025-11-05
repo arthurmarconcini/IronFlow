@@ -15,7 +15,7 @@ import {
   SetData,
   useWorkoutExecutionStore,
 } from '../../state/workoutExecutionStore'
-import { DatabaseService } from '../../db/DatabaseService'
+import { useWorkouts } from '../../db/useWorkouts' // Importar o hook
 import { theme } from '../../theme'
 import { StrengthExercise } from '../../types/database'
 import ExerciseSetRow from '../../components/ExerciseSetRow'
@@ -31,15 +31,17 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   const navigation = useNavigation()
   const flatListRef = useRef<FlatList>(null)
   const [isModalVisible, setModalVisible] = useState(false)
+  const { finishWorkout } = useWorkouts() // Obter a função do hook
 
   const {
     workout,
+    logId,
     currentExerciseIndex,
     currentSetIndex,
     restTimer,
     isFinished,
     completedSets,
-    startWorkout,
+    initializeWorkout, // Usar a nova ação
     completeSet,
     startRest,
     tickRestTimer,
@@ -54,15 +56,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      const loadWorkout = async () => {
-        const workoutData = await DatabaseService.getWorkoutById(workoutId)
-        if (workoutData) {
-          startWorkout(workoutData)
-        }
-      }
-      loadWorkout()
-      // A função de limpeza que chamava reset() foi removida daqui.
-    }, [workoutId, startWorkout]),
+      initializeWorkout(workoutId)
+    }, [workoutId, initializeWorkout]),
   )
 
   useEffect(() => {
@@ -76,9 +71,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Se o treino não estiver finalizado, mostre o alerta.
       if (!isFinished && workout) {
-        e.preventDefault() // Previne a ação de sair da tela
+        e.preventDefault()
 
         Alert.alert(
           'Abandonar Treino?',
@@ -102,22 +96,25 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   }, [navigation, isFinished, workout, reset])
 
   useEffect(() => {
-    if (isFinished) {
-      Alert.alert(
-        'Treino Concluído!',
-        'Você finalizou seu treino com sucesso.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              reset()
-              navigation.goBack()
+    if (isFinished && logId && workout) {
+      // Chamar a nova função aqui
+      finishWorkout(logId, workout.firestoreId).then(() => {
+        Alert.alert(
+          'Treino Concluído!',
+          'Você finalizou seu treino com sucesso.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                reset()
+                navigation.navigate('AppTabs', { screen: 'HomeTab' })
+              },
             },
-          },
-        ],
-      )
+          ],
+        )
+      })
     }
-  }, [isFinished, navigation, reset])
+  }, [isFinished, logId, workout, finishWorkout, navigation, reset])
 
   useEffect(() => {
     if (workout && flatListRef.current) {
@@ -212,6 +209,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
           {setsArray.map((setIndex) => {
             const setData = completedSets[`${index}-${setIndex}`]
             const isCompleted = !!setData
+            const isActive =
+              index === currentExerciseIndex && setIndex === currentSetIndex
 
             const isResting =
               restTimer.isActive &&
@@ -225,6 +224,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
                 targetReps={setData?.reps ?? exercise.reps}
                 targetWeight={setData?.weightKg ?? lastCompletedSet?.weightKg}
                 isCompleted={isCompleted}
+                isActive={isActive}
                 isResting={isResting}
                 restDuration={exercise.rest}
                 onComplete={(data) => handleCompleteSet(setIndex, data)}

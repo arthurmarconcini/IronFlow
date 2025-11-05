@@ -8,6 +8,7 @@ interface WorkoutCardProps {
   workout: Workout
   onPress: () => void
   onPlay: () => void
+  isCompleted?: boolean
 }
 
 const getIconForMuscleGroup = (muscleGroup: string) => {
@@ -39,9 +40,13 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
   workout,
   onPress,
   onPlay,
+  isCompleted,
 }) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.card, isCompleted && styles.completedCard]}
+      onPress={onPress}
+    >
       <View style={styles.cardContent}>
         {/* Ícone */}
         <View style={styles.iconContainer}>
@@ -66,10 +71,14 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
           </View>
         </View>
 
-        {/* Botão de Play */}
-        <TouchableOpacity style={styles.playButton} onPress={onPlay}>
+        {/* Botão de Play ou Ícone de Concluído */}
+        <TouchableOpacity
+          style={styles.playButton}
+          onPress={onPlay}
+          disabled={isCompleted}
+        >
           <Ionicons
-            name="play-circle-outline"
+            name={isCompleted ? 'checkmark-circle' : 'play-circle-outline'}
             size={32}
             color={theme.colors.primary}
           />
@@ -92,6 +101,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+  },
+  completedCard: {
+    opacity: 0.6,
   },
   cardContent: {
     flex: 1,
