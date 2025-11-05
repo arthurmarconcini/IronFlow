@@ -7,6 +7,8 @@ import { useAuth } from './src/hooks/useAuth' // Importar o hook
 import SplashScreen from './src/screens/SplashScreen'
 import Toast from 'react-native-toast-message'
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+
 export default function App() {
   const [isDbLoading, setIsDbLoading] = useState(true)
 
@@ -38,9 +40,9 @@ export default function App() {
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <RootNavigator />
       <Toast />
-    </>
+    </GestureHandlerRootView>
   )
 }

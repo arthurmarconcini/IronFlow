@@ -10,11 +10,13 @@ import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
-import { Exercise as ApiExercise } from '../../services/exerciseDB'
+import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
 import { PRESET_BODY_PARTS, PRESET_EQUIPMENTS } from '../../utils/presetData'
+import { StrengthExercise } from '../../types/database'
 
 export default function AddManualExerciseScreen() {
   const navigation = useNavigation<AppNavigationProp>()
+  const { addExercise } = useWorkoutCreationStore()
 
   const [name, setName] = useState('')
   const [bodyPart, setBodyPart] = useState<string>(PRESET_BODY_PARTS[0])
@@ -30,19 +32,27 @@ export default function AddManualExerciseScreen() {
       return
     }
 
-    const manualExercise: ApiExercise = {
-      id: Crypto.randomUUID(),
+    // Cria um exercício de força com valores padrão
+    const newExercise: StrengthExercise = {
+      exerciseId: Crypto.randomUUID(),
       name: name.trim(),
-      bodyPart: bodyPart,
-      equipment: equipment,
-      target: bodyPart,
-      gifUrl: '',
-      category: 'strength', // Adicionado para satisfazer o tipo ApiExercise
+      type: 'strength',
+      sets: 3,
+      reps: '10',
+      rest: 60,
+      weight: 0,
     }
 
-    navigation.navigate('CustomizeExercise', {
-      selectedExercises: [manualExercise],
+    addExercise(newExercise)
+
+    Toast.show({
+      type: 'success',
+      text1: 'Exercício Adicionado!',
+      text2: `${newExercise.name} foi adicionado ao seu treino.`,
     })
+
+    // Navega de volta para a tela de criação de treino
+    navigation.pop(2)
   }
 
   return (
@@ -81,7 +91,7 @@ export default function AddManualExerciseScreen() {
       </View>
 
       <StyledButton
-        title="Salvar e Continuar"
+        title="Adicionar ao Treino"
         onPress={handleSave}
         containerStyle={styles.saveButton}
       />
@@ -107,7 +117,7 @@ const styles = StyleSheet.create({
     // Estilos podem variar entre iOS e Android
   },
   saveButton: {
-    marginTop: 'auto', // Empurra o botão para o final da tela
+    marginTop: 'auto',
     marginBottom: theme.spacing.large,
   },
 })

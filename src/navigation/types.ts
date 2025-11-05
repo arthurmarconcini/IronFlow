@@ -4,7 +4,6 @@ import {
   Exercise as WorkoutExercise,
   ExerciseDefinition,
 } from '../types/database'
-import { Exercise as ApiExercise } from '../services/exerciseDB'
 
 export type AuthStackParamList = {
   Login: undefined
@@ -51,10 +50,10 @@ export type AppTabParamList = {
 export type AppStackParamList = {
   AppTabs: { screen: keyof AppTabParamList }
   ProfileEdit: undefined
-  CreateWorkout: { newExercise?: WorkoutExercise; workoutId?: string }
+  CreateWorkout: { workoutId?: string }
   AddExercise: undefined
   AddManualExercise: undefined
-  CustomizeExercise: { selectedExercises: ApiExercise[] }
+  CustomizeExercise: { exercise: WorkoutExercise; index: number }
   WorkoutExecution: { workoutId: string }
   WorkoutDetails: { workoutId: string }
   Premium: undefined

@@ -15,8 +15,9 @@ import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
-import { ExerciseDefinition } from '../../types/database'
+import { ExerciseDefinition, Exercise } from '../../types/database'
 import { mockExercises } from '../../utils/mockExercises'
+import { useWorkoutCreationStore } from '../../state/workoutCreationStore'
 
 const BODY_PART_FILTERS = [
   'Costas',
@@ -72,6 +73,7 @@ const ExerciseListItem = React.memo(
 
 export default function AddExerciseScreen() {
   const navigation = useNavigation<AppNavigationProp>()
+  const { addExercise } = useWorkoutCreationStore()
 
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedExercises, setSelectedExercises] = useState<
@@ -117,7 +119,7 @@ export default function AddExerciseScreen() {
     [navigation],
   )
 
-  const handleProceedToCustomization = () => {
+  const handleAddExercises = () => {
     if (selectedExercises.length === 0) {
       Toast.show({
         type: 'error',
@@ -126,11 +128,28 @@ export default function AddExerciseScreen() {
       })
       return
     }
-    Toast.show({
-      type: 'info',
-      text1: 'Funcionalidade em Desenvolvimento',
-      text2: 'A customização de exercícios será implementada em breve.',
+
+    selectedExercises.forEach((exerciseDef) => {
+      const newExercise: Exercise = {
+        exerciseId: exerciseDef.id,
+        name: exerciseDef.name,
+        type: 'strength',
+        sets: 3,
+        reps: '10',
+        rest: 60,
+        weight: 0,
+      }
+      addExercise(newExercise)
     })
+
+    Toast.show({
+      type: 'success',
+      text1: `${selectedExercises.length} exercício(s) adicionado(s)!`,
+      text2: 'Você pode customizá-los na tela de treino.',
+    })
+
+    setSelectedExercises([])
+    navigation.goBack()
   }
 
   const renderExerciseItem = ({ item }: { item: ExerciseDefinition }) => {
@@ -200,7 +219,7 @@ export default function AddExerciseScreen() {
 
       <StyledButton
         title={`Adicionar ${selectedExercises.length} Exercícios`}
-        onPress={handleProceedToCustomization}
+        onPress={handleAddExercises}
         disabled={selectedExercises.length === 0}
         containerStyle={styles.addButton}
       />

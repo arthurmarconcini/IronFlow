@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useRef } from 'react'
 import {
   Text,
   StyleSheet,
@@ -6,6 +6,8 @@ import {
   Platform,
   FlatList,
   View,
+  TouchableOpacity,
+  Animated, // Import Animated from react-native
 } from 'react-native'
 import { useWorkouts } from '../../db/useWorkouts'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
@@ -21,6 +23,8 @@ import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
 import { AppNavigationProp, AppStackParamList } from '../../navigation/types'
 import Toast from 'react-native-toast-message'
+import { Swipeable } from 'react-native-gesture-handler'
+import { Ionicons } from '@expo/vector-icons'
 
 type CreateWorkoutScreenRouteProp = RouteProp<
   AppStackParamList,
@@ -41,8 +45,11 @@ export default function CreateWorkoutScreen() {
     setWorkoutName,
     setMuscleGroup,
     setExercises,
+    removeExercise,
     reset,
   } = useWorkoutCreationStore()
+
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map())
 
   useEffect(() => {
     if (workoutId) {
@@ -132,42 +139,100 @@ export default function CreateWorkoutScreen() {
     reset,
   ])
 
-  const renderExercise = ({ item }: { item: Exercise }) => (
-    <View style={styles.exerciseItem}>
-      <Text style={styles.exerciseName}>{item.name}</Text>
-      <View style={styles.exerciseDetails}>
-        {item.type === 'strength' ? (
-          <>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>
-                {(item as StrengthExercise).sets}
-              </Text>
-              <Text style={styles.detailLabel}>Séries</Text>
+  // Use the signature provided by Swipeable: (progress, dragX)
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>,
+    onDelete: () => void,
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-80, 0],
+      outputRange: [0, 80],
+      extrapolate: 'clamp',
+    })
+    return (
+      <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+        <Animated.View
+          style={[
+            styles.deleteButtonView,
+            { transform: [{ translateX: trans }] },
+          ]}
+        >
+          <Ionicons name="trash-outline" size={24} color={theme.colors.white} />
+        </Animated.View>
+      </TouchableOpacity>
+    )
+  }
+
+  const renderExercise = ({
+    item,
+    index,
+  }: {
+    item: Exercise
+    index: number
+  }) => {
+    const key = `${item.exerciseId}-${index}`
+    return (
+      <Swipeable
+        ref={(ref) => {
+          if (ref) {
+            swipeableRefs.current.set(key, ref)
+          } else {
+            swipeableRefs.current.delete(key)
+          }
+        }}
+        renderRightActions={(progress, dragX) =>
+          renderRightActions(progress, dragX, () => {
+            swipeableRefs.current.get(key)?.close()
+            removeExercise(index)
+          })
+        }
+        overshootRight={false}
+        containerStyle={styles.swipeableContainer}
+      >
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('CustomizeExercise', { exercise: item, index })
+          }
+        >
+          <View style={styles.exerciseItem}>
+            <Text style={styles.exerciseName}>{item.name}</Text>
+            <View style={styles.exerciseDetails}>
+              {item.type === 'strength' ? (
+                <>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailValue}>
+                      {(item as StrengthExercise).sets}
+                    </Text>
+                    <Text style={styles.detailLabel}>Séries</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailValue}>
+                      {(item as StrengthExercise).reps}
+                    </Text>
+                    <Text style={styles.detailLabel}>Reps</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailValue}>
+                      {(item as StrengthExercise).rest ?? 0}
+                    </Text>
+                    <Text style={styles.detailLabel}>Descanso (s)</Text>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailValue}>
+                    {(item as CardioExercise).durationMinutes}
+                  </Text>
+                  <Text style={styles.detailLabel}>Duração (min)</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>
-                {(item as StrengthExercise).reps}
-              </Text>
-              <Text style={styles.detailLabel}>Reps</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailValue}>
-                {(item as StrengthExercise).rest ?? 0}
-              </Text>
-              <Text style={styles.detailLabel}>Descanso (s)</Text>
-            </View>
-          </>
-        ) : (
-          <View style={styles.detailItem}>
-            <Text style={styles.detailValue}>
-              {(item as CardioExercise).durationMinutes}
-            </Text>
-            <Text style={styles.detailLabel}>Duração (min)</Text>
           </View>
-        )}
-      </View>
-    </View>
-  )
+        </TouchableOpacity>
+      </Swipeable>
+    )
+  }
 
   return (
     <ScreenContainer style={styles.container}>
@@ -199,7 +264,7 @@ export default function CreateWorkoutScreen() {
         <FlatList
           data={exercises}
           renderItem={renderExercise}
-          keyExtractor={(item, index) => `${item.name}-${index}`}
+          keyExtractor={(item, index) => `${item.exerciseId}-${index}`}
           style={styles.list}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
@@ -270,12 +335,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: theme.spacing.small,
   },
+  swipeableContainer: {
+    marginBottom: theme.spacing.medium,
+  },
   exerciseItem: {
     backgroundColor: theme.colors.white,
     paddingVertical: theme.spacing.small,
     paddingHorizontal: theme.spacing.medium,
     borderRadius: theme.borderRadius.medium,
-    marginBottom: theme.spacing.medium,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -313,5 +380,19 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     marginTop: theme.spacing.medium,
+  },
+  deleteButton: {
+    width: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+  },
+  deleteButtonView: {
+    backgroundColor: theme.colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+    borderRadius: theme.borderRadius.medium,
   },
 })
