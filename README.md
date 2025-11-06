@@ -42,21 +42,40 @@ O núcleo do IronFlow é sua resiliência. A arquitetura foi projetada para forn
 
 ---
 
-## 🗺️ Roadmap (Funcionalidades Futuras)
+## 🗺️ Roadmap e Funcionalidades Implementadas
 
--   [x] **Gerenciamento Completo de Treinos:** (Concluído em 30/10/2025)
-    -   [x] Criação, leitura, atualização e exclusão (CRUD) de treinos e exercícios.
-    -   [x] Sincronização offline-first para todos os dados de treino.
--   [x] **Execução de Treino:** (Concluído em 30/10/2025)
-    -   [x] Interface para registrar séries, repetições, peso e descansos durante um treino.
+-   [x] **Gerenciamento Completo de Treinos:**
+    -   [x] CRUD offline-first para treinos e exercícios.
+    -   [x] Modelo flexível para exercícios de força e cardio.
+-   [x] **Execução de Treino:**
+    -   [x] Interface para registro de séries, repetições, peso e descanso.
     -   [x] Cronômetro de descanso.
--   [ ] **Biblioteca de Exercícios:**
-    -   [ ] Uma lista de exercícios pesquisável com instruções e GIFs/vídeos.
--   [ ] **Dashboard e Estatísticas:**
-    -   [ ] Gráficos para visualizar o progresso de volume, peso levantado, etc.
-    -   [ ] Histórico de treinos concluídos.
+-   [x] **Gerenciamento de Planos de Treino:**
+    -   [x] Capacidade de agrupar múltiplos treinos em um plano estruturado.
+-   [x] **Agendamento de Treinos:**
+    -   [x] Funcionalidade para agendar treinos em datas específicas.
+-   [x] **Dashboard e Estatísticas (Básico):**
+    -   [x] Tela inicial para visualização de estatísticas de progresso.
+-   [ ] **Biblioteca de Exercícios Completa:**
+    -   [ ] Adicionar instruções detalhadas e GIFs/vídeos para cada exercício.
 -   [ ] **Notificações:**
-    -   [ ] Lembretes para dias de treino.
+    -   [ ] Lembretes para dias de treino e outras interações.
+
+---
+
+## 💰 Próximos Passos: Modelo de Monetização
+
+O futuro do IronFlow é se tornar um aplicativo sustentável com um modelo de monetização claro, oferecendo valor tanto para usuários gratuitos quanto para assinantes.
+
+### Plano Gratuito (Free)
+-   **Acesso com Anúncios:** Acesso a todas as funcionalidades essenciais de criação e execução de treinos, com a exibição de anúncios (Google AdMob).
+-   **Estatísticas Básicas:** Visualização de métricas de progresso fundamentais.
+
+### Plano Premium (Assinatura)
+-   **Experiência Sem Anúncios:** Uso do aplicativo sem interrupções.
+-   **Estatísticas Avançadas:** Acesso completo a gráficos detalhados, análise de volume, recordes pessoais (PRs) e tendências de progresso.
+-   **Planos de Treino Avançados:** Acesso a planos de treino pré-construídos por especialistas.
+-   **Gerador de Treinos com IA:** Uma funcionalidade futura que criará treinos personalizados com base nos objetivos e progresso do usuário.
 
 ---
 

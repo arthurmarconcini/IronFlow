@@ -57,3 +57,35 @@ Forneça sempre os comandos de terminal exatos para instalar dependências (npx 
 Gere snippets de código completos e prontos para serem inseridos nos arquivos corretos.
 
 Explique brevemente o "porquê" de cada escolha técnica importante.
+
+---
+
+### Diretrizes para Monetização (Free/Premium)
+
+A próxima fase do projeto focará na implementação de um modelo de monetização. As seguintes diretrizes devem ser seguidas:
+
+**Stack Tecnológica para Monetização:**
+
+1.  **Gerenciamento de Assinaturas:**
+    -   **Biblioteca:** `react-native-purchases` (RevenueCat).
+    -   **Por quê?** RevenueCat abstrai a complexidade das compras in-app da App Store e Google Play, simplifica a verificação de recibos e oferece um proxy confiável para gerenciar o status da assinatura do usuário. Isso acelera o desenvolvimento e reduz a complexidade do backend.
+
+2.  **Exibição de Anúncios (Plano Free):**
+    -   **Biblioteca:** `react-native-google-mobile-ads`.
+    -   **Por quê?** É a biblioteca oficial do Google para AdMob em React Native, garantindo compatibilidade e acesso aos formatos de anúncio mais comuns (Banner, Interstitial, Rewarded).
+
+**Abordagem de Implementação:**
+
+1.  **Estado de Assinatura do Usuário:**
+    -   O status da assinatura (`free` ou `premium`) deve ser armazenado tanto no `UserProfile` no banco de dados local quanto no Firestore.
+    -   O `profileStore` (Zustand) deve ser a fonte da verdade para o status da assinatura na UI, evitando chamadas repetidas à API do RevenueCat.
+    -   O status deve ser atualizado a partir do RevenueCat no login e quando o app volta do background.
+
+2.  **Controle de Acesso (Paywall):**
+    -   Crie um hook customizado, como `useSubscriptionStatus()`, que retorna o status atual do usuário a partir do `profileStore`.
+    -   Use este hook para renderizar condicionalmente os componentes ou telas premium.
+    -   Implemente um "Paywall" (tela de oferta de assinatura) que será exibido quando um usuário gratuito tentar acessar uma funcionalidade premium.
+
+3.  **Estrutura de Arquivos:**
+    -   **Serviços de Monetização:** Crie um novo arquivo `src/services/SubscriptionService.ts` para encapsular toda a lógica de interação com o RevenueCat (inicialização, login, recuperação de ofertas, etc.).
+    -   **Componentes de Anúncios:** Crie componentes reutilizáveis para anúncios (ex: `src/components/ads/BannerAd.tsx`) para desacoplar a lógica do AdMob das telas.
