@@ -1,6 +1,8 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
-interface OnboardingState {
+export interface OnboardingState {
   displayName: string
   goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN' | null
   dob: string | null
@@ -13,7 +15,10 @@ interface OnboardingState {
   resetOnboardingData: () => void
 }
 
-const initialState: OnboardingState = {
+const initialState: Omit<
+  OnboardingState,
+  'setOnboardingData' | 'resetOnboardingData'
+> = {
   displayName: '',
   goal: null,
   dob: null,
@@ -22,12 +27,18 @@ const initialState: OnboardingState = {
   availability: null,
   heightCm: null,
   weightKg: null,
-  setOnboardingData: () => {},
-  resetOnboardingData: () => {},
 }
 
-export const useOnboardingStore = create<OnboardingState>((set) => ({
-  ...initialState,
-  setOnboardingData: (data) => set((state) => ({ ...state, ...data })),
-  resetOnboardingData: () => set(initialState),
-}))
+export const useOnboardingStore = create<OnboardingState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      setOnboardingData: (data) => set((state) => ({ ...state, ...data })),
+      resetOnboardingData: () => set(initialState),
+    }),
+    {
+      name: 'onboarding-store',
+      storage: createJSONStorage(() => AsyncStorage),
+    },
+  ),
+)

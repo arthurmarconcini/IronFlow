@@ -1,64 +1,94 @@
-import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useState, useRef } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Slider } from '@miblanchard/react-native-slider'
+import { ZodError } from 'zod'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { RouteProp } from '@react-navigation/native'
-import {
-  OnboardingNavigationProp,
-  OnboardingStackParamList,
-} from '../../navigation/types'
+import { OnboardingNavigationProp } from '../../navigation/types'
+import { useOnboardingStore } from '../../state/onboardingStore'
+import { biometricsSchema, BiometricsData } from '../../types/onboardingSchema'
+import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
 
 type Props = {
   navigation: OnboardingNavigationProp
-  route: RouteProp<OnboardingStackParamList, 'Biometrics'>
 }
 
 type UnitSystem = 'metric' | 'imperial'
 
-const BiometricsScreen = ({ navigation, route }: Props) => {
-  const { goal, displayName, dob, sex, experienceLevel, availability } =
-    route.params
-  const [height, setHeight] = useState(175) // cm
-  const [weight, setWeight] = useState(70) // kg
+const BiometricsScreen = ({ navigation }: Props) => {
+  const { heightCm, weightKg, setOnboardingData } = useOnboardingStore()
   const [units, setUnits] = useState<UnitSystem>('metric')
 
+  const [height, setHeight] = useState(heightCm || 170)
+  const [weight, setWeight] = useState(weightKg || 70)
+
+  const intervalRef = useRef<number | null>(null)
+
+  const MIN_WEIGHT = 30
+  const MAX_WEIGHT = 330
+
   const handleFinish = () => {
-    navigation.navigate('Confirmation', {
-      goal,
-      displayName,
-      dob,
-      sex,
-      experienceLevel,
-      availability,
-      heightCm: height,
-      weightKg: weight,
-    })
+    try {
+      const formData: BiometricsData = {
+        heightCm: height,
+        weightKg: weight,
+      }
+      const validatedData = biometricsSchema.parse(formData)
+      setOnboardingData(validatedData)
+      navigation.navigate('Experience')
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errorMessage = error.errors.map((e) => e.message).join('\n')
+        Alert.alert('Dados Inválidos', errorMessage)
+      }
+    }
   }
 
-  // Funções de conversão simples para exibição
+  const incrementWeight = () => {
+    setWeight((prev) => Math.min(MAX_WEIGHT, prev + 0.5))
+  }
+
+  const decrementWeight = () => {
+    setWeight((prev) => Math.max(MIN_WEIGHT, prev - 0.5))
+  }
+
+  const handlePressOut = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }
+
+  const handleLongPress = (action: 'increment' | 'decrement') => {
+    handlePressOut() // Clear any existing interval
+    intervalRef.current = setInterval(() => {
+      if (action === 'increment') {
+        incrementWeight()
+      } else {
+        decrementWeight()
+      }
+    }, 50)
+  }
+
   const displayHeight =
-    units === 'metric'
-      ? `${height.toFixed(0)} cm`
-      : `${(height / 2.54).toFixed(1)} in`
+    units === 'metric' ? `${height.toFixed(0)} cm` : convertCmToFtIn(height)
   const displayWeight =
     units === 'metric'
       ? `${weight.toFixed(1)} kg`
-      : `${(weight * 2.20462).toFixed(1)} lbs`
+      : `${convertKgToLbs(weight).toFixed(1)} lbs`
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
       <View style={styles.content}>
-        <Text style={styles.title}>Conte-nos sobre você</Text>
+        <Text style={styles.title}>Suas Medidas</Text>
         <Text style={styles.subtitle}>
-          Isso nos ajudará a personalizar sua experiência.
+          Isso nos ajudará a calcular suas necessidades calóricas e de macros.
         </Text>
 
-        {/* Seletor de Unidades */}
         <View style={styles.unitSelector}>
           <TouchableOpacity
             onPress={() => setUnits('metric')}
@@ -89,12 +119,11 @@ const BiometricsScreen = ({ navigation, route }: Props) => {
                 units === 'imperial' && styles.unitTextActive,
               ]}
             >
-              Imperial (ft, lbs)
+              Imperial (ft, in)
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Slider de Altura */}
         <View style={styles.sliderContainer}>
           <Text style={styles.label}>Altura</Text>
           <Text style={styles.value}>{displayHeight}</Text>
@@ -104,26 +133,43 @@ const BiometricsScreen = ({ navigation, route }: Props) => {
           onValueChange={(value) =>
             setHeight(Array.isArray(value) ? value[0] : value)
           }
-          minimumValue={120}
-          maximumValue={220}
+          minimumValue={100}
+          maximumValue={240}
           step={1}
           thumbTintColor={theme.colors.primary}
           minimumTrackTintColor={theme.colors.primary}
           maximumTrackTintColor={theme.colors.lightGray}
         />
 
-        {/* Slider de Peso */}
         <View style={styles.sliderContainer}>
           <Text style={styles.label}>Peso</Text>
-          <Text style={styles.value}>{displayWeight}</Text>
+          <View style={styles.valueContainer}>
+            <TouchableOpacity
+              onPress={decrementWeight}
+              onLongPress={() => handleLongPress('decrement')}
+              onPressOut={handlePressOut}
+              style={styles.adjustButton}
+            >
+              <Text style={styles.adjustButtonText}>-</Text>
+            </TouchableOpacity>
+            <Text style={styles.value}>{displayWeight}</Text>
+            <TouchableOpacity
+              onPress={incrementWeight}
+              onLongPress={() => handleLongPress('increment')}
+              onPressOut={handlePressOut}
+              style={styles.adjustButton}
+            >
+              <Text style={styles.adjustButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Slider
           value={weight}
           onValueChange={(value) =>
             setWeight(Array.isArray(value) ? value[0] : value)
           }
-          minimumValue={40}
-          maximumValue={150}
+          minimumValue={MIN_WEIGHT}
+          maximumValue={MAX_WEIGHT}
           step={0.5}
           thumbTintColor={theme.colors.primary}
           minimumTrackTintColor={theme.colors.primary}
@@ -132,13 +178,13 @@ const BiometricsScreen = ({ navigation, route }: Props) => {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 5 de 5</Text>
+        <Text style={styles.progressIndicator}>Passo 3 de 5</Text>
         <StyledButton title="Próximo" onPress={handleFinish} />
       </View>
     </SafeAreaView>
   )
 }
-
+// ... (styles remain the same)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -148,7 +194,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: theme.spacing.medium,
-    paddingTop: 60, // Espaço para o header transparente
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
@@ -168,12 +214,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: theme.spacing.large,
     backgroundColor: theme.colors.lightGray,
-    borderRadius: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    alignSelf: 'center',
   },
   unitButton: {
     paddingVertical: theme.spacing.small,
     paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
   },
   unitButtonActive: {
     backgroundColor: theme.colors.primary,
@@ -199,6 +246,27 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.large,
     fontWeight: '600',
     color: theme.colors.primary,
+    minWidth: 100,
+    textAlign: 'center',
+  },
+  valueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  adjustButton: {
+    backgroundColor: theme.colors.lightGray,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: theme.spacing.small,
+  },
+  adjustButtonText: {
+    color: theme.colors.primary,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   footer: {
     padding: theme.spacing.medium,

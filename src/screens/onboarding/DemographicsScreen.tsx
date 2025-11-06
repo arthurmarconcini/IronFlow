@@ -3,68 +3,57 @@ import { View, Text, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Picker } from '@react-native-picker/picker'
+import { ZodError } from 'zod'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
+import { OnboardingNavigationProp } from '../../navigation/types'
+import { useOnboardingStore } from '../../state/onboardingStore'
 import {
-  OnboardingNavigationProp,
-  OnboardingStackParamList,
-} from '../../navigation/types'
-import { RouteProp } from '@react-navigation/native'
+  demographicsSchema,
+  DemographicsData,
+} from '../../types/onboardingSchema'
 
 type Props = {
   navigation: OnboardingNavigationProp
-  route: RouteProp<OnboardingStackParamList, 'Demographics'>
 }
 
-const DemographicsScreen = ({ navigation, route }: Props) => {
-  const { goal } = route.params
-  const [displayName, setDisplayName] = useState('')
-  const [dob, setDob] = useState('')
-  const [sex, setSex] = useState<'male' | 'female' | 'other' | null>(null)
-
-  // Estados para mensagens de erro
-  const [errors, setErrors] = useState({
-    displayName: '',
-    dob: '',
-    sex: '',
+const DemographicsScreen = ({ navigation }: Props) => {
+  const { displayName, dob, sex, setOnboardingData } = useOnboardingStore()
+  const [formData, setFormData] = useState<DemographicsData>({
+    displayName: displayName || '',
+    dob: dob || '',
+    sex: sex || 'male',
   })
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof DemographicsData, string>>
+  >({})
 
-  const validateFields = () => {
-    const newErrors = { displayName: '', dob: '', sex: '' }
-    let isValid = true
-
-    // Validação do Nome
-    if (displayName.trim().length < 2) {
-      newErrors.displayName = 'O nome deve ter pelo menos 2 caracteres.'
-      isValid = false
+  const handleInputChange = (
+    field: keyof DemographicsData,
+    value: string | null,
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }))
     }
-
-    // Validação da Data de Nascimento
-    const dobRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/
-    if (!dobRegex.test(dob)) {
-      newErrors.dob = 'Por favor, insira uma data válida (DD/MM/AAAA).'
-      isValid = false
-    }
-
-    // Validação do Sexo
-    if (!sex) {
-      newErrors.sex = 'Por favor, selecione uma opção.'
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
   }
 
-  const handleNext = () => {
-    if (validateFields()) {
-      navigation.navigate('Experience', {
-        goal,
-        displayName,
-        dob,
-        sex: sex!, // Sabemos que não é nulo por causa da validação
-      })
+  const validateAndProceed = () => {
+    try {
+      const validatedData = demographicsSchema.parse(formData)
+      setOnboardingData(validatedData)
+      navigation.navigate('Biometrics')
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const fieldErrors: Partial<Record<keyof DemographicsData, string>> = {}
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as keyof DemographicsData] = err.message
+          }
+        })
+        setErrors(fieldErrors)
+      }
     }
   }
 
@@ -79,66 +68,40 @@ const DemographicsScreen = ({ navigation, route }: Props) => {
 
         <StyledInput
           placeholder="Como podemos te chamar?"
-          value={displayName}
-          onChangeText={(text) => {
-            setDisplayName(text)
-            if (errors.displayName) setErrors({ ...errors, displayName: '' })
-          }}
+          value={formData.displayName}
+          onChangeText={(text) => handleInputChange('displayName', text)}
           containerStyle={{ marginBottom: theme.spacing.small }}
         />
-        {errors.displayName ? (
+        {errors.displayName && (
           <Text style={styles.errorText}>{errors.displayName}</Text>
-        ) : null}
+        )}
 
         <StyledInput
           placeholder="DD/MM/AAAA"
-          value={dob}
-          onChangeText={(masked) => {
-            setDob(masked)
-            if (errors.dob) setErrors({ ...errors, dob: '' })
-          }}
+          value={formData.dob}
+          onChangeText={(masked) => handleInputChange('dob', masked)}
           mask={[/\d/, /\d/, '/', /\d/, /\d/, '/', /\d/, /\d/, /\d/, /\d/]}
           keyboardType="numeric"
           containerStyle={{ marginBottom: theme.spacing.small }}
         />
-        {errors.dob ? <Text style={styles.errorText}>{errors.dob}</Text> : null}
+        {errors.dob && <Text style={styles.errorText}>{errors.dob}</Text>}
 
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={sex}
-            onValueChange={(itemValue) => {
-              setSex(itemValue)
-              if (errors.sex) setErrors({ ...errors, sex: '' })
-            }}
+            selectedValue={formData.sex}
+            onValueChange={(itemValue) => handleInputChange('sex', itemValue)}
             style={styles.picker}
           >
-            <Picker.Item
-              label="Selecione seu sexo"
-              value={null}
-              style={styles.pickerItem}
-            />
-            <Picker.Item
-              label="Masculino"
-              value="male"
-              style={styles.pickerItem}
-            />
-            <Picker.Item
-              label="Feminino"
-              value="female"
-              style={styles.pickerItem}
-            />
-            <Picker.Item
-              label="Outro"
-              value="other"
-              style={styles.pickerItem}
-            />
+            <Picker.Item label="Masculino" value="male" />
+            <Picker.Item label="Feminino" value="female" />
+            <Picker.Item label="Outro" value="other" />
           </Picker>
         </View>
-        {errors.sex ? <Text style={styles.errorText}>{errors.sex}</Text> : null}
+        {errors.sex && <Text style={styles.errorText}>{errors.sex}</Text>}
       </View>
       <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 3 de 5</Text>
-        <StyledButton title="Próximo" onPress={handleNext} />
+        <Text style={styles.progressIndicator}>Passo 2 de 5</Text>
+        <StyledButton title="Próximo" onPress={validateAndProceed} />
       </View>
     </SafeAreaView>
   )
@@ -180,13 +143,11 @@ const styles = StyleSheet.create({
   picker: {
     width: '100%',
   },
-  pickerItem: {
-    fontSize: theme.fontSizes.medium,
-  },
   errorText: {
     color: theme.colors.error,
     fontSize: theme.fontSizes.small,
-    marginBottom: theme.spacing.medium,
+    marginTop: -theme.spacing.small,
+    marginBottom: theme.spacing.small,
     marginLeft: theme.spacing.small,
   },
   footer: {
