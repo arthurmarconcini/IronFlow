@@ -1,34 +1,40 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, StyleSheet, Alert } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Picker } from '@react-native-picker/picker'
 import { ZodError } from 'zod'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
 import { OnboardingNavigationProp } from '../../navigation/types'
-import { useOnboardingStore } from '../../state/onboardingStore'
-import { experienceSchema, ExperienceData } from '../../types/onboardingSchema'
+import {
+  OnboardingState,
+  useOnboardingStore,
+} from '../../state/onboardingStore'
+import { experienceSchema } from '../../types/onboardingSchema'
+import { experienceMap, availabilityMap } from '../../utils/translationUtils'
 
 type Props = {
   navigation: OnboardingNavigationProp
 }
 
 const ExperienceScreen = ({ navigation }: Props) => {
-  const { experienceLevel, availability, setOnboardingData } =
-    useOnboardingStore()
+  const store = useOnboardingStore()
 
-  const handleValueChange = (
-    field: keyof ExperienceData,
-    value: string | null,
-  ) => {
-    setOnboardingData({ [field]: value })
-  }
+  const [experienceLevel, setExperienceLevel] = useState<
+    OnboardingState['experienceLevel']
+  >(store.experienceLevel)
+  const [availability, setAvailability] = useState<
+    OnboardingState['availability']
+  >(store.availability)
+
+  const insets = useSafeAreaInsets()
 
   const handleNext = () => {
     try {
       const formData = { experienceLevel, availability }
-      experienceSchema.parse(formData)
+      const validatedData = experienceSchema.parse(formData)
+      store.setOnboardingData(validatedData)
       navigation.navigate('Confirmation')
     } catch (error) {
       if (error instanceof ZodError) {
@@ -47,11 +53,23 @@ const ExperienceScreen = ({ navigation }: Props) => {
           Isso nos ajuda a montar o treino ideal para você.
         </Text>
 
-        <View style={styles.pickerContainer}>
+        <View style={styles.pickerInputContainer}>
+          <Text
+            style={[
+              styles.pickerInputText,
+              !experienceLevel && styles.placeholderText,
+            ]}
+          >
+            {experienceLevel
+              ? experienceMap[experienceLevel]
+              : 'Nível de Experiência'}
+          </Text>
           <Picker
             selectedValue={experienceLevel}
             onValueChange={(itemValue) =>
-              handleValueChange('experienceLevel', itemValue)
+              setExperienceLevel(
+                itemValue as OnboardingState['experienceLevel'],
+              )
             }
             style={styles.picker}
           >
@@ -62,11 +80,21 @@ const ExperienceScreen = ({ navigation }: Props) => {
           </Picker>
         </View>
 
-        <View style={styles.pickerContainer}>
+        <View style={styles.pickerInputContainer}>
+          <Text
+            style={[
+              styles.pickerInputText,
+              !availability && styles.placeholderText,
+            ]}
+          >
+            {availability
+              ? availabilityMap[availability]
+              : 'Disponibilidade Semanal'}
+          </Text>
           <Picker
             selectedValue={availability}
             onValueChange={(itemValue) =>
-              handleValueChange('availability', itemValue)
+              setAvailability(itemValue as OnboardingState['availability'])
             }
             style={styles.picker}
           >
@@ -77,7 +105,12 @@ const ExperienceScreen = ({ navigation }: Props) => {
           </Picker>
         </View>
       </View>
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: insets.bottom + theme.spacing.medium },
+        ]}
+      >
         <Text style={styles.progressIndicator}>Passo 4 de 5</Text>
         <StyledButton
           title="Próximo"
@@ -113,6 +146,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: theme.spacing.large,
   },
+  pickerInputContainer: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    height: 50,
+    marginBottom: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
+  },
+  pickerInputText: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+  },
+  placeholderText: {
+    color: theme.colors.secondary,
+  },
   pickerContainer: {
     backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.medium,
@@ -123,7 +173,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
   },
   picker: {
-    width: '100%',
+    position: 'absolute',
+    width: '120%',
+    height: '100%',
+    opacity: 0,
   },
   footer: {
     padding: theme.spacing.medium,

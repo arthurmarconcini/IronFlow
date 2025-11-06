@@ -65,7 +65,8 @@ export default function AddManualExerciseScreen() {
       />
 
       <Text style={styles.label}>Grupo Muscular</Text>
-      <View style={styles.pickerContainer}>
+      <View style={styles.pickerInputContainer}>
+        <Text style={styles.pickerInputText}>{bodyPart}</Text>
         <Picker
           selectedValue={bodyPart}
           onValueChange={(itemValue) => setBodyPart(itemValue)}
@@ -78,7 +79,8 @@ export default function AddManualExerciseScreen() {
       </View>
 
       <Text style={styles.label}>Equipamento</Text>
-      <View style={styles.pickerContainer}>
+      <View style={styles.pickerInputContainer}>
+        <Text style={styles.pickerInputText}>{equipment}</Text>
         <Picker
           selectedValue={equipment}
           onValueChange={(itemValue) => setEquipment(itemValue)}
@@ -106,6 +108,19 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.small,
     marginTop: theme.spacing.medium,
   },
+  pickerInputContainer: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: 'center',
+    height: 50,
+    paddingHorizontal: theme.spacing.medium,
+  },
+  pickerInputText: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+  },
   pickerContainer: {
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.medium,
@@ -114,7 +129,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   picker: {
-    // Estilos podem variar entre iOS e Android
+    position: 'absolute',
+    width: '120%',
+    height: '100%',
+    opacity: 0,
   },
   saveButton: {
     marginTop: 'auto',

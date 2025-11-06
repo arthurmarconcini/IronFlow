@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Slider } from '@miblanchard/react-native-slider'
 import { Picker } from '@react-native-picker/picker'
@@ -20,7 +20,6 @@ import {
   goalMap,
   sexMap,
 } from '../../utils/translationUtils'
-import { UserProfile } from '../../types/database'
 import FormGroup from '../../components/FormGroup'
 
 type Props = {
@@ -31,19 +30,20 @@ const ProfileEditScreen = ({ navigation }: Props) => {
   const { user } = useAuth()
   const { profile, setProfile, unitSystem } = useProfileStore()
   const [isLoading, setIsLoading] = useState(false)
+  const insets = useSafeAreaInsets()
 
   const [displayName, setDisplayName] = useState(profile?.displayName || '')
   const [weight, setWeight] = useState(profile?.currentWeightKg ?? 70)
-  const [goal, setGoal] = useState<UserProfile['goal']>(
+  const [goal, setGoal] = useState<keyof typeof goalMap>(
     profile?.goal || 'GAIN_MASS',
   )
   const [experienceLevel, setExperienceLevel] = useState<
-    UserProfile['experienceLevel']
+    keyof typeof experienceMap
   >(profile?.experienceLevel || 'beginner')
-  const [availability, setAvailability] = useState<UserProfile['availability']>(
-    profile?.availability || '3-4',
-  )
-  const [sex, setSex] = useState<UserProfile['sex']>(profile?.sex || 'male')
+  const [availability, setAvailability] = useState<
+    keyof typeof availabilityMap
+  >(profile?.availability || '3-4')
+  const [sex, setSex] = useState<keyof typeof sexMap>(profile?.sex || 'male')
 
   const handleSave = async () => {
     if (!profile || !user) return
@@ -148,10 +148,13 @@ const ProfileEditScreen = ({ navigation }: Props) => {
         </FormGroup>
 
         <FormGroup label="Objetivo">
-          <View style={styles.pickerWrapper}>
+          <View style={styles.pickerInputContainer}>
+            <Text style={styles.pickerInputText}>{goalMap[goal]}</Text>
             <Picker
               selectedValue={goal}
-              onValueChange={(itemValue) => setGoal(itemValue)}
+              onValueChange={(itemValue) =>
+                setGoal(itemValue as keyof typeof goalMap)
+              }
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
@@ -161,10 +164,15 @@ const ProfileEditScreen = ({ navigation }: Props) => {
         </FormGroup>
 
         <FormGroup label="Nível de Experiência">
-          <View style={styles.pickerWrapper}>
+          <View style={styles.pickerInputContainer}>
+            <Text style={styles.pickerInputText}>
+              {experienceMap[experienceLevel]}
+            </Text>
             <Picker
               selectedValue={experienceLevel}
-              onValueChange={(itemValue) => setExperienceLevel(itemValue)}
+              onValueChange={(itemValue) =>
+                setExperienceLevel(itemValue as keyof typeof experienceMap)
+              }
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
@@ -174,10 +182,15 @@ const ProfileEditScreen = ({ navigation }: Props) => {
         </FormGroup>
 
         <FormGroup label="Disponibilidade">
-          <View style={styles.pickerWrapper}>
+          <View style={styles.pickerInputContainer}>
+            <Text style={styles.pickerInputText}>
+              {availabilityMap[availability]}
+            </Text>
             <Picker
               selectedValue={availability}
-              onValueChange={(itemValue) => setAvailability(itemValue)}
+              onValueChange={(itemValue) =>
+                setAvailability(itemValue as keyof typeof availabilityMap)
+              }
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
@@ -187,10 +200,13 @@ const ProfileEditScreen = ({ navigation }: Props) => {
         </FormGroup>
 
         <FormGroup label="Sexo">
-          <View style={styles.pickerWrapper}>
+          <View style={styles.pickerInputContainer}>
+            <Text style={styles.pickerInputText}>{sexMap[sex]}</Text>
             <Picker
               selectedValue={sex}
-              onValueChange={(itemValue) => setSex(itemValue)}
+              onValueChange={(itemValue) =>
+                setSex(itemValue as keyof typeof sexMap)
+              }
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
@@ -211,7 +227,12 @@ const ProfileEditScreen = ({ navigation }: Props) => {
         </FormGroup>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: insets.bottom + theme.spacing.medium },
+        ]}
+      >
         <StyledButton
           title="Salvar Alterações"
           onPress={handleSave}
@@ -271,6 +292,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.primary,
   },
+  pickerInputContainer: {
+    borderColor: theme.colors.lightGray,
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: theme.colors.white,
+    height: 50,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.medium,
+  },
+  pickerInputText: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+  },
   pickerWrapper: {
     borderColor: theme.colors.lightGray,
     borderWidth: 1,
@@ -279,8 +313,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
   },
   picker: {
-    height: Platform.OS === 'ios' ? 150 : 50,
-    width: '100%',
+    position: 'absolute',
+    width: '120%',
+    height: Platform.OS === 'ios' ? 150 : '100%',
+    opacity: 0,
   },
   pickerItem: {
     fontSize: theme.fontSizes.medium,
