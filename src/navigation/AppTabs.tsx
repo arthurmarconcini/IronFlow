@@ -21,6 +21,7 @@ export default function AppTabs() {
         tabBarStyle: {
           backgroundColor: theme.colors.white,
           borderTopColor: theme.colors.lightGray,
+          paddingBottom: theme.spacing.medium * 2, // Aumenta o padding inferior
         },
         tabBarLabelStyle: {
           fontSize: theme.fontSizes.small,
