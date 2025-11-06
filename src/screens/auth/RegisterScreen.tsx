@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { View, Text, StyleSheet, Alert } from 'react-native'
+import {
+  Text,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
@@ -7,8 +13,9 @@ import { auth } from '../../config/firebaseConfig'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
 import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator'
-import { theme } from '../../theme'
+
 import { AuthNavigationProp } from '../../navigation/types'
+import { styles } from './styles' // Importar estilos globais
 
 type Props = {
   navigation: AuthNavigationProp
@@ -81,60 +88,50 @@ const RegisterScreen = ({ navigation }: Props) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <View style={styles.content}>
-        <Text style={styles.title}>Crie sua Conta</Text>
-        <StyledInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <StyledInput
-          placeholder="Senha"
-          value={password}
-          onChangeText={setPassword}
-          isPassword
-        />
-        <PasswordStrengthIndicator strength={passwordStrength} />
-        <StyledInput
-          placeholder="Confirme a Senha"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          isPassword
-        />
-        <StyledButton
-          title="Registrar"
-          onPress={handleRegister}
-          isLoading={isLoading}
-          disabled={!isPasswordStrong || isLoading}
-        />
-        <StyledButton
-          title="Já tenho uma conta"
-          onPress={() => navigation.navigate('Login')}
-          type="secondary"
-        />
-      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingContainer}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>Crie sua Conta</Text>
+          <StyledInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <StyledInput
+            placeholder="Senha"
+            value={password}
+            onChangeText={setPassword}
+            isPassword
+          />
+          <PasswordStrengthIndicator strength={passwordStrength} />
+          <StyledInput
+            placeholder="Confirme a Senha"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            isPassword
+          />
+          <StyledButton
+            title="Registrar"
+            onPress={handleRegister}
+            isLoading={isLoading}
+            disabled={!isPasswordStrong || isLoading}
+          />
+          <StyledButton
+            title="Já tenho uma conta"
+            onPress={() => navigation.navigate('Login')}
+            type="secondary"
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-  },
-  content: {
-    paddingHorizontal: theme.spacing.medium,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    textAlign: 'center',
-    marginBottom: theme.spacing.large,
-  },
-})
 
 export default RegisterScreen

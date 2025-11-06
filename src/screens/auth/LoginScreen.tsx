@@ -6,16 +6,19 @@ import {
   Platform,
   Pressable,
   Alert,
+  ScrollView,
 } from 'react-native'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
 import { styles } from './styles'
 import { AuthNavigationProp } from '../../navigation/types'
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn'
-
 import { FontAwesome } from '@expo/vector-icons'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { StatusBar } from 'expo-status-bar'
+import { theme } from '../../theme'
 
 export default function LoginScreen({
   navigation,
@@ -93,78 +96,88 @@ export default function LoginScreen({
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.logoContainer}>
-        <Text style={styles.logo}>IronFlow</Text>
-      </View>
-
-      <StyledInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <StyledInput
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        isPassword
-      />
-
-      <StyledButton
-        title="Entrar"
-        onPress={handleLogin}
-        isLoading={isLoading}
-        disabled={isLoading || isGoogleLoading}
-      />
-
-      <View style={styles.separatorContainer}>
-        <View style={styles.separatorLine} />
-        <Text style={styles.separatorText}>OU</Text>
-        <View style={styles.separatorLine} />
-      </View>
-
-      <StyledButton
-        title="Entrar com Google"
-        onPress={signInWithGoogle}
-        type="secondary"
-        icon={<FontAwesome name="google" size={20} color="#DB4437" />}
-        isLoading={isGoogleLoading}
-        disabled={isGoogleLoading || isLoading}
-      />
-
-      {Platform.OS === 'ios' && (
-        <StyledButton
-          title="Entrar com Apple"
-          onPress={() =>
-            Alert.alert(
-              'Em breve!',
-              'Login com Apple será implementado em breve.',
-            )
-          }
-          type="secondary"
-          icon={<FontAwesome name="apple" size={20} color="#000000" />}
-          disabled={isGoogleLoading || isLoading}
-        />
-      )}
-
-      <Pressable
-        style={styles.navLinkContainer}
-        onPress={() => navigation.navigate('ForgotPassword')}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <StatusBar style="dark" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingContainer}
       >
-        <Text style={styles.navLinkText}>Esqueceu sua senha?</Text>
-      </Pressable>
+        <ScrollView
+          contentContainerStyle={styles.scrollContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>IronFlow</Text>
+          </View>
 
-      <Pressable
-        style={styles.navLinkContainer}
-        onPress={() => navigation.navigate('Register')}
-      >
-        <Text style={styles.navLinkText}>Não tem uma conta? Cadastre-se</Text>
-      </Pressable>
-    </KeyboardAvoidingView>
+          <StyledInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <StyledInput
+            placeholder="Senha"
+            value={password}
+            onChangeText={setPassword}
+            isPassword
+          />
+
+          <StyledButton
+            title="Entrar"
+            onPress={handleLogin}
+            isLoading={isLoading}
+            disabled={isLoading || isGoogleLoading}
+          />
+
+          <View style={styles.separatorContainer}>
+            <View style={styles.separatorLine} />
+            <Text style={styles.separatorText}>OU</Text>
+            <View style={styles.separatorLine} />
+          </View>
+
+          <StyledButton
+            title="Entrar com Google"
+            onPress={signInWithGoogle}
+            type="secondary"
+            icon={<FontAwesome name="google" size={20} color="#DB4437" />}
+            isLoading={isGoogleLoading}
+            disabled={isGoogleLoading || isLoading}
+          />
+
+          {Platform.OS === 'ios' && (
+            <StyledButton
+              title="Entrar com Apple"
+              onPress={() =>
+                Alert.alert(
+                  'Em breve!',
+                  'Login com Apple será implementado em breve.',
+                )
+              }
+              type="secondary"
+              icon={<FontAwesome name="apple" size={20} color="#000000" />}
+              disabled={isGoogleLoading || isLoading}
+            />
+          )}
+
+          <Pressable
+            style={styles.navLinkContainer}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.navLinkText}>Esqueceu sua senha?</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.navLinkContainer}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={styles.navLinkText}>
+              Não tem uma conta? Cadastre-se
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }

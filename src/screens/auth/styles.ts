@@ -4,9 +4,15 @@ import { theme } from '../../theme'
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: theme.spacing.large, // Increased padding
     backgroundColor: theme.colors.background,
+  },
+  keyboardAvoidingContainer: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: theme.spacing.large,
   },
   logoContainer: {
     alignItems: 'center',
