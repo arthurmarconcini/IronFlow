@@ -30,7 +30,8 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "scheme": "com.ironflow.app",
     "extra": {
