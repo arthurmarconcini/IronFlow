@@ -199,8 +199,7 @@ const FreeWorkoutOfferScreen = () => {
       bmi: userProfileData.bmi,
       bmiCategory: userProfileData.bmiCategory,
       onboardingCompleted: true,
-      syncStatus: 'dirty',
-      lastModifiedLocally: Date.now(),
+      syncStatus: 'synced',
     }
 
     const newId = await DatabaseService.saveUserProfile(finalProfileData)

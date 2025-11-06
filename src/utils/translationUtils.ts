@@ -49,10 +49,9 @@ const equipmentTranslations: { [key: string]: string } = {
 
 export const goalMap = {
   GAIN_MASS: 'Ganhar Massa',
-  LOSE_FAT: 'Perder Gordura',
+  FAT_LOSS: 'Perder Gordura',
   MAINTAIN: 'Manter a Forma',
-  RECOMPOSITION: 'Recomposição Corporal',
-  ENDURANCE: 'Resistência',
+  STRENGTH: 'Força',
 }
 
 export const experienceMap = {
