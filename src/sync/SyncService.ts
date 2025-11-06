@@ -1,7 +1,6 @@
 import {
   getFirestore,
   doc,
-  setDoc,
   getDoc,
   serverTimestamp,
   Timestamp,
@@ -9,6 +8,7 @@ import {
   query,
   where,
   getDocs,
+  runTransaction,
 } from 'firebase/firestore'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { User } from 'firebase/auth'
@@ -46,58 +46,46 @@ const syncUserProfile = async (user: User | null) => {
           syncStatus: 'syncing',
         })
 
-        const serverDoc = await getDoc(docRef)
+        await runTransaction(firestoreDb, async (transaction) => {
+          const serverDoc = await transaction.get(docRef)
 
-        if (serverDoc.exists()) {
-          const serverData = serverDoc.data()
-          const serverTimestamp =
-            (serverData.last_updated_server as Timestamp)?.toMillis() ?? 0
+          if (serverDoc.exists()) {
+            const serverData = serverDoc.data()
+            const serverTimestamp =
+              (serverData.last_updated_server as Timestamp)?.toMillis() ?? 0
 
-          if (serverTimestamp > profile.lastModifiedLocally) {
-            console.warn(
-              `Conflito detectado para o perfil ${user.uid}. O servidor tem dados mais recentes. Atualizando localmente.`,
-            )
-            await DatabaseService.updateUserProfile(profile.id!, {
-              planType: serverData.planType,
-              displayName: serverData.displayName,
-              dob: serverData.dob,
-              sex: serverData.sex,
-              experienceLevel: serverData.experienceLevel,
-              availability: serverData.availability,
-              goal: serverData.goal,
-              heightCm: serverData.heightCm,
-              currentWeightKg: serverData.currentWeightKg,
-              bmi: serverData.bmi,
-              bmiCategory: serverData.bmiCategory,
-              syncStatus: 'synced',
-              lastUpdatedServer: serverTimestamp,
-            })
-            continue
+            if (serverTimestamp > profile.lastModifiedLocally) {
+              console.warn(
+                `Conflito detectado para o perfil ${user.uid}. O servidor tem dados mais recentes. Atualizando localmente.`,
+              )
+              // A transação é apenas para o servidor, então a atualização local fica fora,
+              // mas marcamos para não prosseguir com o envio.
+              throw new Error('SERVER_DATA_NEWER')
+            }
           }
-        }
 
-        // Prepara um objeto limpo para o Firestore, sem metadados locais.
-        const profileDataForFirestore = {
-          userId: profile.userId,
-          planType: profile.planType,
-          displayName: profile.displayName,
-          dob: profile.dob,
-          sex: profile.sex,
-          experienceLevel: profile.experienceLevel,
-          availability: profile.availability,
-          goal: profile.goal,
-          heightCm: profile.heightCm,
-          currentWeightKg: profile.currentWeightKg,
-          bmi: profile.bmi,
-          bmiCategory: profile.bmiCategory,
-          onboardingCompleted: profile.onboardingCompleted,
-          lastModifiedLocally: profile.lastModifiedLocally,
-          last_updated_server: serverTimestamp(),
-        }
+          const profileDataForFirestore = {
+            userId: profile.userId,
+            planType: profile.planType,
+            displayName: profile.displayName,
+            dob: profile.dob,
+            sex: profile.sex,
+            experienceLevel: profile.experienceLevel,
+            availability: profile.availability,
+            goal: profile.goal,
+            heightCm: profile.heightCm,
+            currentWeightKg: profile.currentWeightKg,
+            bmi: profile.bmi,
+            bmiCategory: profile.bmiCategory,
+            onboardingCompleted: profile.onboardingCompleted,
+            lastModifiedLocally: profile.lastModifiedLocally,
+            last_updated_server: serverTimestamp(),
+          }
 
-        await setDoc(docRef, profileDataForFirestore, { merge: true })
+          transaction.set(docRef, profileDataForFirestore, { merge: true })
+        })
 
-        // Sucesso: Atualiza o status local de forma segura
+        // Sucesso na transação: Atualiza o status local
         const updatedDoc = await getDoc(docRef)
         const updatedServerTimestamp = (
           updatedDoc.data()?.last_updated_server as Timestamp
@@ -110,28 +98,51 @@ const syncUserProfile = async (user: User | null) => {
           lastUpdatedServer: updatedServerTimestamp,
         })
         console.log(`Perfil do usuário ${user.uid} sincronizado com sucesso.`)
-      } catch (error) {
-        console.error(
-          `Falha ao sincronizar perfil para ${user.uid}. Erro do Firebase:`,
-          JSON.stringify(error, null, 2),
-        )
-        const currentRetryCount = profile.retryCount ?? 0
-        if (currentRetryCount < MAX_RETRIES) {
-          const newRetryCount = currentRetryCount + 1
-          const delay = BASE_RETRY_DELAY * Math.pow(2, newRetryCount)
-          const nextRetryTimestamp = Date.now() + delay
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'SERVER_DATA_NEWER') {
+          // Lógica para quando o servidor tem dados mais recentes
+          const serverDoc = await getDoc(docRef)
+          const serverData = serverDoc.data()
+          const serverTimestamp =
+            (serverData?.last_updated_server as Timestamp)?.toMillis() ?? 0
           await DatabaseService.updateUserProfile(profile.id!, {
-            syncStatus: 'error',
-            retryCount: newRetryCount,
-            nextRetryTimestamp,
+            planType: serverData?.planType,
+            displayName: serverData?.displayName,
+            dob: serverData?.dob,
+            sex: serverData?.sex,
+            experienceLevel: serverData?.experienceLevel,
+            availability: serverData?.availability,
+            goal: serverData?.goal,
+            heightCm: serverData?.heightCm,
+            currentWeightKg: serverData?.currentWeightKg,
+            bmi: serverData?.bmi,
+            bmiCategory: serverData?.bmiCategory,
+            syncStatus: 'synced',
+            lastUpdatedServer: serverTimestamp,
           })
         } else {
-          await DatabaseService.updateUserProfile(profile.id!, {
-            syncStatus: 'error',
-          })
-          console.warn(
-            `Máximo de tentativas de sincronização atingido para o perfil ${user.uid}.`,
+          console.error(
+            `Falha ao sincronizar perfil para ${user.uid}. Erro detalhado:`,
+            error,
           )
+          const currentRetryCount = profile.retryCount ?? 0
+          if (currentRetryCount < MAX_RETRIES) {
+            const newRetryCount = currentRetryCount + 1
+            const delay = BASE_RETRY_DELAY * Math.pow(2, newRetryCount)
+            const nextRetryTimestamp = Date.now() + delay
+            await DatabaseService.updateUserProfile(profile.id!, {
+              syncStatus: 'error',
+              retryCount: newRetryCount,
+              nextRetryTimestamp,
+            })
+          } else {
+            await DatabaseService.updateUserProfile(profile.id!, {
+              syncStatus: 'error',
+            })
+            console.warn(
+              `Máximo de tentativas de sincronização atingido para o perfil ${user.uid}.`,
+            )
+          }
         }
       }
     }
