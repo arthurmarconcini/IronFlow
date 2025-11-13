@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
   TouchableOpacity,
   UIManager,
   LayoutAnimation,
@@ -21,6 +20,9 @@ import { WorkoutPlan, Exercise } from '../../types/database'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledButton from '../../components/StyledButton'
 import { theme } from '../../theme'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
+import AdRewarded from '../../components/ads/RewardedAd'
+import PremiumBadge from '../../components/PremiumBadge'
 
 // Habilita LayoutAnimation no Android
 if (
@@ -33,12 +35,28 @@ if (
 export default function WorkoutPlanDetailsScreen() {
   const route = useRoute<AppRouteProp<'WorkoutPlanDetails'>>()
   const navigation = useNavigation<AppNavigationProp>()
-  const { createWorkout, isLoading: isCreating } = useWorkouts()
+  const { workouts, createWorkout, isLoading: isCreating } = useWorkouts() // Obter workouts do usuário
   const { planId } = route.params
 
   const [plan, setPlan] = useState<WorkoutPlan | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const { isPremium } = useSubscriptionStatus()
+  const [rewardGranted, setRewardGranted] = useState(false)
+  const [isAlreadyImported, setIsAlreadyImported] = useState(false) // Novo estado
+
+  // Efeito para verificar se o plano já foi importado
+  useEffect(() => {
+    if (plan && workouts.length > 0) {
+      const planWorkoutNames = new Set(plan.workouts.map((w) => w.name))
+      const userWorkoutNames = new Set(workouts.map((w) => w.name))
+
+      const isImported = [...planWorkoutNames].every((name) =>
+        userWorkoutNames.has(name),
+      )
+      setIsAlreadyImported(isImported)
+    }
+  }, [plan, workouts])
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -55,46 +73,49 @@ export default function WorkoutPlanDetailsScreen() {
     fetchPlan()
   }, [planId])
 
-  const handleImportPlan = async () => {
-    if (!plan) return
+  const handleImportPlan = useCallback(async () => {
+    if (!plan) {
+      console.log('handleImportPlan chamado, mas o plano é nulo.')
+      return
+    }
 
-    Alert.alert(
-      'Importar Plano',
-      `Você está prestes a adicionar ${plan.workouts.length} novo(s) treino(s) à sua lista. Deseja continuar?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              for (const workoutTemplate of plan.workouts) {
-                await createWorkout(
-                  workoutTemplate.name,
-                  workoutTemplate.muscleGroup,
-                  workoutTemplate.exercises,
-                )
-              }
+    Toast.show({
+      type: 'info',
+      text1: 'Processando sua recompensa...',
+    })
 
-              Toast.show({
-                type: 'success',
-                text1: 'Plano Importado!',
-                text2: `${plan.workouts.length} treino(s) adicionado(s) com sucesso.`,
-              })
+    try {
+      for (const workoutTemplate of plan.workouts) {
+        await createWorkout(
+          workoutTemplate.name,
+          workoutTemplate.muscleGroup,
+          workoutTemplate.exercises,
+        )
+      }
 
-              navigation.navigate('AppTabs', { screen: 'HomeTab' })
-            } catch (error) {
-              console.error('Failed to import workout plan:', error)
-              Toast.show({
-                type: 'error',
-                text1: 'Erro ao Importar',
-                text2: 'Não foi possível adicionar o plano aos seus treinos.',
-              })
-            }
-          },
-        },
-      ],
-    )
-  }
+      Toast.show({
+        type: 'success',
+        text1: 'Plano Importado!',
+        text2: `${plan.workouts.length} treino(s) adicionado(s) com sucesso.`,
+      })
+
+      navigation.navigate('AppTabs', { screen: 'HomeTab' })
+    } catch (error) {
+      console.error('Failed to import workout plan:', error)
+      Toast.show({
+        type: 'error',
+        text1: 'Erro ao Importar',
+        text2: 'Não foi possível adicionar o plano aos seus treinos.',
+      })
+    }
+  }, [plan, createWorkout, navigation])
+
+  useEffect(() => {
+    if (rewardGranted) {
+      handleImportPlan()
+      setRewardGranted(false)
+    }
+  }, [rewardGranted, handleImportPlan])
 
   const toggleExpand = (index: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -117,6 +138,47 @@ export default function WorkoutPlanDetailsScreen() {
     </View>
   )
 
+  const renderFooter = () => {
+    const buttonTitle = isAlreadyImported
+      ? 'Plano já Adicionado'
+      : `Importar ${plan?.workouts.length ?? 0} Treino(s)`
+
+    if (isPremium) {
+      return (
+        <View style={styles.footer}>
+          <StyledButton
+            title={buttonTitle}
+            onPress={handleImportPlan}
+            isLoading={isCreating}
+            disabled={!plan || isAlreadyImported}
+          />
+        </View>
+      )
+    }
+
+    const adButtonTitle = isAlreadyImported
+      ? 'Plano já Adicionado'
+      : 'Importar com Anúncio'
+
+    return (
+      <View style={styles.footer}>
+        <AdRewarded
+          onRewarded={() => setRewardGranted(true)}
+          buttonTitle={adButtonTitle}
+          disabled={isCreating || !plan || isAlreadyImported}
+        />
+        <TouchableOpacity
+          style={styles.premiumButton}
+          onPress={() => navigation.navigate('Premium')}
+        >
+          <Text style={styles.premiumButtonText}>
+            Vire Premium para importar sem anúncios
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   if (isLoading) {
     return (
       <ScreenContainer style={styles.center}>
@@ -137,7 +199,10 @@ export default function WorkoutPlanDetailsScreen() {
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.planName}>{plan.name}</Text>
+            {plan.isPremium && <PremiumBadge />}
+          </View>
           <Text style={styles.planDescription}>{plan.description}</Text>
           <Text style={styles.workoutsTitle}>Treinos do Plano</Text>
         </View>
@@ -173,13 +238,7 @@ export default function WorkoutPlanDetailsScreen() {
           )
         })}
       </ScrollView>
-      <View style={styles.footer}>
-        <StyledButton
-          title={`Importar ${plan.workouts.length} Treino(s)`}
-          onPress={handleImportPlan}
-          isLoading={isCreating}
-        />
-      </View>
+      {renderFooter()}
     </ScreenContainer>
   )
 }
@@ -197,11 +256,16 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: theme.spacing.medium,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
   planName: {
     fontSize: theme.fontSizes.xlarge,
     fontWeight: 'bold',
     color: theme.colors.text,
-    marginBottom: theme.spacing.small,
+    marginRight: theme.spacing.small,
   },
   planDescription: {
     fontSize: theme.fontSizes.medium,
@@ -263,5 +327,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     backgroundColor: theme.colors.background,
+  },
+  premiumButton: {
+    marginTop: theme.spacing.medium,
+    alignItems: 'center',
+  },
+  premiumButtonText: {
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
 })
