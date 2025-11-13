@@ -1,4 +1,4 @@
-// src/utils/translationUtils.ts
+import { UserProfile } from '../types/database'
 
 // Mapeamento de Body Parts (Partes do Corpo)
 const bodyPartTranslations: { [key: string]: string } = {
@@ -47,32 +47,38 @@ const equipmentTranslations: { [key: string]: string } = {
   'wheel roller': 'Roda Abdominal',
 }
 
-export const goalMap = {
+export const goalMap: Record<NonNullable<UserProfile['goal']>, string> = {
   GAIN_MASS: 'Ganhar Massa',
   FAT_LOSS: 'Perder Gordura',
   MAINTAIN: 'Manter a Forma',
   STRENGTH: 'Força',
 }
 
-export const experienceMap = {
+export const experienceMap: Record<
+  NonNullable<UserProfile['experienceLevel']>,
+  string
+> = {
   beginner: 'Iniciante',
   intermediate: 'Intermediário',
   advanced: 'Avançado',
 }
 
-export const availabilityMap = {
+export const availabilityMap: Record<
+  NonNullable<UserProfile['availability']>,
+  string
+> = {
   '1-2': '1-2 dias/semana',
   '3-4': '3-4 dias/semana',
   '5+': '5+ dias/semana',
 }
 
-export const sexMap = {
+export const sexMap: Record<NonNullable<UserProfile['sex']>, string> = {
   male: 'Masculino',
   female: 'Feminino',
   other: 'Outro',
 }
 
-export const planMap = {
+export const planMap: Record<NonNullable<UserProfile['planType']>, string> = {
   free: 'Gratuito',
   premium: 'Premium',
 }

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import ScreenContainer from '../../components/ScreenContainer'
 import StyledButton from '../../components/StyledButton'
 import { theme } from '../../theme'
-import { useSubscription } from '../../hooks/useSubscription'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
 import { useAuth } from '../../hooks/useAuth'
 import { DatabaseService } from '../../db/DatabaseService'
 import { Ionicons } from '@expo/vector-icons'
@@ -33,7 +33,7 @@ type Props = {
 }
 
 export default function StatsScreen({ navigation }: Props) {
-  const { isPremium } = useSubscription()
+  const { isPremium } = useSubscriptionStatus()
   const { user } = useAuth()
 
   const [workoutCount, setWorkoutCount] = useState(0)

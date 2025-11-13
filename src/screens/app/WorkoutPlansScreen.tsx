@@ -12,11 +12,14 @@ import { DatabaseService } from '../../db/DatabaseService'
 import { WorkoutPlan } from '../../types/database'
 import ScreenContainer from '../../components/ScreenContainer'
 import { theme } from '../../theme'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
+import PremiumBadge from '../../components/PremiumBadge'
 
 export default function WorkoutPlansScreen() {
   const navigation = useNavigation<AppNavigationProp>()
   const [plans, setPlans] = useState<WorkoutPlan[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { isPremium } = useSubscriptionStatus()
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -33,14 +36,24 @@ export default function WorkoutPlansScreen() {
     fetchPlans()
   }, [])
 
+  const handlePlanPress = (plan: WorkoutPlan) => {
+    if (plan.isPremium && !isPremium) {
+      navigation.navigate('Premium') // Redireciona para a tela Premium/Paywall
+    } else {
+      navigation.navigate('WorkoutPlanDetails', { planId: plan.firestoreId })
+    }
+  }
+
   const renderPlan = ({ item }: { item: WorkoutPlan }) => (
     <TouchableOpacity
-      style={styles.planCard}
-      onPress={() =>
-        navigation.navigate('WorkoutPlanDetails', { planId: item.firestoreId })
-      }
+      style={[styles.planCard, item.isPremium && styles.premiumPlanCard]}
+      onPress={() => handlePlanPress(item)}
+      activeOpacity={item.isPremium && !isPremium ? 0.7 : 0.2}
     >
-      <Text style={styles.planName}>{item.name}</Text>
+      <View style={styles.planHeader}>
+        <Text style={styles.planName}>{item.name}</Text>
+        {item.isPremium && <PremiumBadge />}
+      </View>
       <Text style={styles.planDescription}>{item.description}</Text>
       <View style={styles.planMeta}>
         <Text style={styles.planCategory}>{item.category}</Text>
@@ -106,10 +119,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
+  premiumPlanCard: {
+    borderWidth: 2,
+    borderColor: theme.colors.gold,
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
   planName: {
     fontSize: theme.fontSizes.large,
     fontWeight: 'bold',
     color: theme.colors.text,
+    flexShrink: 1, // Permite que o texto diminua se o badge for grande
   },
   planDescription: {
     fontSize: theme.fontSizes.medium,

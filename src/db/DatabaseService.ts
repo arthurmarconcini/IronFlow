@@ -75,7 +75,7 @@ interface ExerciseDefinitionFromDB {
 const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
   id: record.id,
   userId: record.user_id,
-  planType: record.plan_type,
+  planType: record.plan_type ?? 'free',
   displayName: record.display_name,
   dob: record.dob,
   sex: record.sex,

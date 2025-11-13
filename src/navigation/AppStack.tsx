@@ -12,6 +12,7 @@ import WorkoutDetailsScreen from '../screens/app/WorkoutDetailsScreen'
 import PremiumScreen from '../screens/app/PremiumScreen'
 import ExerciseDetailScreen from '../screens/app/ExerciseDetailScreen'
 
+import ProfileScreen from '../screens/app/ProfileScreen'
 import WorkoutPlansScreen from '../screens/app/WorkoutPlansScreen'
 import WorkoutPlanDetailsScreen from '../screens/app/WorkoutPlanDetailsScreen'
 
@@ -25,6 +26,11 @@ export default function AppStack() {
       }}
     >
       <Stack.Screen name="AppTabs" component={AppTabs} />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Perfil', headerShown: true }}
+      />
       <Stack.Screen
         name="CreateWorkout"
         component={CreateWorkoutScreen}

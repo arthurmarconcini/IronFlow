@@ -16,7 +16,7 @@ import { StrengthExercise } from '../../types/database'
 
 export default function AddManualExerciseScreen() {
   const navigation = useNavigation<AppNavigationProp>()
-  const { addExercise } = useWorkoutCreationStore()
+  const addExercise = useWorkoutCreationStore((state) => state.addExercise)
 
   const [name, setName] = useState('')
   const [bodyPart, setBodyPart] = useState<string>(PRESET_BODY_PARTS[0])
@@ -41,6 +41,8 @@ export default function AddManualExerciseScreen() {
       reps: '10',
       rest: 60,
       weight: 0,
+      bodyPart, // Adicionado
+      equipment, // Adicionado
     }
 
     addExercise(newExercise)

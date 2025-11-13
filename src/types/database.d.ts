@@ -45,6 +45,8 @@ export interface StrengthExercise extends BaseExercise {
   reps: string
   rest: number
   weight?: number
+  bodyPart?: string
+  equipment?: string
 }
 
 // Exercise type for cardio-based activities
@@ -69,6 +71,13 @@ export interface Workout {
 
 // --- Planos de Treino (Templates) ---
 
+// Representa um "molde" de treino dentro de um WorkoutPlan
+export interface WorkoutTemplate {
+  name: string
+  muscleGroup: string
+  exercises: Exercise[]
+}
+
 // Representa um plano de treino (template) que os usuários podem importar
 export interface WorkoutPlan {
   id: number // ID local do SQLite
@@ -76,8 +85,8 @@ export interface WorkoutPlan {
   name: string
   description: string
   category: 'beginner' | 'intermediate' | 'advanced' | 'expert'
-  // Um plano é uma coleção de "templates de treino"
-  workouts: Omit<Workout, 'id' | 'firestoreId' | 'lastModified' | 'deletedAt'>[]
+  workouts: WorkoutTemplate[]
+  isPremium?: boolean // Adicionado para indicar se o plano é premium
 }
 
 // --- Agendamento de Treinos ---

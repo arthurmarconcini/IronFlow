@@ -14,10 +14,13 @@ const colors = {
   card: '#FFFFFF',
   border: '#E0E0E0',
   textMuted: '#6C757D',
+  gold: '#FFD700', // Cor para elementos premium
+  textLight: '#FFFFFF', // Cor de texto claro (branco)
 }
 
 const fontSizes = {
   small: 12,
+  xsmall: 10, // Adicionado para tamanhos de fonte muito pequenos
   medium: 16,
   large: 20,
   xlarge: 24,
@@ -25,6 +28,7 @@ const fontSizes = {
 
 const spacing = {
   small: 10,
+  xsmall: 5, // Adicionado para espaçamentos muito pequenos
   medium: 20,
   large: 30,
 }
