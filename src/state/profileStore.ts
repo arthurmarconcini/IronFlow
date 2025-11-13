@@ -10,6 +10,7 @@ interface ProfileState {
   unitSystem: UnitSystem
   initializationStatus: InitializationStatus
   setProfile: (profile: UserProfile | null) => void
+  updateProfile: (updates: Partial<UserProfile>) => void
   setIsLoading: (isLoading: boolean) => void
   setUnitSystem: (system: UnitSystem) => void
   setInitializationStatus: (status: InitializationStatus) => void
@@ -21,6 +22,10 @@ export const useProfileStore = create<ProfileState>((set) => ({
   unitSystem: 'metric',
   initializationStatus: 'loading',
   setProfile: (profile) => set({ profile, isLoading: false }),
+  updateProfile: (updates) =>
+    set((state) => ({
+      profile: state.profile ? { ...state.profile, ...updates } : null,
+    })),
   setIsLoading: (isLoading) => set({ isLoading }),
   setUnitSystem: (system) => set({ unitSystem: system }),
   setInitializationStatus: (status) => set({ initializationStatus: status }),

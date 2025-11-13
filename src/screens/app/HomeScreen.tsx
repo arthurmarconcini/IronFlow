@@ -23,10 +23,11 @@ import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 import { DatabaseService } from '../../db/DatabaseService'
 import { ScheduledWorkout } from '../../types/database'
 import { format } from 'date-fns'
+import AdBanner from '../../components/ads/BannerAd' // Importar o componente de anúncio
 
 export default function HomeScreen() {
   const { user } = useAuth()
-  const { profile } = useProfileStore()
+  const profile = useProfileStore((state) => state.profile)
   const { workouts, isLoading, syncWorkouts, fetchLocalWorkouts } =
     useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
@@ -119,9 +120,7 @@ export default function HomeScreen() {
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.profileButton}
-          onPress={() =>
-            navigation.navigate('AppTabs', { screen: 'ProfileTab' })
-          }
+          onPress={() => navigation.navigate('Profile')}
         >
           <Ionicons
             name="person-circle-outline"
@@ -133,7 +132,10 @@ export default function HomeScreen() {
 
       <View style={styles.greetingContainer}>
         <Text style={styles.greeting} numberOfLines={2} ellipsizeMode="tail">
-          Olá, <Text style={styles.userName}>{profile?.displayName || user?.email}</Text>
+          Olá,{' '}
+          <Text style={styles.userName}>
+            {profile?.displayName || user?.email}
+          </Text>
         </Text>
       </View>
 
@@ -160,6 +162,7 @@ export default function HomeScreen() {
           )}
           ListHeaderComponent={
             <>
+              <AdBanner />
               {renderTodaysWorkouts()}
               <View style={styles.listTitleContainer}>
                 <Text style={styles.sectionTitle}>Meus Treinos</Text>
@@ -198,7 +201,11 @@ export default function HomeScreen() {
           style={styles.actionButton}
           onPress={() => navigation.navigate('WorkoutPlans')}
         >
-          <Ionicons name="compass-outline" size={24} color={theme.colors.white} />
+          <Ionicons
+            name="compass-outline"
+            size={24}
+            color={theme.colors.white}
+          />
           <Text style={styles.actionButtonText}>Explorar Planos</Text>
         </TouchableOpacity>
         <TouchableOpacity

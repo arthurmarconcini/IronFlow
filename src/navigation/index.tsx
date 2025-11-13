@@ -13,8 +13,13 @@ import OfflineSyncScreen from '../screens/OfflineSyncScreen'
 export default function RootNavigator() {
   const { user, loading: authLoading } = useAuth()
 
+  // Chama o hook de inicialização. Ele não retorna nada, apenas dispara a lógica.
   useUserProfile()
-  const { profile, initializationStatus } = useProfileStore()
+
+  const profile = useProfileStore((state) => state.profile)
+  const initializationStatus = useProfileStore(
+    (state) => state.initializationStatus,
+  )
 
   if (authLoading || initializationStatus === 'loading') {
     return <SplashScreen />

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native'
 import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
@@ -16,6 +17,7 @@ import { convertCmToFtIn, convertKgToLbs } from '../../utils/conversionUtils'
 import { signOut } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
 import { AppNavigationProp } from '../../navigation/types'
+import { UserProfile } from '../../types/database'
 import { useSubscription } from '../../hooks/useSubscription'
 import ProfileCard from '../../components/ProfileCard'
 import InfoRow from '../../components/InfoRow'
@@ -63,6 +65,16 @@ type Props = {
   navigation: AppNavigationProp
 }
 
+const getMappedValue = <T extends string>(
+  map: Record<T, string>,
+  key: T | null | undefined,
+): string => {
+  if (key && key in map) {
+    return map[key]
+  }
+  return 'N/A'
+}
+
 export default function ProfileScreen({ navigation }: Props) {
   const { user } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
@@ -76,45 +88,61 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   }
 
-  const syncStatusMap = {
+  const syncStatusMap: Record<
+    UserProfile['syncStatus'],
+    {
+      text: string
+      color: string
+      icon: keyof typeof Ionicons.glyphMap
+    }
+  > = {
     synced: {
       text: 'Sincronizado',
       color: theme.colors.primary,
-      icon: 'checkmark-circle-outline' as const,
+      icon: 'checkmark-circle-outline',
     },
     dirty: {
       text: 'Aguardando Sinc.',
       color: theme.colors.secondary,
-      icon: 'time-outline' as const,
+      icon: 'time-outline',
     },
     syncing: {
       text: 'Sincronizando...',
       color: theme.colors.primary,
-      icon: 'sync-circle-outline' as const,
+      icon: 'sync-circle-outline',
     },
     error: {
       text: 'Falha na Sinc.',
       color: theme.colors.error,
-      icon: 'alert-circle-outline' as const,
+      icon: 'alert-circle-outline',
     },
   }
 
-  const currentSyncStatus = profile?.syncStatus ?? 'dirty'
+  if (!profile) {
+    return (
+      <ScreenContainer
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </ScreenContainer>
+    )
+  }
+
+  const currentSyncStatus = profile.syncStatus
   const syncDisplay = syncStatusMap[currentSyncStatus]
 
   const displayHeight =
     unitSystem === 'metric'
-      ? `${profile?.heightCm?.toFixed(0) ?? 'N/A'} cm`
-      : convertCmToFtIn(profile?.heightCm ?? 0)
+      ? `${profile.heightCm?.toFixed(0) ?? 'N/A'} cm`
+      : convertCmToFtIn(profile.heightCm ?? 0)
   const displayWeight =
     unitSystem === 'metric'
-      ? `${profile?.currentWeightKg?.toFixed(1) ?? 'N/A'} kg`
-      : `${convertKgToLbs(profile?.currentWeightKg ?? 0).toFixed(1)} lbs`
+      ? `${profile.currentWeightKg?.toFixed(1) ?? 'N/A'} kg`
+      : `${convertKgToLbs(profile.currentWeightKg ?? 0).toFixed(1)} lbs`
 
   const BmiInfo = () => {
-    if (!profile?.bmi || !profile.bmiCategory) return null
-    const category =
-      bmiCategoryMap[profile.bmiCategory as keyof typeof bmiCategoryMap]
+    if (!profile.bmi || !profile.bmiCategory) return null
+    const category = getMappedValue(bmiCategoryMap, profile.bmiCategory)
     return (
       <View style={styles.bmiContainer}>
         <Text style={styles.bmiValue}>{profile.bmi.toFixed(1)}</Text>
@@ -140,7 +168,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={styles.header}>
           <AvatarInput />
           <Text style={styles.displayName}>
-            {profile?.displayName || user?.email}
+            {profile.displayName || user?.email}
           </Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
@@ -191,33 +219,17 @@ export default function ProfileScreen({ navigation }: Props) {
         <ProfileCard title="Meu Plano de Treino">
           <InfoRow
             label="Objetivo"
-            value={
-              profile?.goal
-                ? goalMap[profile.goal as keyof typeof goalMap]
-                : 'N/A'
-            }
+            value={getMappedValue(goalMap, profile.goal)}
             icon="trophy-outline"
           />
           <InfoRow
             label="Nível"
-            value={
-              profile?.experienceLevel
-                ? experienceMap[
-                    profile.experienceLevel as keyof typeof experienceMap
-                  ]
-                : 'N/A'
-            }
+            value={getMappedValue(experienceMap, profile.experienceLevel)}
             icon="analytics-outline"
           />
           <InfoRow
             label="Disponibilidade"
-            value={
-              profile?.availability
-                ? availabilityMap[
-                    profile.availability as keyof typeof availabilityMap
-                  ]
-                : 'N/A'
-            }
+            value={getMappedValue(availabilityMap, profile.availability)}
             icon="calendar-outline"
           />
         </ProfileCard>
@@ -225,7 +237,7 @@ export default function ProfileScreen({ navigation }: Props) {
         <ProfileCard title="Minha Conta">
           <InfoRow
             label="Plano"
-            value={planType ? planMap[planType] : 'N/A'}
+            value={getMappedValue(planMap, planType)}
             icon="ribbon-outline"
           />
           <InfoRow
@@ -235,14 +247,12 @@ export default function ProfileScreen({ navigation }: Props) {
           />
           <InfoRow
             label="Sexo"
-            value={
-              profile?.sex ? sexMap[profile.sex as keyof typeof sexMap] : 'N/A'
-            }
+            value={getMappedValue(sexMap, profile.sex)}
             icon="transgender-outline"
           />
           <InfoRow
             label="Data de Nasc."
-            value={profile?.dob}
+            value={profile.dob}
             icon="calendar-number-outline"
           />
         </ProfileCard>

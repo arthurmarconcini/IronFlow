@@ -138,7 +138,7 @@ const FreeWorkoutOfferScreen = () => {
   const { user } = useAuth()
   const setProfile = useProfileStore((state) => state.setProfile)
   const { createWorkout } = useWorkouts()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false) // Trava para submissão
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
   const onboardingData = useOnboardingStore((state) => state)
@@ -199,7 +199,8 @@ const FreeWorkoutOfferScreen = () => {
       bmi: userProfileData.bmi,
       bmiCategory: userProfileData.bmiCategory,
       onboardingCompleted: true,
-      syncStatus: 'synced',
+      syncStatus: 'dirty', // Marcar como 'dirty' para sincronização
+      lastModifiedLocally: Date.now(), // Adicionar o timestamp local
     }
 
     const newId = await DatabaseService.saveUserProfile(finalProfileData)
@@ -210,8 +211,8 @@ const FreeWorkoutOfferScreen = () => {
   }
 
   const handleAccept = async () => {
-    if (!previewWorkouts) return
-    setIsLoading(true)
+    if (isSubmitting || !previewWorkouts) return // Trava
+    setIsSubmitting(true)
     try {
       for (const workout of previewWorkouts) {
         await createWorkout(
@@ -224,18 +225,19 @@ const FreeWorkoutOfferScreen = () => {
     } catch (error) {
       console.error('Erro ao aceitar a oferta de treino:', error)
     } finally {
-      setIsLoading(false)
+      // A navegação irá desmontar o componente, então não precisamos resetar o estado
     }
   }
 
   const handleDecline = async () => {
-    setIsLoading(true)
+    if (isSubmitting) return // Trava
+    setIsSubmitting(true)
     try {
       await saveProfileAndFinalize()
     } catch (error) {
       console.error('Erro ao recusar a oferta de treino:', error)
     } finally {
-      setIsLoading(false)
+      // A navegação irá desmontar o componente, então não precisamos resetar o estado
     }
   }
 
@@ -332,12 +334,12 @@ const FreeWorkoutOfferScreen = () => {
           <StyledButton
             title="Aceitar e Começar"
             onPress={handleAccept}
-            isLoading={isLoading}
+            isLoading={isSubmitting}
           />
           <TouchableOpacity
             onPress={handleDecline}
             style={styles.declineButton}
-            disabled={isLoading}
+            disabled={isSubmitting}
           >
             <Text style={styles.declineButtonText}>Agora não, obrigado</Text>
           </TouchableOpacity>

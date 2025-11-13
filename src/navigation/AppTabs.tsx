@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 
 import HomeScreen from '../screens/app/HomeScreen'
-import ProfileScreen from '../screens/app/ProfileScreen'
+
 import StatsScreen from '../screens/app/StatsScreen'
 import ScheduleScreen from '../screens/app/ScheduleScreen' // Importar a nova tela
 import { theme } from '../theme'
@@ -61,14 +61,21 @@ export default function AppTabs() {
       />
       <Tab.Screen
         name="ProfileTab"
-        component={ProfileScreen}
         options={{
           tabBarLabel: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
-      />
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault()
+            navigation.getParent()?.navigate('Profile')
+          },
+        })}
+      >
+        {() => null}
+      </Tab.Screen>
     </Tab.Navigator>
   )
 }

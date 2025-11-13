@@ -26,24 +26,26 @@ type Props = {
   navigation: AppNavigationProp
 }
 
-const ProfileEditScreen = ({ navigation }: Props) => {
+export default function ProfileEditScreen({ navigation }: Props) {
   const { user } = useAuth()
-  const { profile, setProfile, unitSystem } = useProfileStore()
+  const { profile, updateProfile } = useProfileStore()
   const [isLoading, setIsLoading] = useState(false)
   const insets = useSafeAreaInsets()
 
-  const [displayName, setDisplayName] = useState(profile?.displayName || '')
-  const [weight, setWeight] = useState(profile?.currentWeightKg ?? 70)
+  // O RootNavigator garante que 'profile' não é nulo aqui.
+  // Se for, a tela não deveria nem ser acessível.
+  const [displayName, setDisplayName] = useState(profile!.displayName || '')
+  const [weight, setWeight] = useState(profile!.currentWeightKg ?? 70)
   const [goal, setGoal] = useState<keyof typeof goalMap>(
-    profile?.goal || 'GAIN_MASS',
+    profile!.goal || 'GAIN_MASS',
   )
   const [experienceLevel, setExperienceLevel] = useState<
     keyof typeof experienceMap
-  >(profile?.experienceLevel || 'beginner')
+  >(profile!.experienceLevel || 'beginner')
   const [availability, setAvailability] = useState<
     keyof typeof availabilityMap
-  >(profile?.availability || '3-4')
-  const [sex, setSex] = useState<keyof typeof sexMap>(profile?.sex || 'male')
+  >(profile!.availability || '3-4')
+  const [sex, setSex] = useState<keyof typeof sexMap>(profile!.sex || 'male')
 
   const handleSave = async () => {
     if (!profile || !user) return
@@ -67,10 +69,7 @@ const ProfileEditScreen = ({ navigation }: Props) => {
       }
 
       await DatabaseService.updateUserProfile(profile.id!, updatedFields)
-
-      const updatedProfile = { ...profile, ...updatedFields }
-      setProfile(updatedProfile)
-
+      updateProfile(updatedFields)
       SyncService.syncUserProfile(user)
 
       navigation.goBack()
@@ -86,14 +85,9 @@ const ProfileEditScreen = ({ navigation }: Props) => {
       <Picker.Item key={key} label={value} value={key} />
     ))
 
-  const displayHeight =
-    unitSystem === 'metric'
-      ? `${profile?.heightCm?.toFixed(0) ?? 'N/A'} cm`
-      : `${((profile?.heightCm ?? 0) * 0.393701) / 12}'${(
-          ((profile?.heightCm ?? 0) * 0.393701) %
-          12
-        ).toFixed(0)}"`
-  const displayWeightUnit = unitSystem === 'metric' ? 'kg' : 'lbs'
+  const displayHeight = `${profile!.heightCm?.toFixed(0) ?? 'N/A'} cm`
+  const displayWeightUnit =
+    useProfileStore.getState().unitSystem === 'metric' ? 'kg' : 'lbs'
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,7 +211,7 @@ const ProfileEditScreen = ({ navigation }: Props) => {
 
         <FormGroup label="Data de Nascimento">
           <View style={styles.readOnlyContainer}>
-            <Text style={styles.fixedValue}>{profile?.dob || 'N/A'}</Text>
+            <Text style={styles.fixedValue}>{profile!.dob || 'N/A'}</Text>
             <Ionicons
               name="lock-closed-outline"
               size={16}
@@ -328,5 +322,3 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
 })
-
-export default ProfileEditScreen
