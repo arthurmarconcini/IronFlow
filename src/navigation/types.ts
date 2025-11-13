@@ -41,6 +41,7 @@ export type AppStackParamList = {
   WorkoutPlans: undefined
   WorkoutPlanDetails: { planId: string }
   Premium: undefined
+  Paywall: undefined
   ExerciseDetail: { exercise: ExerciseDefinition }
 }
 

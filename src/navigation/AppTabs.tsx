@@ -1,3 +1,5 @@
+import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus'
+
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,6 +14,8 @@ import { AppTabParamList } from './types'
 const Tab = createBottomTabNavigator<AppTabParamList>()
 
 export default function AppTabs() {
+  const { isPremium } = useSubscriptionStatus()
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -58,6 +62,14 @@ export default function AppTabs() {
             <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            if (!isPremium) {
+              e.preventDefault()
+              navigation.getParent()?.navigate('Paywall')
+            }
+          },
+        })}
       />
       <Tab.Screen
         name="ProfileTab"

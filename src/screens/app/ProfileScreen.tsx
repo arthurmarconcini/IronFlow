@@ -19,6 +19,7 @@ import { auth } from '../../config/firebaseConfig'
 import { AppNavigationProp } from '../../navigation/types'
 import { UserProfile } from '../../types/database'
 import { useSubscription } from '../../hooks/useSubscription'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
 import ProfileCard from '../../components/ProfileCard'
 import InfoRow from '../../components/InfoRow'
 import {
@@ -35,27 +36,51 @@ const ActionButton = ({
   label,
   onPress,
   isLogout = false,
+  isPremium = false,
+  isActiveStatus = false, // Nova prop para o indicador
 }: {
   icon: keyof typeof Ionicons.glyphMap
   label: string
   onPress: () => void
   isLogout?: boolean
+  isPremium?: boolean
+  isActiveStatus?: boolean
 }) => (
-  <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+  <TouchableOpacity
+    style={[
+      styles.actionButton,
+      isPremium && !isActiveStatus && styles.premiumButton,
+    ]}
+    onPress={onPress}
+    disabled={isActiveStatus} // Desabilita o toque para o indicador
+  >
     <Ionicons
       name={icon}
       size={22}
-      color={isLogout ? theme.colors.error : theme.colors.primary}
+      color={
+        isLogout
+          ? theme.colors.error
+          : isPremium && !isActiveStatus
+            ? theme.colors.white
+            : theme.colors.primary
+      }
       style={styles.actionIcon}
     />
-    <Text style={[styles.actionLabel, isLogout && styles.logoutText]}>
+    <Text
+      style={[
+        styles.actionLabel,
+        isLogout && styles.logoutText,
+        isPremium && !isActiveStatus && styles.premiumText,
+        isActiveStatus && styles.premiumActiveText,
+      ]}
+    >
       {label}
     </Text>
-    {!isLogout && (
+    {!isLogout && !isActiveStatus && (
       <Ionicons
         name="chevron-forward-outline"
         size={20}
-        color={theme.colors.secondary}
+        color={isPremium ? theme.colors.white : theme.colors.secondary}
       />
     )}
   </TouchableOpacity>
@@ -79,6 +104,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const { user } = useAuth()
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
   const { planType } = useSubscription()
+  const { isPremium } = useSubscriptionStatus()
 
   const handleLogout = async () => {
     try {
@@ -258,6 +284,21 @@ export default function ProfileScreen({ navigation }: Props) {
         </ProfileCard>
 
         <ProfileCard title="Ações">
+          {isPremium ? (
+            <ActionButton
+              icon="shield-checkmark-outline"
+              label="Plano Premium Ativo"
+              onPress={() => {}}
+              isActiveStatus // Passa a nova prop
+            />
+          ) : (
+            <ActionButton
+              icon="sparkles-outline"
+              label="Fazer Upgrade para Premium"
+              onPress={() => navigation.navigate('Paywall')}
+              isPremium
+            />
+          )}
           <ActionButton
             icon="create-outline"
             label="Editar Perfil"
@@ -364,7 +405,13 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.small,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+  },
+  premiumButton: {
+    backgroundColor: theme.colors.primary, // Usa a cor primária
+    marginVertical: theme.spacing.small / 2,
   },
   actionIcon: {
     marginRight: theme.spacing.medium,
@@ -376,6 +423,14 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: theme.colors.error,
+    fontWeight: '600',
+  },
+  premiumText: {
+    color: theme.colors.white, // Texto branco para o botão de upgrade
+    fontWeight: '600',
+  },
+  premiumActiveText: {
+    color: theme.colors.primary, // Texto primário para o indicador
     fontWeight: '600',
   },
 })

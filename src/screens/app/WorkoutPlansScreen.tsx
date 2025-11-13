@@ -38,7 +38,7 @@ export default function WorkoutPlansScreen() {
 
   const handlePlanPress = (plan: WorkoutPlan) => {
     if (plan.isPremium && !isPremium) {
-      navigation.navigate('Premium') // Redireciona para a tela Premium/Paywall
+      navigation.navigate('Paywall') // Redireciona para a tela de Paywall
     } else {
       navigation.navigate('WorkoutPlanDetails', { planId: plan.firestoreId })
     }

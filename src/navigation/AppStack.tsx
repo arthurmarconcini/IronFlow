@@ -15,6 +15,7 @@ import ExerciseDetailScreen from '../screens/app/ExerciseDetailScreen'
 import ProfileScreen from '../screens/app/ProfileScreen'
 import WorkoutPlansScreen from '../screens/app/WorkoutPlansScreen'
 import WorkoutPlanDetailsScreen from '../screens/app/WorkoutPlanDetailsScreen'
+import PaywallScreen from '../screens/app/PaywallScreen'
 
 const Stack = createStackNavigator<AppStackParamList>()
 
@@ -80,6 +81,11 @@ export default function AppStack() {
         name="ExerciseDetail"
         component={ExerciseDetailScreen}
         options={{ title: 'Detalhes do Exercício', headerShown: true }}
+      />
+      <Stack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{ presentation: 'modal', headerShown: false }}
       />
       <Stack.Screen
         name="Premium"

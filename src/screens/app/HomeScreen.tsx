@@ -22,6 +22,7 @@ import { useProfileStore } from '../../state/profileStore'
 import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 import { DatabaseService } from '../../db/DatabaseService'
 import { ScheduledWorkout } from '../../types/database'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
 import { format } from 'date-fns'
 import AdBanner from '../../components/ads/BannerAd' // Importar o componente de anúncio
 
@@ -34,6 +35,7 @@ export default function HomeScreen() {
   const isOnline = useNetworkStore((state) => state.isOnline)
   const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
   const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
+  const { isPremium } = useSubscriptionStatus()
 
   const [todaysWorkouts, setTodaysWorkouts] = useState<ScheduledWorkout[]>([])
 
@@ -162,7 +164,7 @@ export default function HomeScreen() {
           )}
           ListHeaderComponent={
             <>
-              <AdBanner />
+              {!isPremium && <AdBanner />}
               {renderTodaysWorkouts()}
               <View style={styles.listTitleContainer}>
                 <Text style={styles.sectionTitle}>Meus Treinos</Text>
