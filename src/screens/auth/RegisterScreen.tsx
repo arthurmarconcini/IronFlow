@@ -6,7 +6,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import ScreenContainer from '../../components/ScreenContainer'
 import { StatusBar } from 'expo-status-bar'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../../config/firebaseConfig'
@@ -86,7 +86,7 @@ const RegisterScreen = ({ navigation }: Props) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScreenContainer style={styles.container}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -130,7 +130,7 @@ const RegisterScreen = ({ navigation }: Props) => {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenContainer>
   )
 }
 

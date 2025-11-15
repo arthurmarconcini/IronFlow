@@ -16,9 +16,8 @@ import { useGoogleSignIn } from '../../hooks/useGoogleSignIn'
 import { FontAwesome } from '@expo/vector-icons'
 import StyledInput from '../../components/StyledInput'
 import StyledButton from '../../components/StyledButton'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { StatusBar } from 'expo-status-bar'
-import { theme } from '../../theme'
+
+import ScreenContainer from '../../components/ScreenContainer'
 
 export default function LoginScreen({
   navigation,
@@ -43,9 +42,7 @@ export default function LoginScreen({
 
     try {
       await signInWithEmailAndPassword(auth, email, password)
-      // Limpa a contagem de tentativas em caso de sucesso
       setAttemptCounts((prev) => ({ ...prev, [email]: 0 }))
-      // A navegação é tratada automaticamente pelo RootNavigator
     } catch (error: unknown) {
       let errorMessage = 'Ocorreu um erro inesperado.'
       if (
@@ -75,9 +72,8 @@ export default function LoginScreen({
                   },
                 ],
               )
-              // Limpa a contagem para não mostrar o alerta novamente logo em seguida
               setAttemptCounts((prev) => ({ ...prev, [email]: 0 }))
-              return // Sai da função para não mostrar o alerta padrão
+              return
             }
             errorMessage = `Email ou senha inválidos. Tentativa ${newAttempts} de 3.`
             break
@@ -96,8 +92,7 @@ export default function LoginScreen({
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <StatusBar style="dark" />
+    <ScreenContainer>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingContainer}
@@ -105,6 +100,7 @@ export default function LoginScreen({
         <ScrollView
           contentContainerStyle={styles.scrollContentContainer}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoContainer}>
             <Text style={styles.logo}>IronFlow</Text>
@@ -178,6 +174,6 @@ export default function LoginScreen({
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </ScreenContainer>
   )
 }
