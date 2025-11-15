@@ -40,15 +40,20 @@ export type AppStackParamList = {
   WorkoutDetails: { workoutId: string }
   WorkoutPlans: undefined
   WorkoutPlanDetails: { planId: string }
-  Premium: undefined
-  Paywall: undefined
+  Premium: { blockedFeatureMessage?: string } | undefined
   ExerciseDetail: { exercise: ExerciseDefinition }
+}
+
+export type RootStackParamList = {
+  App: undefined // Corresponde ao AppStack inteiro
+  Premium: { blockedFeatureMessage?: string } | undefined
 }
 
 export type AuthNavigationProp = StackNavigationProp<AuthStackParamList>
 export type OnboardingNavigationProp =
   StackNavigationProp<OnboardingStackParamList>
 export type AppNavigationProp = StackNavigationProp<AppStackParamList>
+export type RootNavigationProp = StackNavigationProp<RootStackParamList>
 
 // Tipos para Route Prop (para acessar route.params)
 export type ConfirmationScreenRouteProp = RouteProp<

@@ -30,6 +30,7 @@ import {
   planMap,
   sexMap,
 } from '../../utils/translationUtils'
+import { usePremiumAction } from '../../hooks/usePremiumAction'
 
 const ActionButton = ({
   icon,
@@ -105,6 +106,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const { profile, unitSystem, setUnitSystem } = useProfileStore()
   const { planType } = useSubscription()
   const { isPremium } = useSubscriptionStatus()
+  const { handlePremiumAction } = usePremiumAction()
 
   const handleLogout = async () => {
     try {
@@ -295,7 +297,7 @@ export default function ProfileScreen({ navigation }: Props) {
             <ActionButton
               icon="sparkles-outline"
               label="Fazer Upgrade para Premium"
-              onPress={() => navigation.navigate('Paywall')}
+              onPress={() => handlePremiumAction(() => {})}
               isPremium
             />
           )}

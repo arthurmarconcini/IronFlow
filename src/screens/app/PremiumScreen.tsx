@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Alert } from 'react-native'
+import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { LinearGradient } from 'expo-linear-gradient'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { AppNavigationProp } from '../../navigation/types'
+import { AppNavigationProp, AppRouteProp } from '../../navigation/types'
 
 import { useProfileStore } from '../../state/profileStore'
 import { DatabaseService } from '../../db/DatabaseService'
@@ -19,11 +19,13 @@ const BenefitRow = ({ text }: { text: string }) => (
 
 type Props = {
   navigation: AppNavigationProp
+  route: AppRouteProp<'Premium'>
 }
 
-export default function PremiumScreen({ navigation }: Props) {
+export default function PremiumScreen({ navigation, route }: Props) {
   const { profile, updateProfile } = useProfileStore()
   const [isLoading, setIsLoading] = useState(false)
+  const blockedFeatureMessage = route.params?.blockedFeatureMessage
 
   const handleUpgrade = async () => {
     if (!profile) return
@@ -68,15 +70,16 @@ export default function PremiumScreen({ navigation }: Props) {
           <Ionicons name="sparkles" size={40} color={theme.colors.gold} />
           <Text style={styles.title}>Leve seu Treino ao Próximo Nível</Text>
           <Text style={styles.subtitle}>
-            Desbloqueie todo o potencial do IronFlow com o plano Premium.
+            {blockedFeatureMessage ??
+              'Desbloqueie todo o potencial do IronFlow com o plano Premium.'}
           </Text>
         </View>
 
         <View style={styles.benefitsContainer}>
+          <BenefitRow text="Diretor de Treino com IA para progressão automática" />
           <BenefitRow text="Estatísticas Avançadas e Gráficos de Progressão" />
           <BenefitRow text="Geração de Treinos Ilimitada e Personalizada" />
           <BenefitRow text="Sincronização Automática na Nuvem" />
-          <BenefitRow text="Acesso Antecipado a Novos Recursos" />
           <BenefitRow text="Experiência Sem Anúncios" />
         </View>
 
@@ -87,6 +90,12 @@ export default function PremiumScreen({ navigation }: Props) {
             isLoading={isLoading}
             icon={<Ionicons name="star" size={20} color="#FFFFFF" />}
           />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.goBackButton}
+          >
+            <Text style={styles.goBackButtonText}>Voltar</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -119,6 +128,7 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     textAlign: 'center',
     marginTop: theme.spacing.small,
+    lineHeight: 24,
   },
   benefitsContainer: {
     marginTop: theme.spacing.large,
@@ -137,17 +147,13 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: theme.spacing.medium,
   },
-  footerText: {
-    fontSize: theme.fontSizes.small,
-    color: theme.colors.secondary,
-    textAlign: 'center',
+  goBackButton: {
     marginTop: theme.spacing.medium,
+    alignItems: 'center',
   },
-  orText: {
+  goBackButtonText: {
     fontSize: theme.fontSizes.medium,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-    marginVertical: theme.spacing.medium,
-    fontWeight: 'bold',
+    color: theme.colors.secondary,
+    textDecorationLine: 'underline',
   },
 })
