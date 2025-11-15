@@ -4,6 +4,7 @@ const { width: screenWidth } = Dimensions.get('window')
 
 const colors = {
   primary: '#007BFF',
+  lightPrimary: '#E6F2FF', // Azul claro para fundos de destaque
   secondary: '#6C757D',
   background: '#F8F9FA',
   text: '#212529',
