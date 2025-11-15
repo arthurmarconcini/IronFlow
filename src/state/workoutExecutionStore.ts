@@ -6,6 +6,7 @@ import { useAuthStore } from './authStore'
 export interface SetData {
   weightKg: number
   reps: number
+  rir?: number
 }
 
 interface RestTimer {
@@ -104,6 +105,7 @@ export const useWorkoutExecutionStore = create<WorkoutExecutionState>(
           targetWeight: exercise.weight || null,
           actualWeight: setData.weightKg,
           restTime: exercise.rest,
+          rir: setData.rir ?? null,
           completedAt: Date.now(),
         })
         DatabaseService.saveOrUpdateExerciseRecord({

@@ -1,5 +1,11 @@
-import React, { useState } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { theme } from '../theme'
@@ -30,33 +36,63 @@ const ExerciseSetRow = ({
   onComplete,
   onTimerFinish,
 }: ExerciseSetRowProps) => {
-  const [weight, setWeight] = useState(targetWeight?.toString() || '')
+  const [weight, setWeight] = useState((targetWeight ?? '').toString())
   const [reps, setReps] = useState(targetReps.toString())
+  const [rir, setRir] = useState('')
   const [shakeWeight, setShakeWeight] = useState(0)
   const [shakeReps, setShakeReps] = useState(0)
+  const [shakeRir, setShakeRir] = useState(0)
+
+  const weightRef = useRef<TextInput>(null)
+  const repsRef = useRef<TextInput>(null)
+  const rirRef = useRef<TextInput>(null)
+
+  useEffect(() => {
+    if (isActive && !isCompleted) {
+      weightRef.current?.focus()
+    }
+  }, [isActive, isCompleted])
 
   const handleComplete = () => {
     const weightValue = parseFloat(weight)
     const repsValue = parseInt(reps, 10)
+    const rirValue = parseInt(rir, 10)
 
     if (isNaN(weightValue) || weight.trim() === '') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      setShakeWeight((s) => s + 1) // Aciona o shake do input de peso
+      setShakeWeight((s) => s + 1)
       return
     }
 
     if (isNaN(repsValue) || reps.trim() === '') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
-      setShakeReps((s) => s + 1) // Aciona o shake do input de reps
+      setShakeReps((s) => s + 1)
+      return
+    }
+
+    if (rir.trim() !== '' && (isNaN(rirValue) || rirValue < 0)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
+      setShakeRir((s) => s + 1)
       return
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    onComplete({ weightKg: weightValue, reps: repsValue })
+    onComplete({
+      weightKg: weightValue,
+      reps: repsValue,
+      rir: isNaN(rirValue) ? undefined : rirValue,
+    })
   }
 
   return (
     <View>
+      {isActive && targetWeight ? (
+        <View style={styles.targetContainer}>
+          <Text style={styles.targetText}>
+            Meta: {targetWeight} kg x {targetReps} reps
+          </Text>
+        </View>
+      ) : null}
       <View
         style={[
           styles.container,
@@ -67,6 +103,7 @@ const ExerciseSetRow = ({
         <Text style={styles.setNumber}>{setNumber}</Text>
         <View style={styles.inputContainer}>
           <StyledInput
+            ref={weightRef}
             value={weight}
             onChangeText={setWeight}
             keyboardType="numeric"
@@ -75,10 +112,13 @@ const ExerciseSetRow = ({
             containerStyle={styles.inputWrapper}
             editable={!isCompleted && isActive}
             shake={shakeWeight}
+            onSubmitEditing={() => repsRef.current?.focus()}
+            returnKeyType="next"
           />
         </View>
         <View style={styles.inputContainer}>
           <StyledInput
+            ref={repsRef}
             value={reps}
             onChangeText={setReps}
             keyboardType="numeric"
@@ -87,6 +127,23 @@ const ExerciseSetRow = ({
             containerStyle={styles.inputWrapper}
             editable={!isCompleted && isActive}
             shake={shakeReps}
+            onSubmitEditing={() => rirRef.current?.focus()}
+            returnKeyType="next"
+          />
+        </View>
+        <View style={styles.inputContainer}>
+          <StyledInput
+            ref={rirRef}
+            value={rir}
+            onChangeText={setRir}
+            keyboardType="numeric"
+            placeholder="RIR"
+            style={styles.input}
+            containerStyle={styles.inputWrapper}
+            editable={!isCompleted && isActive}
+            shake={shakeRir}
+            onSubmitEditing={handleComplete}
+            returnKeyType="done"
           />
         </View>
         <TouchableOpacity
@@ -117,6 +174,15 @@ const ExerciseSetRow = ({
 }
 
 const styles = StyleSheet.create({
+  targetContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xsmall,
+  },
+  targetText: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.secondary,
+    fontWeight: '600',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,7 +208,7 @@ const styles = StyleSheet.create({
     width: '10%',
   },
   inputContainer: {
-    width: '30%',
+    width: '22%', // Ajustado para acomodar o novo campo
   },
   inputWrapper: {
     marginVertical: 0,

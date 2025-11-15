@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
@@ -15,12 +16,21 @@ import {
   SetData,
   useWorkoutExecutionStore,
 } from '../../state/workoutExecutionStore'
-import { useWorkouts } from '../../db/useWorkouts' // Importar o hook
+import { useWorkouts } from '../../db/useWorkouts'
 import { theme } from '../../theme'
 import { StrengthExercise } from '../../types/database'
+import { parseRepTarget } from '../../utils/workoutUtils' // 1. Importar a nova função
 import ExerciseSetRow from '../../components/ExerciseSetRow'
 import ExerciseSelectionModal from '../../components/ExerciseSelectionModal'
 import CompletionOverlay from '../../components/CompletionOverlay'
+import GoalRow from '../../components/GoalRow'
+import {
+  ProgressiveOverloadService,
+  SessionTarget,
+} from '../../services/ProgressiveOverloadService'
+import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
+import PremiumOfferRow from '../../components/PremiumOfferRow'
+import BannerAd from '../../components/ads/BannerAd'
 
 type Props = {
   route: AppRouteProp<'WorkoutExecution'>
@@ -31,7 +41,10 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   const navigation = useNavigation<AppNavigationProp>()
   const flatListRef = useRef<FlatList>(null)
   const [isModalVisible, setModalVisible] = useState(false)
-  const { finishWorkout } = useWorkouts() // Obter a função do hook
+  const [sessionTarget, setSessionTarget] = useState<SessionTarget | null>(null)
+  const [isTargetLoading, setIsTargetLoading] = useState(false)
+  const { finishWorkout } = useWorkouts()
+  const { isPremium } = useSubscriptionStatus()
 
   const {
     workout,
@@ -41,7 +54,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     restTimer,
     isFinished,
     completedSets,
-    initializeWorkout, // Usar a nova ação
+    initializeWorkout,
     completeSet,
     startRest,
     tickRestTimer,
@@ -59,6 +72,23 @@ export default function WorkoutExecutionScreen({ route }: Props) {
       initializeWorkout(workoutId)
     }, [workoutId, initializeWorkout]),
   )
+
+  useEffect(() => {
+    if (workout && isPremium) {
+      setIsTargetLoading(true)
+      const currentExercise = workout.exercises[
+        currentExerciseIndex
+      ] as StrengthExercise
+      ProgressiveOverloadService.calculateNextSessionTarget(
+        currentExercise.name,
+        currentExercise.reps,
+      )
+        .then(setSessionTarget)
+        .finally(() => setIsTargetLoading(false))
+    } else {
+      setSessionTarget(null)
+    }
+  }, [currentExerciseIndex, workout, isPremium])
 
   useEffect(() => {
     if (restTimer.isActive) {
@@ -97,7 +127,6 @@ export default function WorkoutExecutionScreen({ route }: Props) {
 
   useEffect(() => {
     if (isFinished && logId && workout) {
-      // Chamar a nova função aqui
       finishWorkout(logId, workout.firestoreId).then(() => {
         Alert.alert(
           'Treino Concluído!',
@@ -180,6 +209,27 @@ export default function WorkoutExecutionScreen({ route }: Props) {
 
     const isLastExercise = index === workout!.exercises.length - 1
 
+    const renderTargetRow = () => {
+      if (index !== currentExerciseIndex) return null
+
+      if (isTargetLoading) {
+        return (
+          <View style={styles.targetRowPlaceholder}>
+            <ActivityIndicator color={theme.colors.primary} />
+          </View>
+        )
+      }
+
+      if (isPremium) {
+        return sessionTarget ? <GoalRow target={sessionTarget} /> : null
+      }
+
+      return <PremiumOfferRow />
+    }
+
+    // 2. Calcular a meta de repetições
+    const repTarget = parseRepTarget(exercise.reps)
+
     return (
       <View style={styles.exerciseContainer}>
         <TouchableOpacity onPress={() => setModalVisible(true)}>
@@ -200,6 +250,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
           </View>
         </TouchableOpacity>
 
+        {renderTargetRow()}
+
         <View>
           {isExerciseCompleted && (
             <CompletionOverlay
@@ -217,12 +269,17 @@ export default function WorkoutExecutionScreen({ route }: Props) {
               index === currentExerciseIndex &&
               setIndex === currentSetIndex - 1
 
+            const weightToShow =
+              isPremium && sessionTarget?.targetWeight
+                ? sessionTarget.targetWeight
+                : (lastCompletedSet?.weightKg ?? exercise.weight)
+
             return (
               <ExerciseSetRow
                 key={setIndex}
                 setNumber={setIndex + 1}
-                targetReps={setData?.reps ?? exercise.reps}
-                targetWeight={setData?.weightKg ?? lastCompletedSet?.weightKg}
+                targetReps={setData?.reps ?? repTarget} // 3. Passar a meta calculada
+                targetWeight={setData?.weightKg ?? weightToShow}
                 isCompleted={isCompleted}
                 isActive={isActive}
                 isResting={isResting}
@@ -257,6 +314,12 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         scrollEnabled={false}
         getItemLayout={getItemLayout}
       />
+
+      {!isPremium && (
+        <View style={styles.adContainer}>
+          <BannerAd />
+        </View>
+      )}
 
       <ExerciseSelectionModal
         isVisible={isModalVisible}
@@ -322,5 +385,14 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
+  },
+  adContainer: {
+    paddingBottom: theme.spacing.small,
+  },
+  targetRowPlaceholder: {
+    height: 80, // Altura aproximada do GoalRow/PremiumOfferRow
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
   },
 })

@@ -192,6 +192,7 @@ const initDB = async (): Promise<void> => {
       target_weight_kg REAL,
       actual_weight_kg REAL,
       rest_time_seconds INTEGER,
+      rir INTEGER,
       completed_at INTEGER NOT NULL,
       FOREIGN KEY (workout_log_id) REFERENCES workout_logs (id) ON DELETE CASCADE
     );
@@ -577,6 +578,7 @@ interface SetLogData {
   targetWeight: number | null
   actualWeight: number | null
   restTime: number | null
+  rir: number | null
   completedAt: number
 }
 
@@ -603,7 +605,7 @@ const startWorkoutLog = async (
 
 const logSetData = async (log: SetLogData): Promise<void> => {
   await db.runAsync(
-    'INSERT INTO set_logs (workout_log_id, exercise_name, exercise_db_id, set_index, target_reps, actual_reps, target_weight_kg, actual_weight_kg, rest_time_seconds, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO set_logs (workout_log_id, exercise_name, exercise_db_id, set_index, target_reps, actual_reps, target_weight_kg, actual_weight_kg, rest_time_seconds, rir, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     log.workoutLogId,
     log.exerciseName,
     log.exerciseDbId ?? null,
@@ -613,6 +615,7 @@ const logSetData = async (log: SetLogData): Promise<void> => {
     log.targetWeight ?? null,
     log.actualWeight ?? null,
     log.restTime ?? null,
+    log.rir ?? null,
     log.completedAt,
   )
 }
@@ -690,6 +693,53 @@ const getTotalSetsCompleted = async (userId: string): Promise<number> => {
   return result?.count ?? 0
 }
 
+export interface SetLog {
+  id: number
+  workout_log_id: number
+  exercise_name: string
+  set_index: number
+  actual_reps: number | null
+  actual_weight_kg: number | null
+  rir: number | null
+  completed_at: number
+}
+
+const getLastSessionLogsForExercise = async (
+  userId: string,
+  exerciseName: string,
+): Promise<SetLog[]> => {
+  const query = `
+    SELECT
+      sl.id,
+      sl.workout_log_id,
+      sl.exercise_name,
+      sl.set_index,
+      sl.actual_reps,
+      sl.actual_weight_kg,
+      sl.rir,
+      sl.completed_at
+    FROM set_logs sl
+    JOIN workout_logs wl ON sl.workout_log_id = wl.id
+    WHERE
+      wl.user_id = ? AND
+      sl.exercise_name = ? AND
+      wl.id = (
+        SELECT MAX(wl_inner.id)
+        FROM workout_logs wl_inner
+        JOIN set_logs sl_inner ON sl_inner.workout_log_id = wl_inner.id
+        WHERE wl_inner.user_id = ? AND sl_inner.exercise_name = ?
+      )
+    ORDER BY sl.set_index ASC;
+  `
+  const records = await db.getAllAsync<SetLog>(query, [
+    userId,
+    exerciseName,
+    userId,
+    exerciseName,
+  ])
+  return records
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -719,4 +769,5 @@ export const DatabaseService = {
   getExerciseRecord,
   getWorkoutLogsCount,
   getTotalSetsCompleted,
+  getLastSessionLogsForExercise,
 }
