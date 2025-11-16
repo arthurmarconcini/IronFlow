@@ -69,7 +69,25 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: theme.colors.lightGray,
+    marginVertical: theme.spacing.medium,
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: theme.spacing.medium,
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.secondary,
+    marginTop: 4,
+  },
+  summaryValue: {
+    fontSize: theme.fontSizes.medium,
+    fontWeight: '600',
+    color: theme.colors.text,
   },
   workoutItem: {
     paddingVertical: theme.spacing.medium,
@@ -97,24 +115,6 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     marginTop: 2,
   },
-  exerciseList: {
-    marginTop: theme.spacing.medium,
-    paddingLeft: theme.spacing.large,
-  },
-  exerciseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.small / 2,
-  },
-  exerciseName: {
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.text,
-    flex: 1,
-  },
-  exerciseSetsReps: {
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.secondary,
-  },
   footer: {
     alignItems: 'center',
   },
@@ -134,12 +134,18 @@ const styles = StyleSheet.create({
   },
 })
 
+const GOAL_MAP = {
+  GAIN_MASS: 'Hipertrofia',
+  FAT_LOSS: 'Perda de Gordura',
+  STRENGTH: 'Força',
+  MAINTAIN: 'Manutenção',
+}
+
 const FreeWorkoutOfferScreen = () => {
   const { user } = useAuth()
   const setProfile = useProfileStore((state) => state.setProfile)
   const { createWorkout } = useWorkouts()
-  const [isSubmitting, setIsSubmitting] = useState(false) // Trava para submissão
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const onboardingData = useOnboardingStore((state) => state)
   const resetOnboardingData = useOnboardingStore(
@@ -155,32 +161,29 @@ const FreeWorkoutOfferScreen = () => {
     return { ...onboardingData, bmi, bmiCategory }
   }, [onboardingData])
 
-  const previewWorkouts = useMemo(() => {
+  const generatedPlan = useMemo(() => {
     if (!user || !userProfileData) return null
-    const tempProfileForPreview: UserProfile = {
-      id: 0,
+
+    const tempProfileForGenerator: UserProfile = {
       userId: user.uid,
       planType: 'free',
-      onboardingCompleted: true,
+      onboardingCompleted: false,
       syncStatus: 'synced',
       lastModifiedLocally: Date.now(),
       displayName: userProfileData.displayName,
-      dob: userProfileData.dob!,
-      sex: userProfileData.sex!,
-      experienceLevel: userProfileData.experienceLevel!,
-      availability: userProfileData.availability!,
-      goal: userProfileData.goal!,
-      heightCm: userProfileData.heightCm!,
-      currentWeightKg: userProfileData.weightKg!,
+      dob: userProfileData.dob,
+      sex: userProfileData.sex,
+      experienceLevel: userProfileData.experienceLevel,
+      availability: userProfileData.availability,
+      goal: userProfileData.goal,
+      equipment: userProfileData.equipment,
+      heightCm: userProfileData.heightCm,
+      currentWeightKg: userProfileData.weightKg,
       bmi: userProfileData.bmi,
       bmiCategory: userProfileData.bmiCategory,
     }
-    return WorkoutGeneratorService.generatePreviewWorkout(tempProfileForPreview)
+    return WorkoutGeneratorService.generateWorkoutPlan(tempProfileForGenerator)
   }, [userProfileData, user])
-
-  const handleToggleExpand = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index)
-  }
 
   const saveProfileAndFinalize = async () => {
     if (!user || !userProfileData) return
@@ -189,18 +192,19 @@ const FreeWorkoutOfferScreen = () => {
       userId: user.uid,
       planType: 'free',
       displayName: userProfileData.displayName,
-      dob: userProfileData.dob!,
-      sex: userProfileData.sex!,
-      experienceLevel: userProfileData.experienceLevel!,
-      availability: userProfileData.availability!,
-      goal: userProfileData.goal!,
-      heightCm: userProfileData.heightCm!,
-      currentWeightKg: userProfileData.weightKg!,
+      dob: userProfileData.dob,
+      sex: userProfileData.sex,
+      experienceLevel: userProfileData.experienceLevel,
+      availability: userProfileData.availability,
+      goal: userProfileData.goal,
+      equipment: userProfileData.equipment,
+      heightCm: userProfileData.heightCm,
+      currentWeightKg: userProfileData.weightKg,
       bmi: userProfileData.bmi,
       bmiCategory: userProfileData.bmiCategory,
       onboardingCompleted: true,
-      syncStatus: 'dirty', // Marcar como 'dirty' para sincronização
-      lastModifiedLocally: Date.now(), // Adicionar o timestamp local
+      syncStatus: 'dirty',
+      lastModifiedLocally: Date.now(),
     }
 
     const newId = await DatabaseService.saveUserProfile(finalProfileData)
@@ -211,10 +215,10 @@ const FreeWorkoutOfferScreen = () => {
   }
 
   const handleAccept = async () => {
-    if (isSubmitting || !previewWorkouts) return // Trava
+    if (isSubmitting || !generatedPlan) return
     setIsSubmitting(true)
     try {
-      for (const workout of previewWorkouts) {
+      for (const workout of generatedPlan.workouts) {
         await createWorkout(
           workout.name,
           workout.muscleGroup,
@@ -224,28 +228,26 @@ const FreeWorkoutOfferScreen = () => {
       await saveProfileAndFinalize()
     } catch (error) {
       console.error('Erro ao aceitar a oferta de treino:', error)
-    } finally {
-      // A navegação irá desmontar o componente, então não precisamos resetar o estado
     }
   }
 
   const handleDecline = async () => {
-    if (isSubmitting) return // Trava
+    if (isSubmitting) return
     setIsSubmitting(true)
     try {
       await saveProfileAndFinalize()
     } catch (error) {
       console.error('Erro ao recusar a oferta de treino:', error)
-    } finally {
-      // A navegação irá desmontar o componente, então não precisamos resetar o estado
     }
   }
 
-  if (!userProfileData) {
+  if (!userProfileData || !generatedPlan) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.loadingText}>Carregando dados...</Text>
+          <Text style={styles.loadingText}>
+            Analisando seu perfil e gerando seu plano...
+          </Text>
         </View>
       </SafeAreaView>
     )
@@ -260,74 +262,52 @@ const FreeWorkoutOfferScreen = () => {
             size={80}
             color={theme.colors.primary}
           />
-          <Text style={styles.title}>Seu Plano de Treino Gratuito!</Text>
+          <Text style={styles.title}>Seu Plano Inteligente!</Text>
           <Text style={styles.subtitle}>
-            Com base nas suas respostas, preparamos um plano inicial
-            personalizado para você.
+            Nosso Diretor de Treino analisou seu perfil e criou este plano
+            exclusivo para você.
           </Text>
         </View>
 
         <View style={styles.card}>
-          {previewWorkouts && previewWorkouts.length > 0 ? (
-            <>
-              <Text style={styles.cardTitle}>Seu Plano de Treino Semanal</Text>
-              <View style={styles.divider} />
-              {previewWorkouts.map((workout, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleToggleExpand(index)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.workoutItem}>
-                    <View style={styles.workoutHeader}>
-                      <Ionicons
-                        name="barbell-outline"
-                        size={24}
-                        color={theme.colors.primary}
-                        style={styles.workoutIcon}
-                      />
-                      <View style={styles.workoutDetails}>
-                        <Text style={styles.workoutName}>{workout.name}</Text>
-                        <Text style={styles.workoutSubtext}>
-                          {workout.muscleGroup} • {workout.exercises.length}{' '}
-                          exercícios
-                        </Text>
-                      </View>
-                      <Ionicons
-                        name={
-                          expandedIndex === index
-                            ? 'chevron-up-outline'
-                            : 'chevron-down-outline'
-                        }
-                        size={24}
-                        color={theme.colors.secondary}
-                      />
-                    </View>
-                    {expandedIndex === index && (
-                      <View style={styles.exerciseList}>
-                        {workout.exercises.map((exercise, exIndex) => (
-                          <View key={exIndex} style={styles.exerciseRow}>
-                            <Text style={styles.exerciseName}>
-                              {exercise.name}
-                            </Text>
-                            <Text style={styles.exerciseSetsReps}>
-                              {exercise.type === 'strength'
-                                ? `${exercise.sets}x ${exercise.reps} reps`
-                                : `${exercise.durationMinutes} min`}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </>
-          ) : (
-            <Text style={styles.loadingText}>
-              Gerando seu plano de treino...
-            </Text>
-          )}
+          <Text style={styles.cardTitle}>{generatedPlan.name}</Text>
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryItem}>
+              <Ionicons
+                name="calendar-outline"
+                size={24}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.summaryValue}>
+                {onboardingData.availability} dias
+              </Text>
+              <Text style={styles.summaryLabel}>Frequência</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons
+                name="barbell-outline"
+                size={24}
+                color={theme.colors.primary}
+              />
+              <Text style={styles.summaryValue}>
+                {GOAL_MAP[onboardingData.goal || 'MAINTAIN']}
+              </Text>
+              <Text style={styles.summaryLabel}>Foco Principal</Text>
+            </View>
+          </View>
+          <View style={styles.divider} />
+          {generatedPlan.workouts.map((workout, index) => (
+            <View key={index} style={styles.workoutItem}>
+              <View style={styles.workoutHeader}>
+                <View style={styles.workoutDetails}>
+                  <Text style={styles.workoutName}>{workout.name}</Text>
+                  <Text style={styles.workoutSubtext}>
+                    {workout.muscleGroup}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))}
         </View>
 
         <View style={styles.footer}>

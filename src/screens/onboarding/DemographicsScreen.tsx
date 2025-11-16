@@ -43,7 +43,7 @@ const DemographicsScreen = ({ navigation }: Props) => {
     try {
       const validatedData = demographicsSchema.parse(formData)
       setOnboardingData(validatedData)
-      navigation.navigate('Biometrics')
+      navigation.navigate('Equipment')
     } catch (error) {
       if (error instanceof ZodError) {
         const fieldErrors: Partial<Record<keyof DemographicsData, string>> = {}

@@ -9,6 +9,7 @@ export interface OnboardingState {
   sex: 'male' | 'female' | 'other' | null
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
   availability: '1-2' | '3-4' | '5+' | null
+  equipment: 'full' | 'limited' | null
   heightCm: number | null
   weightKg: number | null
   setOnboardingData: (data: Partial<OnboardingState>) => void
@@ -25,6 +26,7 @@ const initialState: Omit<
   sex: null,
   experienceLevel: null,
   availability: null,
+  equipment: null,
   heightCm: null,
   weightKg: null,
 }

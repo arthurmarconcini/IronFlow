@@ -2,10 +2,10 @@ import React from 'react'
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { theme } from '../theme'
-import { Workout } from '../types/database'
+import { Workout, ScheduledWorkout } from '../types/database'
 
 interface WorkoutCardProps {
-  workout: Workout
+  workout: Workout | ScheduledWorkout
   onPress: () => void
   onPlay: () => void
   isCompleted?: boolean
@@ -42,6 +42,8 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
   onPlay,
   isCompleted,
 }) => {
+  const workoutData = 'scheduleId' in workout ? workout : workout
+
   return (
     <TouchableOpacity
       style={[styles.card, isCompleted && styles.completedCard]}
@@ -51,7 +53,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
         {/* Ícone */}
         <View style={styles.iconContainer}>
           <Ionicons
-            name={getIconForMuscleGroup(workout.muscleGroup)}
+            name={getIconForMuscleGroup(workoutData.muscleGroup)}
             size={28}
             color={theme.colors.primary}
           />
@@ -60,13 +62,13 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
         {/* Informações do Treino */}
         <View style={styles.infoContainer}>
           <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-            {workout.name}
+            {workoutData.name}
           </Text>
           <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>{workout.muscleGroup}</Text>
+            <Text style={styles.detailText}>{workoutData.muscleGroup}</Text>
             <Text style={styles.separator}>|</Text>
             <Text style={styles.detailText}>
-              {workout.exercises.length} exercícios
+              {workoutData.exercises.length} exercícios
             </Text>
           </View>
         </View>

@@ -8,6 +8,7 @@ export interface UserProfile {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced' | null
   availability: '1-2' | '3-4' | '5+' | null
   goal: 'GAIN_MASS' | 'FAT_LOSS' | 'MAINTAIN' | 'STRENGTH' | null
+  equipment: 'full' | 'limited' | null
   heightCm: number | null
   currentWeightKg: number | null
   bmi: number | null

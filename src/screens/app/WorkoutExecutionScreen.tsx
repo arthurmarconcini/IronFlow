@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
@@ -231,7 +232,11 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     const repTarget = parseRepTarget(exercise.reps)
 
     return (
-      <View style={styles.exerciseContainer}>
+      <ScrollView
+        style={styles.exerciseContainer}
+        contentContainerStyle={styles.exerciseScrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <View style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
@@ -290,7 +295,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
             )
           })}
         </View>
-      </View>
+      </ScrollView>
     )
   }
 
@@ -313,6 +318,7 @@ export default function WorkoutExecutionScreen({ route }: Props) {
         showsHorizontalScrollIndicator={false}
         scrollEnabled={false}
         getItemLayout={getItemLayout}
+        style={{ flex: 1 }} // Garante que a lista ocupe o espaço disponível
       />
 
       {!isPremium && (
@@ -331,6 +337,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     </SafeAreaView>
   )
 }
+
+const BANNER_AD_HEIGHT = 60 // Altura estimada do banner + padding
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -355,6 +363,9 @@ const styles = StyleSheet.create({
   exerciseContainer: {
     width: theme.screenWidth,
     paddingHorizontal: theme.spacing.medium,
+  },
+  exerciseScrollViewContent: {
+    paddingBottom: BANNER_AD_HEIGHT + theme.spacing.medium, // Espaço extra no final para não colar no anúncio
   },
   exerciseCard: {
     backgroundColor: theme.colors.white,
@@ -388,9 +399,10 @@ const styles = StyleSheet.create({
   },
   adContainer: {
     paddingBottom: theme.spacing.small,
+    backgroundColor: theme.colors.background,
   },
   targetRowPlaceholder: {
-    height: 80, // Altura aproximada do GoalRow/PremiumOfferRow
+    height: 80,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.medium,

@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import React, { useEffect, useCallback, useState } from 'react'
+import React, { useEffect, useCallback, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -17,14 +17,14 @@ import { AppNavigationProp } from '../../navigation/types'
 import { theme } from '../../theme'
 import ScreenContainer from '../../components/ScreenContainer'
 import WorkoutCard from '../../components/WorkoutCard'
-import { useNetworkStore } from '../../state/networkStore'
+import PlanSummaryCard from '../../components/PlanSummaryCard'
 import { useProfileStore } from '../../state/profileStore'
 import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
-import { DatabaseService } from '../../db/DatabaseService'
-import { ScheduledWorkout } from '../../types/database'
 import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
+import AdBanner from '../../components/ads/BannerAd'
 import { format } from 'date-fns'
-import AdBanner from '../../components/ads/BannerAd' // Importar o componente de anúncio
+import { ScheduledWorkout } from '../../types/database'
+import { DatabaseService } from '../../db/DatabaseService'
 
 export default function HomeScreen() {
   const { user } = useAuth()
@@ -32,26 +32,13 @@ export default function HomeScreen() {
   const { workouts, isLoading, syncWorkouts, fetchLocalWorkouts } =
     useWorkouts()
   const navigation = useNavigation<AppNavigationProp>()
-  const isOnline = useNetworkStore((state) => state.isOnline)
   const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
   const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
   const { isPremium } = useSubscriptionStatus()
-
+  const [lastCompletedWorkoutId, setLastCompletedWorkoutId] = useState<
+    string | null
+  >(null)
   const [todaysWorkouts, setTodaysWorkouts] = useState<ScheduledWorkout[]>([])
-
-  const fetchTodaysWorkout = useCallback(async () => {
-    if (!user) return
-    try {
-      const todayStr = format(new Date(), 'yyyy-MM-dd')
-      const scheduled = await DatabaseService.getScheduleForDate(
-        user.uid,
-        todayStr,
-      )
-      setTodaysWorkouts(scheduled)
-    } catch (error) {
-      console.error("Failed to fetch today's workout:", error)
-    }
-  }, [user])
 
   useEffect(() => {
     syncWorkouts()
@@ -60,9 +47,60 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchLocalWorkouts()
-      fetchTodaysWorkout()
-    }, [fetchLocalWorkouts, fetchTodaysWorkout]),
+      if (user) {
+        DatabaseService.getLastCompletedWorkout(user.uid).then((result) => {
+          setLastCompletedWorkoutId(result?.workout_firestore_id || null)
+        })
+        const todayStr = format(new Date(), 'yyyy-MM-dd')
+        DatabaseService.getScheduleForDate(user.uid, todayStr).then(
+          setTodaysWorkouts,
+        )
+      }
+    }, [fetchLocalWorkouts, user]),
   )
+
+  const { splitType, nextWorkout, otherWorkouts } = useMemo(() => {
+    if (!workouts || workouts.length === 0) {
+      return { splitType: 'N/A', nextWorkout: null, otherWorkouts: [] }
+    }
+
+    let type = 'Personalizado'
+    if (workouts.length <= 2) type = 'Full Body'
+    else if (workouts.length === 3) type = 'ABC'
+    else if (workouts.length === 4) type = 'Upper/Lower'
+    else if (workouts.length >= 5) type = 'Push/Pull/Legs'
+
+    // Prioridade 1: Treino agendado para hoje que não está completo
+    const scheduledButNotCompleted = todaysWorkouts.find(
+      (w) => w.status !== 'completed',
+    )
+    if (scheduledButNotCompleted) {
+      const others = workouts.filter(
+        (w) => w.firestoreId !== scheduledButNotCompleted.firestoreId,
+      )
+      return {
+        splitType: type,
+        nextWorkout: scheduledButNotCompleted,
+        otherWorkouts: others,
+      }
+    }
+
+    // Prioridade 2: Lógica de sequência normal
+    let nextWorkoutIndex = 0
+    if (lastCompletedWorkoutId) {
+      const lastIndex = workouts.findIndex(
+        (w) => w.firestoreId === lastCompletedWorkoutId,
+      )
+      if (lastIndex !== -1) {
+        nextWorkoutIndex = (lastIndex + 1) % workouts.length
+      }
+    }
+
+    const next = workouts[nextWorkoutIndex]
+    const others = workouts.filter((_, index) => index !== nextWorkoutIndex)
+
+    return { splitType: type, nextWorkout: next, otherWorkouts: others }
+  }, [workouts, lastCompletedWorkoutId, todaysWorkouts])
 
   const handlePlayWorkout = (workoutId: string) => {
     if (activeWorkout && activeWorkout.firestoreId !== workoutId) {
@@ -93,32 +131,8 @@ export default function HomeScreen() {
     }
   }
 
-  const renderTodaysWorkouts = () => {
-    if (todaysWorkouts.length === 0) return null
-
-    return (
-      <View style={styles.todaysWorkoutContainer}>
-        <Text style={styles.sectionTitle}>Treino de Hoje</Text>
-        {todaysWorkouts.map((scheduledWorkout) => (
-          <WorkoutCard
-            key={scheduledWorkout.scheduleId}
-            workout={scheduledWorkout}
-            onPress={() =>
-              navigation.navigate('WorkoutDetails', {
-                workoutId: scheduledWorkout.firestoreId,
-              })
-            }
-            onPlay={() => handlePlayWorkout(scheduledWorkout.firestoreId)}
-            isCompleted={scheduledWorkout.status === 'completed'}
-          />
-        ))}
-      </View>
-    )
-  }
-
-  return (
-    <ScreenContainer>
-      <StatusBar style="dark" />
+  const renderHeader = () => (
+    <>
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.profileButton}
@@ -131,7 +145,6 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
       </View>
-
       <View style={styles.greetingContainer}>
         <Text style={styles.greeting} numberOfLines={2} ellipsizeMode="tail">
           Olá,{' '}
@@ -140,8 +153,32 @@ export default function HomeScreen() {
           </Text>
         </Text>
       </View>
+      {!isPremium && <AdBanner />}
+      <PlanSummaryCard profile={profile} splitType={splitType} />
+      {nextWorkout && (
+        <View style={styles.nextWorkoutContainer}>
+          <Text style={styles.sectionTitle}>Próximo Treino</Text>
+          <WorkoutCard
+            workout={nextWorkout}
+            onPress={() =>
+              navigation.navigate('WorkoutDetails', {
+                workoutId: nextWorkout.firestoreId,
+              })
+            }
+            onPlay={() => handlePlayWorkout(nextWorkout.firestoreId)}
+          />
+        </View>
+      )}
+      {otherWorkouts.length > 0 && (
+        <Text style={styles.sectionTitle}>Outros Treinos</Text>
+      )}
+    </>
+  )
 
-      {isLoading ? (
+  return (
+    <ScreenContainer>
+      <StatusBar style="dark" />
+      {isLoading && workouts.length === 0 ? (
         <ActivityIndicator
           size="large"
           color={theme.colors.primary}
@@ -149,7 +186,7 @@ export default function HomeScreen() {
         />
       ) : (
         <FlatList
-          data={workouts}
+          data={otherWorkouts}
           keyExtractor={(item) => item.firestoreId}
           renderItem={({ item }) => (
             <WorkoutCard
@@ -162,38 +199,22 @@ export default function HomeScreen() {
               onPlay={() => handlePlayWorkout(item.firestoreId)}
             />
           )}
-          ListHeaderComponent={
-            <>
-              {!isPremium && <AdBanner />}
-              {renderTodaysWorkouts()}
-              <View style={styles.listTitleContainer}>
-                <Text style={styles.sectionTitle}>Meus Treinos</Text>
-                <View
-                  style={[
-                    styles.networkIndicator,
-                    {
-                      backgroundColor: isOnline
-                        ? theme.colors.primary
-                        : theme.colors.error,
-                    },
-                  ]}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={() =>
+            !nextWorkout && ( // Só mostra se não houver NENHUM treino
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="barbell-outline"
+                  size={80}
+                  color={theme.colors.lightGray}
                 />
+                <Text style={styles.emptyText}>Nenhum treino encontrado</Text>
+                <Text style={styles.emptySubText}>
+                  Crie um treino ou explore planos para começar.
+                </Text>
               </View>
-            </>
+            )
           }
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="barbell-outline"
-                size={80}
-                color={theme.colors.lightGray}
-              />
-              <Text style={styles.emptyText}>Nenhum treino encontrado</Text>
-              <Text style={styles.emptySubText}>
-                Crie um treino ou explore planos para começar.
-              </Text>
-            </View>
-          )}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -241,28 +262,14 @@ const styles = StyleSheet.create({
   userName: {
     fontWeight: 'bold',
   },
-  todaysWorkoutContainer: {
+  nextWorkoutContainer: {
     marginBottom: theme.spacing.large,
   },
   sectionTitle: {
     fontSize: theme.fontSizes.large,
     fontWeight: '600',
     color: theme.colors.text,
-    paddingBottom: theme.spacing.small,
-  },
-  listTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightGray,
     marginBottom: theme.spacing.medium,
-  },
-  networkIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginLeft: theme.spacing.small,
-    marginBottom: theme.spacing.small,
   },
   listContent: {
     paddingBottom: 100,
@@ -280,13 +287,11 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: 'bold',
     marginTop: theme.spacing.medium,
-    textAlign: 'center',
   },
   emptySubText: {
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
     marginTop: theme.spacing.small,
-    textAlign: 'center',
   },
   fabContainer: {
     position: 'absolute',

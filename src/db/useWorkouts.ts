@@ -234,7 +234,7 @@ export function useWorkouts() {
         // 1. Finaliza o log do treino
         await DatabaseService.finishWorkoutLog(logId)
 
-        // 2. Atualiza o status na agenda
+        // 2. Atualiza o status na agenda (se já existia um agendamento)
         const todayStr = new Date().toISOString().split('T')[0] // YYYY-MM-DD
         await DatabaseService.updateScheduleStatus(
           user.uid,
@@ -243,9 +243,45 @@ export function useWorkouts() {
           'completed',
           logId,
         )
+
+        // 3. Agenda o próximo treino da sequência para amanhã
+        try {
+          const allUserWorkouts = await DatabaseService.getWorkouts(user.uid)
+          if (allUserWorkouts.length > 1) {
+            const currentIndex = allUserWorkouts.findIndex(
+              (w) => w.firestoreId === workoutFirestoreId,
+            )
+            if (currentIndex !== -1) {
+              const nextIndex = (currentIndex + 1) % allUserWorkouts.length
+              const nextWorkout = allUserWorkouts[nextIndex]
+
+              const tomorrow = new Date()
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+              // Evita agendar duplicado (opcional, mas bom para robustez)
+              const tomorrowSchedule = await DatabaseService.getScheduleForDate(
+                user.uid,
+                tomorrowStr,
+              )
+              const isAlreadyScheduled = tomorrowSchedule.some(
+                (w) => w.firestoreId === nextWorkout.firestoreId,
+              )
+
+              if (!isAlreadyScheduled) {
+                await DatabaseService.scheduleWorkout(
+                  user.uid,
+                  nextWorkout.firestoreId,
+                  tomorrowStr,
+                )
+              }
+            }
+          }
+        } catch (scheduleError) {
+          console.error('Erro ao agendar o próximo treino:', scheduleError)
+        }
       } catch (error) {
         console.error('Erro ao finalizar o treino e atualizar a agenda:', error)
-        // Mesmo com erro, tentamos não quebrar a experiência do usuário
       }
     },
     [user],

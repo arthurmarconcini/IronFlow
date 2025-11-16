@@ -22,6 +22,7 @@ interface UserProfileFromDB {
   experience_level: 'beginner' | 'intermediate' | 'advanced' | null
   availability: '1-2' | '3-4' | '5+' | null
   goal: 'GAIN_MASS' | 'FAT_LOSS' | 'STRENGTH' | 'MAINTAIN' | null
+  equipment: 'full' | 'limited' | null
   height_cm: number | null
   current_weight_kg: number | null
   bmi: number | null
@@ -82,6 +83,7 @@ const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
   experienceLevel: record.experience_level,
   availability: record.availability,
   goal: record.goal,
+  equipment: record.equipment,
   heightCm: record.height_cm,
   currentWeightKg: record.current_weight_kg,
   bmi: record.bmi,
@@ -149,6 +151,7 @@ const initDB = async (): Promise<void> => {
       experience_level TEXT,
       availability TEXT,
       goal TEXT,
+      equipment TEXT DEFAULT 'full',
       height_cm REAL,
       current_weight_kg REAL,
       bmi REAL,
@@ -318,6 +321,7 @@ const saveUserProfile = async (
     experienceLevel,
     availability,
     goal,
+    equipment,
     heightCm,
     currentWeightKg,
     bmi,
@@ -330,7 +334,7 @@ const saveUserProfile = async (
     onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
   try {
     await db.runAsync(
-      'INSERT INTO user_profile (user_id, plan_type, display_name, dob, sex, experience_level, availability, goal, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET plan_type=excluded.plan_type, display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
+      'INSERT INTO user_profile (user_id, plan_type, display_name, dob, sex, experience_level, availability, goal, equipment, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET plan_type=excluded.plan_type, display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, equipment=excluded.equipment, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
       userId,
       planType ?? 'free',
       displayName ?? null,
@@ -339,6 +343,7 @@ const saveUserProfile = async (
       experienceLevel ?? null,
       availability ?? null,
       goal ?? null,
+      equipment ?? 'full',
       heightCm ?? null,
       currentWeightKg ?? null,
       bmi ?? null,
@@ -740,6 +745,16 @@ const getLastSessionLogsForExercise = async (
   return records
 }
 
+const getLastCompletedWorkout = async (
+  userId: string,
+): Promise<{ workout_firestore_id: string } | null> => {
+  const record = await db.getFirstAsync<{ workout_firestore_id: string }>(
+    "SELECT workout_firestore_id FROM workout_logs WHERE user_id = ? AND status = 'completed' ORDER BY finished_at DESC LIMIT 1",
+    userId,
+  )
+  return record
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -770,4 +785,5 @@ export const DatabaseService = {
   getWorkoutLogsCount,
   getTotalSetsCompleted,
   getLastSessionLogsForExercise,
+  getLastCompletedWorkout,
 }

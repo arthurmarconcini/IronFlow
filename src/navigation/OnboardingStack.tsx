@@ -6,6 +6,7 @@ import { theme } from '../theme'
 // Importando as telas de onboarding
 import WelcomeScreen from '../screens/onboarding/WelcomeScreen'
 import DemographicsScreen from '../screens/onboarding/DemographicsScreen'
+import EquipmentScreen from '../screens/onboarding/EquipmentScreen'
 import BiometricsScreen from '../screens/onboarding/BiometricsScreen'
 import ExperienceScreen from '../screens/onboarding/ExperienceScreen'
 import GoalScreen from '../screens/onboarding/GoalScreen'
@@ -24,6 +25,7 @@ export default function OnboardingStack() {
     >
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Demographics" component={DemographicsScreen} />
+      <Stack.Screen name="Equipment" component={EquipmentScreen} />
       <Stack.Screen name="Biometrics" component={BiometricsScreen} />
       <Stack.Screen name="Experience" component={ExperienceScreen} />
       <Stack.Screen name="Goal" component={GoalScreen} />

@@ -15,6 +15,7 @@ export type OnboardingStackParamList = {
   Welcome: undefined
   Goal: undefined
   Demographics: undefined
+  Equipment: undefined
   Experience: undefined
   Biometrics: undefined
   Confirmation: undefined
