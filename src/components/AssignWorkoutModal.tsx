@@ -6,7 +6,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TouchableWithoutFeedback,
 } from 'react-native'
 import { useWorkouts } from '../db/useWorkouts'
 import { theme } from '../theme'
@@ -19,12 +18,12 @@ interface AssignWorkoutModalProps {
   selectedDate: string
 }
 
-export default function AssignWorkoutModal({
+const AssignWorkoutModal: React.FC<AssignWorkoutModalProps> = ({
   isVisible,
   onClose,
   onAssign,
   selectedDate,
-}: AssignWorkoutModalProps) {
+}) => {
   const { workouts } = useWorkouts()
 
   const handleAssign = (workoutId: string) => {
@@ -39,67 +38,61 @@ export default function AssignWorkoutModal({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContent}>
-              <View style={styles.header}>
-                <Text style={styles.title}>Agendar Treino</Text>
-                <Text style={styles.subtitle}>
-                  Selecione um treino para {selectedDate}
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Agendar Treino</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.subtitle}>
+            Selecione um treino para agendar em {selectedDate}
+          </Text>
+          <FlatList
+            data={workouts}
+            keyExtractor={(item) => item.firestoreId}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.workoutItem}
+                onPress={() => handleAssign(item.firestoreId)}
+              >
+                <Text style={styles.workoutName}>{item.name}</Text>
+                <Text style={styles.workoutMuscleGroup}>
+                  {item.muscleGroup}
                 </Text>
-              </View>
-              <FlatList
-                data={workouts}
-                keyExtractor={(item) => item.firestoreId}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.workoutItem}
-                    onPress={() => handleAssign(item.firestoreId)}
-                  >
-                    <View>
-                      <Text style={styles.workoutName}>{item.name}</Text>
-                      <Text style={styles.workoutMuscleGroup}>
-                        {item.muscleGroup}
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={24}
-                      color={theme.colors.primary}
-                    />
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  <Text style={styles.emptyText}>
-                    Você ainda não criou nenhum treino.
-                  </Text>
-                }
-              />
-            </View>
-          </TouchableWithoutFeedback>
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>Nenhum treino encontrado.</Text>
+            }
+          />
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   )
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.borderRadius.large,
-    borderTopRightRadius: theme.borderRadius.large,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: theme.spacing.medium,
     height: '60%',
   },
   header: {
-    marginBottom: theme.spacing.large,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingBottom: theme.spacing.medium,
   },
   title: {
     fontSize: theme.fontSizes.large,
@@ -108,13 +101,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: theme.fontSizes.medium,
-    color: theme.colors.textMuted,
-    marginTop: theme.spacing.small,
+    color: theme.colors.secondary,
+    marginVertical: theme.spacing.medium,
   },
   workoutItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: theme.spacing.medium,
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.medium,
@@ -122,12 +112,13 @@ const styles = StyleSheet.create({
   },
   workoutName: {
     fontSize: theme.fontSizes.medium,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: theme.colors.text,
   },
   workoutMuscleGroup: {
     fontSize: theme.fontSizes.small,
     color: theme.colors.secondary,
+    marginTop: 4,
   },
   emptyText: {
     textAlign: 'center',
@@ -135,3 +126,5 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.large,
   },
 })
+
+export default AssignWorkoutModal

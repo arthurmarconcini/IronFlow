@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
-import React, { useEffect, useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import AdBanner from '../../components/ads/BannerAd'
 import { format } from 'date-fns'
 import { ScheduledWorkout } from '../../types/database'
 import { DatabaseService } from '../../db/DatabaseService'
+import { ptBR } from 'date-fns/locale/pt-BR'
 
 export default function HomeScreen() {
   const { user } = useAuth()
@@ -35,10 +36,8 @@ export default function HomeScreen() {
   const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
   const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
   const { isPremium } = useSubscriptionStatus()
-  const [lastCompletedWorkoutId, setLastCompletedWorkoutId] = useState<
-    string | null
-  >(null)
-  const [todaysWorkouts, setTodaysWorkouts] = useState<ScheduledWorkout[]>([])
+  const [nextScheduledWorkout, setNextScheduledWorkout] =
+    useState<ScheduledWorkout | null>(null)
 
   useEffect(() => {
     syncWorkouts()
@@ -48,12 +47,9 @@ export default function HomeScreen() {
     useCallback(() => {
       fetchLocalWorkouts()
       if (user) {
-        DatabaseService.getLastCompletedWorkout(user.uid).then((result) => {
-          setLastCompletedWorkoutId(result?.workout_firestore_id || null)
-        })
         const todayStr = format(new Date(), 'yyyy-MM-dd')
-        DatabaseService.getScheduleForDate(user.uid, todayStr).then(
-          setTodaysWorkouts,
+        DatabaseService.getNextScheduledWorkout(user.uid, todayStr).then(
+          setNextScheduledWorkout,
         )
       }
     }, [fetchLocalWorkouts, user]),
@@ -70,37 +66,11 @@ export default function HomeScreen() {
     else if (workouts.length === 4) type = 'Upper/Lower'
     else if (workouts.length >= 5) type = 'Push/Pull/Legs'
 
-    // Prioridade 1: Treino agendado para hoje que não está completo
-    const scheduledButNotCompleted = todaysWorkouts.find(
-      (w) => w.status !== 'completed',
-    )
-    if (scheduledButNotCompleted) {
-      const others = workouts.filter(
-        (w) => w.firestoreId !== scheduledButNotCompleted.firestoreId,
-      )
-      return {
-        splitType: type,
-        nextWorkout: scheduledButNotCompleted,
-        otherWorkouts: others,
-      }
-    }
-
-    // Prioridade 2: Lógica de sequência normal
-    let nextWorkoutIndex = 0
-    if (lastCompletedWorkoutId) {
-      const lastIndex = workouts.findIndex(
-        (w) => w.firestoreId === lastCompletedWorkoutId,
-      )
-      if (lastIndex !== -1) {
-        nextWorkoutIndex = (lastIndex + 1) % workouts.length
-      }
-    }
-
-    const next = workouts[nextWorkoutIndex]
-    const others = workouts.filter((_, index) => index !== nextWorkoutIndex)
+    const next = nextScheduledWorkout
+    const others = workouts.filter((w) => w.firestoreId !== next?.firestoreId)
 
     return { splitType: type, nextWorkout: next, otherWorkouts: others }
-  }, [workouts, lastCompletedWorkoutId, todaysWorkouts])
+  }, [workouts, nextScheduledWorkout])
 
   const handlePlayWorkout = (workoutId: string) => {
     if (activeWorkout && activeWorkout.firestoreId !== workoutId) {
@@ -155,20 +125,48 @@ export default function HomeScreen() {
       </View>
       {!isPremium && <AdBanner />}
       <PlanSummaryCard profile={profile} splitType={splitType} />
-      {nextWorkout && (
-        <View style={styles.nextWorkoutContainer}>
-          <Text style={styles.sectionTitle}>Próximo Treino</Text>
-          <WorkoutCard
-            workout={nextWorkout}
-            onPress={() =>
-              navigation.navigate('WorkoutDetails', {
-                workoutId: nextWorkout.firestoreId,
-              })
-            }
-            onPlay={() => handlePlayWorkout(nextWorkout.firestoreId)}
-          />
-        </View>
-      )}
+      <View style={styles.nextWorkoutContainer}>
+        <Text style={styles.sectionTitle}>Próximo Treino</Text>
+        {nextWorkout ? (
+          <>
+            <Text style={styles.nextWorkoutDate}>
+              Agendado para{' '}
+              {format(
+                new Date(nextWorkout.scheduledDate + 'T00:00:00'),
+                "eeee, dd 'de' MMMM",
+                { locale: ptBR },
+              )}
+            </Text>
+            <WorkoutCard
+              workout={nextWorkout}
+              onPress={() =>
+                navigation.navigate('WorkoutDetails', {
+                  workoutId: nextWorkout.firestoreId,
+                })
+              }
+              onPlay={() => handlePlayWorkout(nextWorkout.firestoreId)}
+            />
+          </>
+        ) : (
+          <View style={styles.emptyScheduleContainer}>
+            <Ionicons
+              name="calendar-outline"
+              size={40}
+              color={theme.colors.secondary}
+            />
+            <Text style={styles.emptyScheduleText}>
+              Nenhum treino agendado.
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('AppTabs', { screen: 'ScheduleTab' })
+              }
+            >
+              <Text style={styles.emptyScheduleLink}>Ir para a Agenda</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
       {otherWorkouts.length > 0 && (
         <Text style={styles.sectionTitle}>Outros Treinos</Text>
       )}
@@ -201,7 +199,7 @@ export default function HomeScreen() {
           )}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={() =>
-            !nextWorkout && ( // Só mostra se não houver NENHUM treino
+            !nextWorkout && (
               <View style={styles.emptyContainer}>
                 <Ionicons
                   name="barbell-outline"
@@ -270,6 +268,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text,
     marginBottom: theme.spacing.medium,
+  },
+  nextWorkoutDate: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.secondary,
+    marginBottom: theme.spacing.small,
+  },
+  emptyScheduleContainer: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyScheduleText: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+    marginTop: theme.spacing.medium,
+    fontWeight: '600',
+  },
+  emptyScheduleLink: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.primary,
+    marginTop: theme.spacing.small,
+    fontWeight: 'bold',
   },
   listContent: {
     paddingBottom: 100,

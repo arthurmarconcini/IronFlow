@@ -46,10 +46,11 @@ interface WorkoutFromDb {
 }
 
 // Nova interface para o resultado do JOIN
-interface ScheduledWorkoutFromDb extends WorkoutFromDb {
+interface ScheduledWorkoutJoinResult extends WorkoutFromDb {
   schedule_id: number
   status: 'scheduled' | 'completed' | 'skipped'
   workout_log_id: number | null
+  scheduled_date: string
 }
 
 interface WorkoutPlanFromDb {
@@ -111,7 +112,7 @@ const mapRecordToWorkout = (record: WorkoutFromDb): Workout => ({
 
 // Nova função de mapeamento para o ScheduledWorkout
 const mapRecordToScheduledWorkout = (
-  record: ScheduledWorkoutFromDb,
+  record: ScheduledWorkoutJoinResult,
 ): ScheduledWorkout => ({
   id: record.id,
   firestoreId: record.firestore_id,
@@ -121,6 +122,7 @@ const mapRecordToScheduledWorkout = (
   lastModified: record.last_modified,
   deletedAt: record.deleted_at ?? undefined,
   scheduleId: record.schedule_id,
+  scheduledDate: record.scheduled_date,
   status: record.status,
   workoutLogId: record.workout_log_id,
 })
@@ -537,13 +539,14 @@ const getScheduleForDate = async (
   userId: string,
   date: string, // YYYY-MM-DD
 ): Promise<ScheduledWorkout[]> => {
-  const results = await db.getAllAsync<ScheduledWorkoutFromDb>(
+  const results = await db.getAllAsync<ScheduledWorkoutJoinResult>(
     `
     SELECT 
       w.*, 
       ws.id as schedule_id, 
       ws.status, 
-      ws.workout_log_id
+      ws.workout_log_id,
+      ws.scheduled_date
     FROM workouts w
     INNER JOIN workout_schedule ws ON w.firestore_id = ws.workout_firestore_id
     WHERE ws.user_id = ? AND ws.scheduled_date = ?
@@ -755,6 +758,32 @@ const getLastCompletedWorkout = async (
   return record
 }
 
+const unscheduleWorkout = async (scheduleId: number): Promise<void> => {
+  await db.runAsync('DELETE FROM workout_schedule WHERE id = ?', scheduleId)
+}
+
+const getNextScheduledWorkout = async (
+  userId: string,
+  startDate: string,
+): Promise<ScheduledWorkout | null> => {
+  const result = await db.getFirstAsync<ScheduledWorkoutJoinResult>(
+    `SELECT 
+      w.*, 
+      ws.id as schedule_id, 
+      ws.status, 
+      ws.workout_log_id,
+      ws.scheduled_date
+    FROM workout_schedule ws
+    JOIN workouts w ON ws.workout_firestore_id = w.firestore_id
+    WHERE ws.user_id = ? AND ws.scheduled_date >= ? AND (ws.status IS NULL OR ws.status != 'completed')
+    ORDER BY ws.scheduled_date ASC
+    LIMIT 1`,
+    userId,
+    startDate,
+  )
+  return result ? mapRecordToScheduledWorkout(result) : null
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -777,6 +806,8 @@ export const DatabaseService = {
   scheduleWorkout,
   getScheduleForDate,
   updateScheduleStatus,
+  unscheduleWorkout,
+  getNextScheduledWorkout,
   startWorkoutLog,
   logSetData,
   saveOrUpdateExerciseRecord,

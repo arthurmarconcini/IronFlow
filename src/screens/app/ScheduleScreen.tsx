@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native'
 import { Calendar, LocaleConfig } from 'react-native-calendars'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
@@ -68,23 +69,33 @@ LocaleConfig.defaultLocale = 'pt-br'
 export default function ScheduleScreen() {
   const { user } = useAuth()
   const navigation = useNavigation<AppNavigationProp>()
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([])
+  const [selectedDate, setSelectedDate] = useState(
+    format(new Date(), 'yyyy-MM-dd'),
+  )
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<
+    ScheduledWorkout[]
+  >([])
   const [isLoading, setIsLoading] = useState(false)
   const [isModalVisible, setIsModalVisible] = useState(false)
 
-  const fetchScheduledWorkouts = useCallback(async (date: string) => {
-    if (!user) return
-    setIsLoading(true)
-    try {
-      const workouts = await DatabaseService.getScheduleForDate(user.uid, date)
-      setScheduledWorkouts(workouts)
-    } catch (error) {
-      console.error('Failed to fetch scheduled workouts:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user])
+  const fetchScheduledWorkouts = useCallback(
+    async (date: string) => {
+      if (!user) return
+      setIsLoading(true)
+      try {
+        const workouts = await DatabaseService.getScheduleForDate(
+          user.uid,
+          date,
+        )
+        setScheduledWorkouts(workouts)
+      } catch (error) {
+        console.error('Failed to fetch scheduled workouts:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [user],
+  )
 
   useFocusEffect(
     useCallback(() => {
@@ -126,13 +137,53 @@ export default function ScheduleScreen() {
     }
   }
 
+  const handleUnscheduleWorkout = (scheduleId: number) => {
+    Alert.alert(
+      'Remover Treino',
+      'Tem certeza que deseja remover este treino da sua agenda?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await DatabaseService.unscheduleWorkout(scheduleId)
+              Toast.show({
+                type: 'success',
+                text1: 'Treino Removido!',
+              })
+              fetchScheduledWorkouts(selectedDate)
+            } catch (error) {
+              console.error('Failed to unschedule workout:', error)
+              Toast.show({
+                type: 'error',
+                text1: 'Erro',
+                text2: 'Não foi possível remover o treino.',
+              })
+            }
+          },
+        },
+      ],
+    )
+  }
+
   const renderScheduledWorkouts = () => {
     if (isLoading) {
-      return <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
+      return (
+        <ActivityIndicator
+          color={theme.colors.primary}
+          style={{ marginTop: 20 }}
+        />
+      )
     }
 
     if (scheduledWorkouts.length === 0) {
-      return <Text style={styles.noWorkoutText}>Nenhum treino agendado para este dia.</Text>
+      return (
+        <Text style={styles.noWorkoutText}>
+          Nenhum treino agendado para este dia.
+        </Text>
+      )
     }
 
     return scheduledWorkouts.map((workout) => {
@@ -141,7 +192,12 @@ export default function ScheduleScreen() {
         <TouchableOpacity
           key={workout.scheduleId}
           style={[styles.workoutCard, isCompleted && styles.completedCard]}
-          onPress={() => navigation.navigate('WorkoutDetails', { workoutId: workout.firestoreId })}
+          onPress={() =>
+            navigation.navigate('WorkoutDetails', {
+              workoutId: workout.firestoreId,
+            })
+          }
+          onLongPress={() => handleUnscheduleWorkout(workout.scheduleId)}
           disabled={isCompleted}
         >
           <View style={styles.workoutInfo}>
@@ -186,21 +242,31 @@ export default function ScheduleScreen() {
         />
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>
-            Treinos para {format(new Date(selectedDate + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR })}
+            Treinos para{' '}
+            {format(new Date(selectedDate + 'T00:00:00'), "dd 'de' MMMM", {
+              locale: ptBR,
+            })}
+          </Text>
+          <Text style={styles.instructionText}>
+            Pressione e segure um treino para removê-lo.
           </Text>
         </View>
-        <View style={styles.workoutsList}>
-          {renderScheduledWorkouts()}
-        </View>
+        <View style={styles.workoutsList}>{renderScheduledWorkouts()}</View>
       </ScrollView>
-      <TouchableOpacity style={styles.addButton} onPress={() => setIsModalVisible(true)}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setIsModalVisible(true)}
+      >
         <Ionicons name="add" size={32} color={theme.colors.white} />
       </TouchableOpacity>
       <AssignWorkoutModal
         isVisible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         onAssign={handleAssignWorkout}
-        selectedDate={format(new Date(selectedDate + 'T00:00:00'), 'dd/MM/yyyy')}
+        selectedDate={format(
+          new Date(selectedDate + 'T00:00:00'),
+          'dd/MM/yyyy',
+        )}
       />
     </ScreenContainer>
   )
@@ -216,6 +282,11 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.large,
     fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  instructionText: {
+    fontSize: theme.fontSizes.small,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.small / 2,
   },
   workoutsList: {
     paddingHorizontal: theme.spacing.medium,

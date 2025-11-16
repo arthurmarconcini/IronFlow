@@ -95,6 +95,7 @@ export interface WorkoutPlan {
 // Representa um treino que foi agendado em uma data específica
 export interface ScheduledWorkout extends Workout {
   scheduleId: number
+  scheduledDate: string
   status: 'scheduled' | 'completed' | 'skipped'
   workoutLogId: number | null
 }

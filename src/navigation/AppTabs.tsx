@@ -66,7 +66,7 @@ export default function AppTabs() {
           tabPress: (e) => {
             if (!isPremium) {
               e.preventDefault()
-              navigation.getParent()?.navigate('Paywall')
+              navigation.getParent()?.navigate('Premium')
             }
           },
         })}
