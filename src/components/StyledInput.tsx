@@ -14,11 +14,15 @@ import {
   Text,
   Pressable,
   Animated,
+  NativeSyntheticEvent,
+  TextInputFocusEventData,
 } from 'react-native'
 import MaskInput, { Mask, MaskInputProps } from 'react-native-mask-input'
 import { theme } from '../theme'
 
 type CustomInputProps = {
+  label?: string
+  error?: string
   isPassword?: boolean
   containerStyle?: object
   mask?: Mask
@@ -32,8 +36,23 @@ export interface StyledInputRef {
 }
 
 const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
-  ({ isPassword, containerStyle, style, mask, shake, ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      isPassword,
+      containerStyle,
+      style,
+      mask,
+      shake,
+      onFocus,
+      onBlur,
+      ...props
+    },
+    ref,
+  ) => {
     const [isSecure, setIsSecure] = useState(true)
+    const [isFocused, setIsFocused] = useState(false)
     const textInputRef = useRef<TextInput>(null)
     const maskInputRef = useRef<ComponentRef<typeof MaskInput>>(null)
     const shakeAnimation = useRef(new Animated.Value(0)).current
@@ -71,12 +90,28 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
       }
     }
 
+    const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+      setIsFocused(true)
+      if (onFocus) onFocus(e)
+    }
+
+    const handleBlur = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+      setIsFocused(false)
+      if (onBlur) onBlur(e)
+    }
+
     const secureText = isPassword ? isSecure : false
 
     const interpolatedShake = shakeAnimation.interpolate({
       inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
       outputRange: [0, -10, 10, -10, 10, 0],
     })
+
+    const borderColor = error
+      ? theme.colors.error
+      : isFocused
+        ? theme.colors.primary
+        : theme.colors.border
 
     const renderInput = () => {
       const inputStyles = [styles.input, style]
@@ -88,6 +123,8 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
             style={inputStyles}
             placeholderTextColor={theme.colors.textMuted}
             mask={mask}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             {...props}
           />
         )
@@ -99,6 +136,8 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
           style={inputStyles}
           secureTextEntry={secureText}
           placeholderTextColor={theme.colors.textMuted}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...props}
         />
       )
@@ -106,13 +145,15 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
 
     return (
       <Animated.View
-        style={{ transform: [{ translateX: interpolatedShake }] }}
+        style={[
+          styles.container,
+          containerStyle,
+          { transform: [{ translateX: interpolatedShake }] },
+        ]}
       >
-        <Pressable
-          onPress={handlePress}
-          style={[styles.pressableContainer, containerStyle]}
-        >
-          <View style={styles.inputWrapper}>
+        {label && <Text style={styles.label}>{label}</Text>}
+        <Pressable onPress={handlePress}>
+          <View style={[styles.inputWrapper, { borderColor }]}>
             {renderInput()}
             {isPassword && (
               <TouchableOpacity
@@ -124,32 +165,45 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
             )}
           </View>
         </Pressable>
+        {error && <Text style={styles.errorText}>{error}</Text>}
       </Animated.View>
     )
   },
 )
 
 const styles = StyleSheet.create({
-  pressableContainer: {
+  container: {
     width: '100%',
     marginVertical: theme.spacing.small,
+  },
+  label: {
+    fontSize: theme.fontSizes.medium,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xsmall,
+    fontWeight: '500',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 1.5,
     borderRadius: theme.borderRadius.medium,
+    height: 50,
   },
   input: {
     flex: 1,
-    padding: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
     fontSize: theme.fontSizes.medium,
     color: theme.colors.text,
+    height: '100%',
   },
   eyeButton: {
     padding: theme.spacing.medium,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.fontSizes.small,
+    marginTop: theme.spacing.xsmall,
   },
 })
 

@@ -1,12 +1,19 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
-import { Picker } from '@react-native-picker/picker'
 import { ZodError } from 'zod'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
 import StyledInput from '../../components/StyledInput'
+import StyledSelect from '../../components/StyledSelect'
 import { OnboardingNavigationProp } from '../../navigation/types'
 import { useOnboardingStore } from '../../state/onboardingStore'
 import {
@@ -57,52 +64,61 @@ const DemographicsScreen = ({ navigation }: Props) => {
     }
   }
 
+  const sexOptions = [
+    { label: 'Masculino', value: 'male' },
+    { label: 'Feminino', value: 'female' },
+    { label: 'Outro', value: 'other' },
+  ]
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <View style={styles.content}>
-        <Text style={styles.title}>Conte-nos sobre você</Text>
-        <Text style={styles.subtitle}>
-          Essas informações nos ajudam a personalizar seu plano.
-        </Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Conte-nos sobre você</Text>
+            <Text style={styles.subtitle}>
+              Essas informações nos ajudam a personalizar seu plano.
+            </Text>
+          </View>
 
-        <StyledInput
-          placeholder="Como podemos te chamar?"
-          value={formData.displayName}
-          onChangeText={(text) => handleInputChange('displayName', text)}
-          containerStyle={{ marginBottom: theme.spacing.small }}
-        />
-        {errors.displayName && (
-          <Text style={styles.errorText}>{errors.displayName}</Text>
-        )}
+          <View style={styles.form}>
+            <StyledInput
+              label="Nome ou Apelido"
+              placeholder="Como podemos te chamar?"
+              value={formData.displayName}
+              onChangeText={(text) => handleInputChange('displayName', text)}
+              error={errors.displayName}
+            />
 
-        <StyledInput
-          placeholder="DD/MM/AAAA"
-          value={formData.dob}
-          onChangeText={(masked) => handleInputChange('dob', masked)}
-          mask={[/\d/, /\d/, '/', /\d/, /\d/, '/', /\d/, /\d/, /\d/, /\d/]}
-          keyboardType="numeric"
-          containerStyle={{ marginBottom: theme.spacing.small }}
-        />
-        {errors.dob && <Text style={styles.errorText}>{errors.dob}</Text>}
+            <StyledInput
+              label="Data de Nascimento"
+              placeholder="DD/MM/AAAA"
+              value={formData.dob}
+              onChangeText={(masked) => handleInputChange('dob', masked)}
+              mask={[/\d/, /\d/, '/', /\d/, /\d/, '/', /\d/, /\d/, /\d/, /\d/]}
+              keyboardType="numeric"
+              error={errors.dob}
+            />
 
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={formData.sex}
-            onValueChange={(itemValue) => handleInputChange('sex', itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Masculino" value="male" />
-            <Picker.Item label="Feminino" value="female" />
-            <Picker.Item label="Outro" value="other" />
-          </Picker>
+            <StyledSelect
+              label="Sexo Biológico"
+              value={formData.sex}
+              options={sexOptions}
+              onValueChange={(value) => handleInputChange('sex', value)}
+              error={errors.sex}
+            />
+          </View>
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Text style={styles.progressIndicator}>Passo 2 de 5</Text>
+          <StyledButton title="Próximo" onPress={validateAndProceed} />
         </View>
-        {errors.sex && <Text style={styles.errorText}>{errors.sex}</Text>}
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.progressIndicator}>Passo 2 de 5</Text>
-        <StyledButton title="Próximo" onPress={validateAndProceed} />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
@@ -111,12 +127,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.medium,
-    paddingTop: 60,
+    paddingTop: 40,
+  },
+  header: {
+    marginBottom: theme.spacing.large,
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
@@ -129,30 +148,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.large,
   },
-  pickerContainer: {
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    height: 50,
-    marginTop: theme.spacing.medium,
-  },
-  picker: {
+  form: {
     width: '100%',
-  },
-  errorText: {
-    color: theme.colors.error,
-    fontSize: theme.fontSizes.small,
-    marginTop: -theme.spacing.small,
-    marginBottom: theme.spacing.small,
-    marginLeft: theme.spacing.small,
   },
   footer: {
     padding: theme.spacing.medium,
     paddingBottom: theme.spacing.large,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.background,
   },
   progressIndicator: {
     fontSize: theme.fontSizes.small,

@@ -1,18 +1,17 @@
 import React, { useState } from 'react'
-import { View, Text, StyleSheet, Alert } from 'react-native'
+import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
-import { Picker } from '@react-native-picker/picker'
 import { ZodError } from 'zod'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
+import StyledSelect from '../../components/StyledSelect'
 import { OnboardingNavigationProp } from '../../navigation/types'
 import {
   OnboardingState,
   useOnboardingStore,
 } from '../../state/onboardingStore'
 import { experienceSchema } from '../../types/onboardingSchema'
-import { experienceMap, availabilityMap } from '../../utils/translationUtils'
 
 type Props = {
   navigation: OnboardingNavigationProp
@@ -44,67 +43,52 @@ const ExperienceScreen = ({ navigation }: Props) => {
     }
   }
 
+  const experienceOptions = [
+    { label: 'Iniciante (0-6 meses)', value: 'beginner' },
+    { label: 'Intermediário (6m - 2a)', value: 'intermediate' },
+    { label: 'Avançado (2a+)', value: 'advanced' },
+  ]
+
+  const availabilityOptions = [
+    { label: '1-2 dias/semana', value: '1-2' },
+    { label: '3-4 dias/semana', value: '3-4' },
+    { label: '5+ dias/semana', value: '5+' },
+  ]
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      <View style={styles.content}>
-        <Text style={styles.title}>Sua Experiência e Disponibilidade</Text>
-        <Text style={styles.subtitle}>
-          Isso nos ajuda a montar o treino ideal para você.
-        </Text>
-
-        <View style={styles.pickerInputContainer}>
-          <Text
-            style={[
-              styles.pickerInputText,
-              !experienceLevel && styles.placeholderText,
-            ]}
-          >
-            {experienceLevel
-              ? experienceMap[experienceLevel]
-              : 'Nível de Experiência'}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Sua Experiência e Disponibilidade</Text>
+          <Text style={styles.subtitle}>
+            Isso nos ajuda a montar o treino ideal para você.
           </Text>
-          <Picker
-            selectedValue={experienceLevel}
-            onValueChange={(itemValue) =>
-              setExperienceLevel(
-                itemValue as OnboardingState['experienceLevel'],
-              )
-            }
-            style={styles.picker}
-          >
-            <Picker.Item label="Nível de Experiência" value={null} />
-            <Picker.Item label="Iniciante (0-6 meses)" value="beginner" />
-            <Picker.Item label="Intermediário (6m - 2a)" value="intermediate" />
-            <Picker.Item label="Avançado (2a+)" value="advanced" />
-          </Picker>
         </View>
 
-        <View style={styles.pickerInputContainer}>
-          <Text
-            style={[
-              styles.pickerInputText,
-              !availability && styles.placeholderText,
-            ]}
-          >
-            {availability
-              ? availabilityMap[availability]
-              : 'Disponibilidade Semanal'}
-          </Text>
-          <Picker
-            selectedValue={availability}
-            onValueChange={(itemValue) =>
-              setAvailability(itemValue as OnboardingState['availability'])
+        <View style={styles.form}>
+          <StyledSelect
+            label="Nível de Experiência"
+            placeholder="Selecione seu nível"
+            value={experienceLevel || ''}
+            options={experienceOptions}
+            onValueChange={(value) =>
+              setExperienceLevel(value as OnboardingState['experienceLevel'])
             }
-            style={styles.picker}
-          >
-            <Picker.Item label="Disponibilidade Semanal" value={null} />
-            <Picker.Item label="1-2 dias/semana" value="1-2" />
-            <Picker.Item label="3-4 dias/semana" value="3-4" />
-            <Picker.Item label="5+ dias/semana" value="5+" />
-          </Picker>
+          />
+
+          <StyledSelect
+            label="Disponibilidade Semanal"
+            placeholder="Quantos dias por semana?"
+            value={availability || ''}
+            options={availabilityOptions}
+            onValueChange={(value) =>
+              setAvailability(value as OnboardingState['availability'])
+            }
+          />
         </View>
-      </View>
+      </ScrollView>
+
       <View
         style={[
           styles.footer,
@@ -126,12 +110,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.medium,
-    paddingTop: 60,
+    paddingTop: 40,
+  },
+  header: {
+    marginBottom: theme.spacing.large,
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
@@ -144,43 +131,16 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.large,
   },
-  pickerInputContainer: {
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    height: 50,
-    marginBottom: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.medium,
-  },
-  pickerInputText: {
-    fontSize: theme.fontSizes.medium,
-    color: theme.colors.text,
-  },
-  placeholderText: {
-    color: theme.colors.secondary,
-  },
-  pickerContainer: {
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.medium,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    height: 50,
-    marginBottom: theme.spacing.medium,
-  },
-  picker: {
-    position: 'absolute',
-    width: '120%',
-    height: '100%',
-    opacity: 0,
+  form: {
+    width: '100%',
   },
   footer: {
     padding: theme.spacing.medium,
     paddingBottom: theme.spacing.large,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.background,
   },
   progressIndicator: {
     fontSize: theme.fontSizes.small,

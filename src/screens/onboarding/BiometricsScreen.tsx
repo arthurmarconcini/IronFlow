@@ -1,5 +1,12 @@
 import React, { useState, useRef } from 'react'
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { Slider } from '@miblanchard/react-native-slider'
@@ -24,7 +31,7 @@ const BiometricsScreen = ({ navigation }: Props) => {
   const [height, setHeight] = useState(heightCm || 170)
   const [weight, setWeight] = useState(weightKg || 70)
 
-  const intervalRef = useRef<number | null>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const MIN_WEIGHT = 30
   const MAX_WEIGHT = 330
@@ -83,11 +90,13 @@ const BiometricsScreen = ({ navigation }: Props) => {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Suas Medidas</Text>
-        <Text style={styles.subtitle}>
-          Isso nos ajudará a calcular suas necessidades calóricas e de macros.
-        </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Suas Medidas</Text>
+          <Text style={styles.subtitle}>
+            Isso nos ajudará a calcular suas necessidades calóricas e de macros.
+          </Text>
+        </View>
 
         <View style={styles.unitSelector}>
           <TouchableOpacity
@@ -124,58 +133,64 @@ const BiometricsScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.sliderContainer}>
-          <Text style={styles.label}>Altura</Text>
-          <Text style={styles.value}>{displayHeight}</Text>
-        </View>
-        <Slider
-          value={height}
-          onValueChange={(value) =>
-            setHeight(Array.isArray(value) ? value[0] : value)
-          }
-          minimumValue={100}
-          maximumValue={240}
-          step={1}
-          thumbTintColor={theme.colors.primary}
-          minimumTrackTintColor={theme.colors.primary}
-          maximumTrackTintColor={theme.colors.lightGray}
-        />
-
-        <View style={styles.sliderContainer}>
-          <Text style={styles.label}>Peso</Text>
-          <View style={styles.valueContainer}>
-            <TouchableOpacity
-              onPress={decrementWeight}
-              onLongPress={() => handleLongPress('decrement')}
-              onPressOut={handlePressOut}
-              style={styles.adjustButton}
-            >
-              <Text style={styles.adjustButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.value}>{displayWeight}</Text>
-            <TouchableOpacity
-              onPress={incrementWeight}
-              onLongPress={() => handleLongPress('increment')}
-              onPressOut={handlePressOut}
-              style={styles.adjustButton}
-            >
-              <Text style={styles.adjustButtonText}>+</Text>
-            </TouchableOpacity>
+        <View style={styles.card}>
+          <View style={styles.sliderHeader}>
+            <Text style={styles.label}>Altura</Text>
+            <Text style={styles.value}>{displayHeight}</Text>
           </View>
+          <Slider
+            value={height}
+            onValueChange={(value) =>
+              setHeight(Array.isArray(value) ? value[0] : value)
+            }
+            minimumValue={100}
+            maximumValue={240}
+            step={1}
+            thumbTintColor={theme.colors.primary}
+            minimumTrackTintColor={theme.colors.primary}
+            maximumTrackTintColor={theme.colors.lightGray}
+            trackStyle={styles.track}
+          />
         </View>
-        <Slider
-          value={weight}
-          onValueChange={(value) =>
-            setWeight(Array.isArray(value) ? value[0] : value)
-          }
-          minimumValue={MIN_WEIGHT}
-          maximumValue={MAX_WEIGHT}
-          step={0.5}
-          thumbTintColor={theme.colors.primary}
-          minimumTrackTintColor={theme.colors.primary}
-          maximumTrackTintColor={theme.colors.lightGray}
-        />
-      </View>
+
+        <View style={styles.card}>
+          <View style={styles.sliderHeader}>
+            <Text style={styles.label}>Peso</Text>
+            <View style={styles.weightControls}>
+              <TouchableOpacity
+                onPress={decrementWeight}
+                onLongPress={() => handleLongPress('decrement')}
+                onPressOut={handlePressOut}
+                style={styles.adjustButton}
+              >
+                <Text style={styles.adjustButtonText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.value}>{displayWeight}</Text>
+              <TouchableOpacity
+                onPress={incrementWeight}
+                onLongPress={() => handleLongPress('increment')}
+                onPressOut={handlePressOut}
+                style={styles.adjustButton}
+              >
+                <Text style={styles.adjustButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Slider
+            value={weight}
+            onValueChange={(value) =>
+              setWeight(Array.isArray(value) ? value[0] : value)
+            }
+            minimumValue={MIN_WEIGHT}
+            maximumValue={MAX_WEIGHT}
+            step={0.5}
+            thumbTintColor={theme.colors.primary}
+            minimumTrackTintColor={theme.colors.primary}
+            maximumTrackTintColor={theme.colors.lightGray}
+            trackStyle={styles.track}
+          />
+        </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <Text style={styles.progressIndicator}>Passo 3 de 5</Text>
@@ -184,17 +199,20 @@ const BiometricsScreen = ({ navigation }: Props) => {
     </SafeAreaView>
   )
 }
-// ... (styles remain the same)
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'space-between',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.medium,
-    paddingTop: 60,
+    paddingTop: 40,
+  },
+  header: {
+    marginBottom: theme.spacing.large,
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
@@ -207,70 +225,94 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSizes.medium,
     color: theme.colors.secondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.large,
   },
   unitSelector: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: theme.spacing.large,
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.white,
     borderRadius: theme.borderRadius.medium,
-    alignSelf: 'center',
+    padding: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   unitButton: {
+    flex: 1,
     paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.small,
+    alignItems: 'center',
   },
   unitButtonActive: {
     backgroundColor: theme.colors.primary,
   },
   unitText: {
-    color: theme.colors.secondary,
+    color: theme.colors.textMuted,
     fontWeight: '600',
+    fontSize: theme.fontSizes.small,
   },
   unitTextActive: {
     color: theme.colors.white,
   },
-  sliderContainer: {
+  card: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  sliderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: theme.spacing.large,
+    marginBottom: theme.spacing.medium,
   },
   label: {
-    fontSize: theme.fontSizes.large,
+    fontSize: theme.fontSizes.medium,
     color: theme.colors.text,
+    fontWeight: '500',
   },
   value: {
     fontSize: theme.fontSizes.large,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: theme.colors.primary,
-    minWidth: 100,
+    minWidth: 80,
     textAlign: 'center',
   },
-  valueContainer: {
+  weightControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
   },
   adjustButton: {
-    backgroundColor: theme.colors.lightGray,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    backgroundColor: theme.colors.lightPrimary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: theme.spacing.small,
+    marginHorizontal: theme.spacing.xsmall,
   },
   adjustButtonText: {
     color: theme.colors.primary,
     fontSize: 20,
     fontWeight: 'bold',
+    lineHeight: 22,
+  },
+  track: {
+    height: 6,
+    borderRadius: 3,
   },
   footer: {
     padding: theme.spacing.medium,
     paddingBottom: theme.spacing.large,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.lightGray,
+    backgroundColor: theme.colors.background,
   },
   progressIndicator: {
     fontSize: theme.fontSizes.small,
