@@ -51,6 +51,7 @@ export const useUserProfile = () => {
             experienceLevel: serverProfileData.experienceLevel,
             availability: serverProfileData.availability,
             goal: serverProfileData.goal,
+            equipment: serverProfileData.equipment,
             heightCm: serverProfileData.heightCm,
             currentWeightKg: serverProfileData.currentWeightKg,
             bmi: serverProfileData.bmi,

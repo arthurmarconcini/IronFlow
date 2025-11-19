@@ -14,8 +14,6 @@ import {
   Text,
   Pressable,
   Animated,
-  NativeSyntheticEvent,
-  TextInputFocusEventData,
 } from 'react-native'
 import MaskInput, { Mask, MaskInputProps } from 'react-native-mask-input'
 import { theme } from '../theme'
@@ -90,12 +88,14 @@ const StyledInput = React.forwardRef<StyledInputRef, StyledInputProps>(
       }
     }
 
-    const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleFocus = (e: any) => {
       setIsFocused(true)
       if (onFocus) onFocus(e)
     }
 
-    const handleBlur = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleBlur = (e: any) => {
       setIsFocused(false)
       if (onBlur) onBlur(e)
     }
