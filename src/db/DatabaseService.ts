@@ -695,7 +695,7 @@ const getWorkoutLogsCount = async (userId: string): Promise<number> => {
 
 const getTotalSetsCompleted = async (userId: string): Promise<number> => {
   const result = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(s.id) as count FROM set_logs s JOIN workout_logs w ON s.workout_log_id = w.id WHERE w.user_id = ?',
+    "SELECT COUNT(s.id) as count FROM set_logs s JOIN workout_logs w ON s.workout_log_id = w.id WHERE w.user_id = ? AND w.status = 'completed'",
     userId,
   )
   return result?.count ?? 0
@@ -809,7 +809,7 @@ export const DatabaseService = {
         SUM(sl.actual_reps * sl.actual_weight_kg) as volume 
       FROM set_logs sl 
       JOIN workout_logs wl ON sl.workout_log_id = wl.id 
-      WHERE wl.user_id = ? AND sl.completed_at >= ? 
+      WHERE wl.user_id = ? AND sl.completed_at >= ? AND wl.status = 'completed'
       GROUP BY date
       ORDER BY date ASC
     `
@@ -877,7 +877,7 @@ export const DatabaseService = {
         MAX(sl.actual_weight_kg * (1 + sl.actual_reps / 30.0)) as e1rm
       FROM set_logs sl 
       JOIN workout_logs wl ON sl.workout_log_id = wl.id 
-      WHERE wl.user_id = ? AND (sl.exercise_db_id = ? OR sl.exercise_name = ?)
+      WHERE wl.user_id = ? AND (sl.exercise_db_id = ? OR sl.exercise_name = ?) AND wl.status = 'completed'
       GROUP BY date
       ORDER BY date ASC
     `

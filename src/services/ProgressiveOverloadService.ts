@@ -29,43 +29,55 @@ const calculateNextSessionTarget = async (
     return null // Sem dados para basear a progressão.
   }
 
-  const lastSet = lastPerformance[lastPerformance.length - 1]
-  const lastWeight = lastSet.actual_weight_kg ?? 0
-  const lastReps = lastSet.actual_reps ?? 0
-  const lastRir = lastSet.rir
+  // Find the BEST set from the last session (highest weight, then highest reps)
+  // This avoids issues where the last set was a drop set or performed under fatigue
+  let bestSet = lastPerformance[0]
+  for (const set of lastPerformance) {
+    const currentWeight = set.actual_weight_kg ?? 0
+    const currentReps = set.actual_reps ?? 0
+    const bestWeight = bestSet.actual_weight_kg ?? 0
+    const bestReps = bestSet.actual_reps ?? 0
+
+    if (currentWeight > bestWeight) {
+      bestSet = set
+    } else if (currentWeight === bestWeight && currentReps > bestReps) {
+      bestSet = set
+    }
+  }
+
+  const lastWeight = bestSet.actual_weight_kg ?? 0
+  const lastReps = bestSet.actual_reps ?? 0
+  const lastRir = bestSet.rir
 
   const maxTargetReps = parseInt(targetRepsRange.split('-')[1], 10)
 
   // REGRA 1: Progressão de Peso
-  // Se o usuário completou a última série no topo da faixa de repetições
+  // Se o usuário completou a MELHOR SÉRIE no topo da faixa de repetições
   // e teve um RIR de 2 ou mais, ele está pronto para mais peso.
   if (lastReps >= maxTargetReps && lastRir !== null && lastRir >= 2) {
     return {
       targetWeight: lastWeight + WEIGHT_INCREMENT_KG,
       targetReps: targetRepsRange,
-      notes: `Ótimo trabalho! Aumentamos o peso para ${
+      notes: `Sua melhor série foi excelente! Aumentamos o peso para ${
         lastWeight + WEIGHT_INCREMENT_KG
       } kg.`,
     }
   }
 
   // REGRA 2: Progressão de Repetições/Manutenção
-  // Se o usuário completou as repetições mas o RIR foi baixo, ou
-  // se ele ainda está trabalhando dentro da faixa de repetições.
   if (lastReps < maxTargetReps || (lastRir !== null && lastRir < 2)) {
     return {
       targetWeight: lastWeight,
       targetReps: targetRepsRange,
-      notes: `Mantenha o peso em ${lastWeight} kg e foque em atingir o topo da faixa de repetições (${maxTargetReps} reps).`,
+      notes: `Mantenha o peso em ${lastWeight} kg e tente aumentar as repetições (alvo: ${maxTargetReps}).`,
     }
   }
 
   // REGRA 3: Caso Padrão (Manter)
-  // Se nenhuma das condições acima for atendida, mantenha os parâmetros.
   return {
     targetWeight: lastWeight,
     targetReps: targetRepsRange,
-    notes: `Continue com ${lastWeight} kg e foque na consistência.`,
+    notes: `Mantenha a carga de ${lastWeight} kg para consolidar a força.`,
   }
 }
 

@@ -15,7 +15,7 @@ import { theme } from '../../theme'
 import { useSubscriptionStatus } from '../../hooks/useSubscriptionStatus'
 import { useAuth } from '../../hooks/useAuth'
 import { DatabaseService } from '../../db/DatabaseService'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { AppNavigationProp } from '../../navigation/types'
 import {
   StatisticsService,
@@ -212,21 +212,22 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginBottom: theme.spacing.large,
+    gap: theme.spacing.medium, // Add gap between cards
   },
   card: {
     backgroundColor: theme.colors.white,
-    borderRadius: 12,
+    borderRadius: 16, // More rounded
     padding: theme.spacing.medium,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '45%',
+    flex: 1, // Flex instead of fixed width
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statValue: {
     fontSize: 28,
