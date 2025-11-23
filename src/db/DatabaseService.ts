@@ -798,6 +798,97 @@ export const DatabaseService = {
   updateWorkout,
   getWorkouts,
   getAllWorkoutsForSync,
+  // Statistics Queries
+  getVolumeLoadStats: async (
+    userId: string,
+    startDate: number,
+  ): Promise<{ date: string; volume: number }[]> => {
+    const query = `
+      SELECT 
+        date(sl.completed_at / 1000, 'unixepoch') as date, 
+        SUM(sl.actual_reps * sl.actual_weight_kg) as volume 
+      FROM set_logs sl 
+      JOIN workout_logs wl ON sl.workout_log_id = wl.id 
+      WHERE wl.user_id = ? AND sl.completed_at >= ? 
+      GROUP BY date
+      ORDER BY date ASC
+    `
+    const results = await db.getAllAsync<{ date: string; volume: number }>(
+      query,
+      userId,
+      startDate,
+    )
+    return results
+  },
+
+  getWorkoutFrequencyStats: async (
+    userId: string,
+    startDate: number,
+  ): Promise<{ week: string; count: number }[]> => {
+    const query = `
+      SELECT 
+        strftime('%Y-%W', started_at / 1000, 'unixepoch') as week, 
+        COUNT(*) as count 
+      FROM workout_logs 
+      WHERE user_id = ? AND status = 'completed' AND started_at >= ?
+      GROUP BY week
+      ORDER BY week ASC
+    `
+    const results = await db.getAllAsync<{ week: string; count: number }>(
+      query,
+      userId,
+      startDate,
+    )
+    return results
+  },
+
+  getMuscleGroupFrequencyStats: async (
+    userId: string,
+    startDate: number,
+  ): Promise<{ muscle_group: string; count: number }[]> => {
+    const query = `
+      SELECT 
+        w.muscle_group, 
+        COUNT(*) as count 
+      FROM workout_logs wl 
+      JOIN workouts w ON wl.workout_firestore_id = w.firestore_id 
+      WHERE wl.user_id = ? AND wl.status = 'completed' AND wl.finished_at >= ? 
+      GROUP BY w.muscle_group
+    `
+    const results = await db.getAllAsync<{
+      muscle_group: string
+      count: number
+    }>(query, userId, startDate)
+    return results
+  },
+
+  getExerciseHistory: async (
+    userId: string,
+    exerciseId: string,
+  ): Promise<
+    { date: string; weight: number; reps: number; e1rm: number }[]
+  > => {
+    // Epley formula for 1RM: weight * (1 + reps / 30)
+    const query = `
+      SELECT 
+        date(sl.completed_at / 1000, 'unixepoch') as date,
+        MAX(sl.actual_weight_kg) as weight,
+        MAX(sl.actual_reps) as reps,
+        MAX(sl.actual_weight_kg * (1 + sl.actual_reps / 30.0)) as e1rm
+      FROM set_logs sl 
+      JOIN workout_logs wl ON sl.workout_log_id = wl.id 
+      WHERE wl.user_id = ? AND (sl.exercise_db_id = ? OR sl.exercise_name = ?)
+      GROUP BY date
+      ORDER BY date ASC
+    `
+    const results = await db.getAllAsync<{
+      date: string
+      weight: number
+      reps: number
+      e1rm: number
+    }>(query, userId, exerciseId, exerciseId)
+    return results
+  },
   deleteWorkout,
   getWorkoutById,
   addWorkoutPlan,
