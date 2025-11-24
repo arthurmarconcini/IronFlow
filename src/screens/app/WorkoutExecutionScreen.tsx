@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppNavigationProp, AppRouteProp } from '../../navigation/types'
@@ -18,9 +18,11 @@ import {
   useWorkoutExecutionStore,
 } from '../../state/workoutExecutionStore'
 import { useWorkouts } from '../../db/useWorkouts'
+import { DatabaseService, SetLog } from '../../db/DatabaseService'
+import { useAuth } from '../../hooks/useAuth'
 import { theme } from '../../theme'
 import { StrengthExercise } from '../../types/database'
-import { parseRepTarget } from '../../utils/workoutUtils' // 1. Importar a nova função
+import { parseRepTarget } from '../../utils/workoutUtils'
 import ExerciseSetRow from '../../components/ExerciseSetRow'
 import ExerciseSelectionModal from '../../components/ExerciseSelectionModal'
 import CompletionOverlay from '../../components/CompletionOverlay'
@@ -40,9 +42,11 @@ type Props = {
 export default function WorkoutExecutionScreen({ route }: Props) {
   const { workoutId } = route.params
   const navigation = useNavigation<AppNavigationProp>()
+  const { user } = useAuth()
   const flatListRef = useRef<FlatList>(null)
   const [isModalVisible, setModalVisible] = useState(false)
   const [sessionTarget, setSessionTarget] = useState<SessionTarget | null>(null)
+  const [lastSessionLogs, setLastSessionLogs] = useState<SetLog[]>([])
   const [isTargetLoading, setIsTargetLoading] = useState(false)
   const { finishWorkout } = useWorkouts()
   const { isPremium } = useSubscriptionStatus()
@@ -74,22 +78,53 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     }, [workoutId, initializeWorkout]),
   )
 
-  useEffect(() => {
-    if (workout && isPremium) {
-      setIsTargetLoading(true)
-      const currentExercise = workout.exercises[
-        currentExerciseIndex
-      ] as StrengthExercise
-      ProgressiveOverloadService.calculateNextSessionTarget(
-        currentExercise.name,
-        currentExercise.reps,
-      )
-        .then(setSessionTarget)
-        .finally(() => setIsTargetLoading(false))
-    } else {
-      setSessionTarget(null)
-    }
-  }, [currentExerciseIndex, workout, isPremium])
+  useFocusEffect(
+    useCallback(() => {
+      if (workout) {
+        const currentExercise = workout.exercises[
+          currentExerciseIndex
+        ] as StrengthExercise
+
+        if (!currentExercise) {
+          setSessionTarget(null)
+          setLastSessionLogs([])
+          return
+        }
+
+        setIsTargetLoading(true)
+
+        // Fetch History & Calculate Target in parallel
+        const loadData = async () => {
+          try {
+            // 1. Fetch History (Director Feature)
+            const history = await DatabaseService.getLastSessionLogsForExercise(
+              user?.uid || '',
+              currentExercise.name,
+            )
+            setLastSessionLogs(history)
+
+            // 2. Calculate Target (Premium Feature)
+            if (isPremium) {
+              const target =
+                await ProgressiveOverloadService.calculateNextSessionTarget(
+                  currentExercise.name,
+                  currentExercise.reps,
+                )
+              setSessionTarget(target)
+            } else {
+              setSessionTarget(null)
+            }
+          } catch (error) {
+            console.error('Error loading exercise data:', error)
+          } finally {
+            setIsTargetLoading(false)
+          }
+        }
+
+        loadData()
+      }
+    }, [currentExerciseIndex, workout, isPremium, user]),
+  )
 
   useEffect(() => {
     if (restTimer.isActive) {
@@ -279,12 +314,24 @@ export default function WorkoutExecutionScreen({ route }: Props) {
                 ? sessionTarget.targetWeight
                 : (lastCompletedSet?.weightKg ?? exercise.weight)
 
+            const previousSetData = lastSessionLogs.find(
+              (log) => log.set_index === setIndex,
+            )
+
             return (
               <ExerciseSetRow
                 key={setIndex}
                 setNumber={setIndex + 1}
                 targetReps={setData?.reps ?? repTarget} // 3. Passar a meta calculada
                 targetWeight={setData?.weightKg ?? weightToShow}
+                previousData={
+                  previousSetData
+                    ? {
+                        weight: previousSetData.actual_weight_kg ?? 0,
+                        reps: previousSetData.actual_reps ?? 0,
+                      }
+                    : undefined
+                }
                 isCompleted={isCompleted}
                 isActive={isActive}
                 isResting={isResting}

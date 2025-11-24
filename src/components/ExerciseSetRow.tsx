@@ -1,12 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, memo } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import * as Haptics from 'expo-haptics'
 import { theme } from '../theme'
 import StyledInput from './StyledInput'
@@ -17,6 +18,7 @@ type ExerciseSetRowProps = {
   setNumber: number
   targetReps: string | number
   targetWeight?: number
+  previousData?: { weight: number; reps: number } // New prop
   isCompleted: boolean
   isActive: boolean
   isResting: boolean
@@ -29,6 +31,7 @@ const ExerciseSetRow = ({
   setNumber,
   targetReps,
   targetWeight,
+  previousData,
   isCompleted,
   isActive,
   isResting,
@@ -42,18 +45,26 @@ const ExerciseSetRow = ({
   const [shakeWeight, setShakeWeight] = useState(0)
   const [shakeReps, setShakeReps] = useState(0)
   const [shakeRir, setShakeRir] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const weightRef = useRef<TextInput>(null)
   const repsRef = useRef<TextInput>(null)
   const rirRef = useRef<TextInput>(null)
 
+  // Only auto-focus if active and NOT completed to avoid annoyance when reviewing
   useEffect(() => {
     if (isActive && !isCompleted) {
-      weightRef.current?.focus()
+      // Small timeout to allow render to settle and keyboard to not jump weirdly
+      const timer = setTimeout(() => {
+        weightRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
     }
   }, [isActive, isCompleted])
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    if (isSubmitting) return
+
     const weightValue = parseFloat(weight)
     const repsValue = parseInt(reps, 10)
     const rirValue = parseInt(rir, 10)
@@ -76,13 +87,23 @@ const ExerciseSetRow = ({
       return
     }
 
+    setIsSubmitting(true)
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+
+    // Simulate async/debounce to prevent double taps
     onComplete({
       weightKg: weightValue,
       reps: repsValue,
       rir: isNaN(rirValue) ? undefined : rirValue,
     })
+
+    // Reset submitting state after a short delay or when props change (handled by parent logic usually, but safety here)
+    setTimeout(() => setIsSubmitting(false), 500)
   }
+
+  // Allow editing if it's the active set OR if it's already completed (to correct mistakes)
+  // We disable editing only if it's a FUTURE set (not active and not completed)
+  const isEditable = isActive || isCompleted
 
   return (
     <View>
@@ -100,7 +121,14 @@ const ExerciseSetRow = ({
           isActive && styles.activeContainer,
         ]}
       >
-        <Text style={styles.setNumber}>{setNumber}</Text>
+        <View style={styles.setInfoContainer}>
+          <Text style={styles.setNumber}>{setNumber}</Text>
+          {previousData && (
+            <Text style={styles.previousDataText}>
+              Ant: {previousData.weight}kg x {previousData.reps}
+            </Text>
+          )}
+        </View>
         <View style={styles.inputContainer}>
           <StyledInput
             ref={weightRef}
@@ -110,10 +138,11 @@ const ExerciseSetRow = ({
             placeholder="Peso"
             style={styles.input}
             containerStyle={styles.inputWrapper}
-            editable={!isCompleted && isActive}
+            editable={isEditable}
             shake={shakeWeight}
             onSubmitEditing={() => repsRef.current?.focus()}
             returnKeyType="next"
+            selectTextOnFocus // UX Improvement
           />
         </View>
         <View style={styles.inputContainer}>
@@ -125,10 +154,11 @@ const ExerciseSetRow = ({
             placeholder="Reps"
             style={styles.input}
             containerStyle={styles.inputWrapper}
-            editable={!isCompleted && isActive}
+            editable={isEditable}
             shake={shakeReps}
             onSubmitEditing={() => rirRef.current?.focus()}
             returnKeyType="next"
+            selectTextOnFocus
           />
         </View>
         <View style={styles.inputContainer}>
@@ -140,28 +170,33 @@ const ExerciseSetRow = ({
             placeholder="RIR"
             style={styles.input}
             containerStyle={styles.inputWrapper}
-            editable={!isCompleted && isActive}
+            editable={isEditable}
             shake={shakeRir}
             onSubmitEditing={handleComplete}
             returnKeyType="done"
+            selectTextOnFocus
           />
         </View>
         <TouchableOpacity
           onPress={handleComplete}
-          disabled={isCompleted || !isActive}
+          disabled={!isEditable || isSubmitting}
           style={styles.checkButton}
         >
-          <Ionicons
-            name={isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-            size={32}
-            color={
-              isCompleted
-                ? theme.colors.primary
-                : isActive
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+          ) : (
+            <Ionicons
+              name={isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+              size={32}
+              color={
+                isCompleted
                   ? theme.colors.primary
-                  : theme.colors.lightGray
-            }
-          />
+                  : isActive
+                    ? theme.colors.primary
+                    : theme.colors.lightGray
+              }
+            />
+          )}
         </TouchableOpacity>
       </View>
       <RestTimerBar
@@ -200,15 +235,26 @@ const styles = StyleSheet.create({
   },
   completedContainer: {
     backgroundColor: '#e9f5e9',
+    borderColor: theme.colors.success, // Visual cue for completion
+  },
+  setInfoContainer: {
+    width: '18%', // Increased width to hold the text
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   setNumber: {
     fontSize: theme.fontSizes.large,
     fontWeight: 'bold',
     color: theme.colors.text,
-    width: '10%',
+  },
+  previousDataText: {
+    fontSize: 10,
+    color: theme.colors.secondary,
+    marginTop: 2,
+    textAlign: 'center',
   },
   inputContainer: {
-    width: '22%', // Ajustado para acomodar o novo campo
+    width: '20%', // Adjusted width
   },
   inputWrapper: {
     marginVertical: 0,
@@ -222,4 +268,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export default ExerciseSetRow
+export default memo(ExerciseSetRow)

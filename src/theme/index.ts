@@ -12,6 +12,7 @@ const colors = {
   white: '#FFFFFF',
   darkGray: '#343A40',
   error: '#DC3545', // Cor para ações de perigo/erro
+  success: '#28a745', // Cor para ações de sucesso/conclusão
   card: '#FFFFFF',
   border: '#E0E0E0',
   textMuted: '#6C757D',
