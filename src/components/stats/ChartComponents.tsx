@@ -49,6 +49,9 @@ const baseChartConfig = {
     strokeWidth: '2',
     stroke: theme.colors.white,
   },
+  propsForLabels: {
+    fontSize: 10,
+  },
   fillShadowGradientFrom: theme.colors.primary,
   fillShadowGradientTo: theme.colors.white,
 }
@@ -85,7 +88,7 @@ export const VolumeChart = ({ data, title }: VolumeChartProps) => {
       <Text style={styles.title}>{title}</Text>
       <LineChart
         data={chartData}
-        width={CHART_WIDTH}
+        width={CHART_WIDTH - 10} // Reduce width slightly to prevent clipping
         height={220}
         chartConfig={baseChartConfig}
         bezier={data.labels.length > 1} // Only bezier if we have enough points
@@ -95,6 +98,12 @@ export const VolumeChart = ({ data, title }: VolumeChartProps) => {
         withVerticalLines={false}
         fromZero
         yAxisInterval={1}
+        formatYLabel={(yValue) => {
+          const value = Number(yValue)
+          if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+          return yValue
+        }}
+        horizontalLabelRotation={0}
       />
     </View>
   )
@@ -123,9 +132,7 @@ export const MuscleDistributionChart = ({
         chartConfig={baseChartConfig}
         accessor={'population'}
         backgroundColor={'transparent'}
-        paddingLeft={'0'}
-        center={[CHART_WIDTH / 4, 0]} // Center adjustment
-        absolute
+        paddingLeft={'15'}
       />
     </View>
   )

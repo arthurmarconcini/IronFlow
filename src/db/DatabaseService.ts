@@ -527,7 +527,7 @@ const scheduleWorkout = async (
   date: string, // YYYY-MM-DD
 ): Promise<void> => {
   await db.runAsync(
-    'INSERT INTO workout_schedule (user_id, workout_firestore_id, scheduled_date, status) VALUES (?, ?, ?, ?)',
+    'INSERT OR IGNORE INTO workout_schedule (user_id, workout_firestore_id, scheduled_date, status) VALUES (?, ?, ?, ?)',
     userId,
     workoutFirestoreId,
     date,
