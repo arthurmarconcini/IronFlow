@@ -139,6 +139,7 @@ export default function HomeScreen() {
             </Text>
             <WorkoutCard
               workout={nextWorkout}
+              isActive={activeWorkout?.firestoreId === nextWorkout.firestoreId}
               onPress={() =>
                 navigation.navigate('WorkoutDetails', {
                   workoutId: nextWorkout.firestoreId,
@@ -189,6 +190,7 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <WorkoutCard
               workout={item}
+              isActive={activeWorkout?.firestoreId === item.firestoreId}
               onPress={() =>
                 navigation.navigate('WorkoutDetails', {
                   workoutId: item.firestoreId,

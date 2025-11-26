@@ -18,6 +18,7 @@ const colors = {
   textMuted: '#6C757D',
   gold: '#FFD700', // Cor para elementos premium
   textLight: '#FFFFFF', // Cor de texto claro (branco)
+  warning: '#FFC107', // Amarelo para avisos/pausa
 }
 
 const fontSizes = {

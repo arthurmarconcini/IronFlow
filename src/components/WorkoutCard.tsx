@@ -9,6 +9,7 @@ interface WorkoutCardProps {
   onPress: () => void
   onPlay: () => void
   isCompleted?: boolean
+  isActive?: boolean
 }
 
 const getIconForMuscleGroup = (muscleGroup: string) => {
@@ -41,29 +42,43 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
   onPress,
   onPlay,
   isCompleted,
+  isActive,
 }) => {
   const workoutData = 'scheduleId' in workout ? workout : workout
 
   return (
     <TouchableOpacity
-      style={[styles.card, isCompleted && styles.completedCard]}
+      style={[
+        styles.card,
+        isCompleted && styles.completedCard,
+        isActive && styles.activeCard,
+      ]}
       onPress={onPress}
     >
       <View style={styles.cardContent}>
         {/* Ícone */}
-        <View style={styles.iconContainer}>
+        <View
+          style={[styles.iconContainer, isActive && styles.activeIconContainer]}
+        >
           <Ionicons
             name={getIconForMuscleGroup(workoutData.muscleGroup)}
             size={28}
-            color={theme.colors.primary}
+            color={isActive ? theme.colors.white : theme.colors.primary}
           />
         </View>
 
         {/* Informações do Treino */}
         <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-            {workoutData.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {workoutData.name}
+            </Text>
+            {isActive && (
+              <View style={styles.activeBadge}>
+                <Text style={styles.activeBadgeText}>Em andamento</Text>
+              </View>
+            )}
+          </View>
           <View style={styles.detailsContainer}>
             <Text style={styles.detailText}>{workoutData.muscleGroup}</Text>
             <Text style={styles.separator}>|</Text>
@@ -80,7 +95,13 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
           disabled={isCompleted}
         >
           <Ionicons
-            name={isCompleted ? 'checkmark-circle' : 'play-circle-outline'}
+            name={
+              isCompleted
+                ? 'checkmark-circle'
+                : isActive
+                  ? 'arrow-forward-circle'
+                  : 'play-circle-outline'
+            }
             size={32}
             color={theme.colors.primary}
           />
@@ -103,6 +124,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  activeCard: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.background,
   },
   completedCard: {
     opacity: 0.6,
@@ -122,6 +149,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: theme.spacing.medium,
   },
+  activeIconContainer: {
+    backgroundColor: theme.colors.primary,
+  },
   icon: {
     fontSize: 24,
   },
@@ -129,11 +159,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small / 2,
+    flexWrap: 'wrap',
+  },
   title: {
     fontSize: theme.fontSizes.large,
     fontWeight: 'bold',
     color: theme.colors.text,
-    marginBottom: theme.spacing.small / 2,
+    marginRight: 8,
+  },
+  activeBadge: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  activeBadgeText: {
+    color: theme.colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   detailsContainer: {
     flexDirection: 'row',

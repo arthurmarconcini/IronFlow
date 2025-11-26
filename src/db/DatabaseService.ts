@@ -784,6 +784,22 @@ const getNextScheduledWorkout = async (
   return result ? mapRecordToScheduledWorkout(result) : null
 }
 
+const getScheduledDates = async (
+  userId: string,
+  startDate: string,
+  endDate: string,
+): Promise<string[]> => {
+  const results = await db.getAllAsync<{ scheduled_date: string }>(
+    `SELECT DISTINCT scheduled_date 
+     FROM workout_schedule 
+     WHERE user_id = ? AND scheduled_date BETWEEN ? AND ?`,
+    userId,
+    startDate,
+    endDate,
+  )
+  return results.map((r) => r.scheduled_date)
+}
+
 // --- Exportação do Serviço ---
 export const DatabaseService = {
   initDB,
@@ -798,6 +814,7 @@ export const DatabaseService = {
   updateWorkout,
   getWorkouts,
   getAllWorkoutsForSync,
+  getScheduledDates,
   // Statistics Queries
   getVolumeLoadStats: async (
     userId: string,

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   ScrollView,
   Alert,
 } from 'react-native'
-import { Calendar, LocaleConfig } from 'react-native-calendars'
+import { Calendar, LocaleConfig, DateData } from 'react-native-calendars'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
 import Toast from 'react-native-toast-message'
 import ScreenContainer from '../../components/ScreenContainer'
@@ -21,6 +21,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { Ionicons } from '@expo/vector-icons'
 import { AppNavigationProp } from '../../navigation/types'
 import AssignWorkoutModal from '../../components/AssignWorkoutModal'
+import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 
 // Configuração de localidade para o calendário
 LocaleConfig.locales['pt-br'] = {
@@ -66,15 +67,28 @@ LocaleConfig.locales['pt-br'] = {
 }
 LocaleConfig.defaultLocale = 'pt-br'
 
+interface MarkedDateDetails {
+  marked?: boolean
+  dotColor?: string
+  selected?: boolean
+  selectedColor?: string
+  disableTouchEvent?: boolean
+}
+
 export default function ScheduleScreen() {
   const { user } = useAuth()
   const navigation = useNavigation<AppNavigationProp>()
+  const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
   const [selectedDate, setSelectedDate] = useState(
     format(new Date(), 'yyyy-MM-dd'),
   )
   const [scheduledWorkouts, setScheduledWorkouts] = useState<
     ScheduledWorkout[]
   >([])
+  const [markedDates, setMarkedDates] = useState<{
+    [key: string]: MarkedDateDetails
+  }>({})
+  const [currentMonth, setCurrentMonth] = useState(new Date())
   const [isLoading, setIsLoading] = useState(false)
   const [isModalVisible, setIsModalVisible] = useState(false)
 
@@ -97,15 +111,51 @@ export default function ScheduleScreen() {
     [user],
   )
 
+  const fetchMonthSchedule = useCallback(async () => {
+    if (!user) return
+    try {
+      const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
+      const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
+      const dates = await DatabaseService.getScheduledDates(
+        user.uid,
+        start,
+        end,
+      )
+
+      const newMarkedDates: { [key: string]: MarkedDateDetails } = {}
+      dates.forEach((date) => {
+        newMarkedDates[date] = { marked: true, dotColor: theme.colors.primary }
+      })
+
+      // Ensure selected date is always marked as selected
+      newMarkedDates[selectedDate] = {
+        ...(newMarkedDates[selectedDate] || {}),
+        selected: true,
+        selectedColor: theme.colors.primary,
+        disableTouchEvent: true,
+      }
+
+      setMarkedDates(newMarkedDates)
+    } catch (error) {
+      console.error('Failed to fetch month schedule:', error)
+    }
+  }, [user, currentMonth, selectedDate])
+
   useFocusEffect(
     useCallback(() => {
       fetchScheduledWorkouts(selectedDate)
-    }, [fetchScheduledWorkouts, selectedDate]),
+      fetchMonthSchedule()
+    }, [fetchScheduledWorkouts, fetchMonthSchedule, selectedDate]),
   )
 
-  const onDayPress = (day: { dateString: string }) => {
+  // Effect to handle selection change
+  useEffect(() => {
+    fetchScheduledWorkouts(selectedDate)
+    fetchMonthSchedule()
+  }, [selectedDate, fetchScheduledWorkouts, fetchMonthSchedule])
+
+  const onDayPress = (day: DateData) => {
     setSelectedDate(day.dateString)
-    fetchScheduledWorkouts(day.dateString)
   }
 
   const handleAssignWorkout = async (workoutId: string) => {
@@ -118,6 +168,7 @@ export default function ScheduleScreen() {
         text2: 'O treino foi adicionado à sua agenda.',
       })
       fetchScheduledWorkouts(selectedDate)
+      fetchMonthSchedule()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.message.includes('UNIQUE constraint failed')) {
@@ -154,6 +205,7 @@ export default function ScheduleScreen() {
                 text1: 'Treino Removido!',
               })
               fetchScheduledWorkouts(selectedDate)
+              fetchMonthSchedule()
             } catch (error) {
               console.error('Failed to unschedule workout:', error)
               Toast.show({
@@ -188,12 +240,18 @@ export default function ScheduleScreen() {
 
     return scheduledWorkouts.map((workout) => {
       const isCompleted = workout.status === 'completed'
+      const isActive = activeWorkout?.firestoreId === workout.firestoreId
+
       return (
         <TouchableOpacity
           key={workout.scheduleId}
-          style={[styles.workoutCard, isCompleted && styles.completedCard]}
+          style={[
+            styles.workoutCard,
+            isCompleted && styles.completedCard,
+            isActive && styles.activeCard,
+          ]}
           onPress={() =>
-            navigation.navigate('WorkoutDetails', {
+            navigation.navigate('WorkoutExecution', {
               workoutId: workout.firestoreId,
             })
           }
@@ -201,16 +259,29 @@ export default function ScheduleScreen() {
           disabled={isCompleted}
         >
           <View style={styles.workoutInfo}>
-            <Text style={styles.workoutName}>{workout.name}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.workoutName}>{workout.name}</Text>
+              {isActive && (
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>Em andamento</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.workoutMuscleGroup}>{workout.muscleGroup}</Text>
           </View>
-          {isCompleted && (
+          {isCompleted ? (
             <Ionicons
               name="checkmark-circle"
               size={24}
               color={theme.colors.primary}
             />
-          )}
+          ) : isActive ? (
+            <Ionicons
+              name="arrow-forward-circle"
+              size={24}
+              color={theme.colors.primary}
+            />
+          ) : null}
         </TouchableOpacity>
       )
     })
@@ -221,12 +292,10 @@ export default function ScheduleScreen() {
       <ScrollView>
         <Calendar
           onDayPress={onDayPress}
-          markedDates={{
-            [selectedDate]: {
-              selected: true,
-              selectedColor: theme.colors.primary,
-            },
+          onMonthChange={(date: DateData) => {
+            setCurrentMonth(new Date(date.dateString))
           }}
+          markedDates={markedDates}
           theme={{
             backgroundColor: theme.colors.background,
             calendarBackground: theme.colors.background,
@@ -238,6 +307,8 @@ export default function ScheduleScreen() {
             arrowColor: theme.colors.primary,
             monthTextColor: theme.colors.primary,
             indicatorColor: theme.colors.primary,
+            dotColor: theme.colors.primary,
+            selectedDotColor: '#ffffff',
           }}
         />
         <View style={styles.listHeader}>
@@ -301,6 +372,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  activeCard: {
+    borderColor: theme.colors.primary,
+    borderWidth: 1,
+    backgroundColor: theme.colors.background,
+  },
   completedCard: {
     backgroundColor: theme.colors.lightGray,
     opacity: 0.7,
@@ -308,10 +384,28 @@ const styles = StyleSheet.create({
   workoutInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
   workoutName: {
     fontSize: theme.fontSizes.medium,
     fontWeight: 'bold',
     color: theme.colors.text,
+  },
+  activeBadge: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  activeBadgeText: {
+    color: theme.colors.white,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   workoutMuscleGroup: {
     fontSize: theme.fontSizes.small,

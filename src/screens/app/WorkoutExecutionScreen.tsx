@@ -62,6 +62,8 @@ export default function WorkoutExecutionScreen({ route }: Props) {
     initializeWorkout,
     completeSet,
     startRest,
+    pauseRest,
+    resumeRest,
     tickRestTimer,
     reset,
     goToExercise,
@@ -136,30 +138,12 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   }, [restTimer.isActive, tickRestTimer])
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isFinished && workout) {
-        e.preventDefault()
-
-        Alert.alert(
-          'Abandonar Treino?',
-          'Você tem um treino em andamento. Tem certeza que deseja abandoná-lo? Seu progresso será perdido.',
-          [
-            { text: 'Não', style: 'cancel', onPress: () => {} },
-            {
-              text: 'Sim, Abandonar',
-              style: 'destructive',
-              onPress: () => {
-                reset()
-                navigation.dispatch(e.data.action)
-              },
-            },
-          ],
-        )
-      }
-    })
-
-    return unsubscribe
-  }, [navigation, isFinished, workout, reset])
+    // Removemos o listener que impedia a saída e resetava o treino.
+    // Agora o usuário pode sair e o estado persistirá graças ao Zustand persist middleware.
+    return () => {
+      // Cleanup se necessário, mas não resetamos o estado aqui.
+    }
+  }, [])
 
   useEffect(() => {
     if (isFinished && logId && workout) {
@@ -349,10 +333,36 @@ export default function WorkoutExecutionScreen({ route }: Props) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.workoutName}>{workout.name}</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.workoutName}>{workout.name}</Text>
+          {/* Pause Button */}
+          {restTimer.isActive ? (
+            <TouchableOpacity onPress={pauseRest} style={styles.pauseButton}>
+              <Ionicons
+                name="pause-circle"
+                size={32}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          ) : restTimer.remaining > 0 && !restTimer.isActive ? (
+            <TouchableOpacity onPress={resumeRest} style={styles.pauseButton}>
+              <Ionicons
+                name="play-circle"
+                size={32}
+                color={theme.colors.success}
+              />
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <Text style={styles.progressText}>
           Exercício {currentExerciseIndex + 1} de {workout.exercises.length}
         </Text>
+        {/* Paused Indicator */}
+        {restTimer.remaining > 0 && !restTimer.isActive && (
+          <View style={styles.pausedBanner}>
+            <Text style={styles.pausedText}>TREINO PAUSADO</Text>
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -395,6 +405,16 @@ const styles = StyleSheet.create({
   header: {
     padding: theme.spacing.medium,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  pauseButton: {
+    position: 'absolute',
+    right: 0,
+  },
   workoutName: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -406,6 +426,18 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     textAlign: 'center',
     marginTop: theme.spacing.small / 2,
+  },
+  pausedBanner: {
+    backgroundColor: theme.colors.warning,
+    padding: 4,
+    borderRadius: 4,
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  pausedText: {
+    color: theme.colors.white,
+    fontWeight: 'bold',
+    fontSize: 12,
   },
   exerciseContainer: {
     width: theme.screenWidth,
