@@ -44,3 +44,7 @@ yarn-error.*
 # Scripts de desenvolvimento e utilitários
 
 google-services.json
+
+# Internal documentation
+GEMINI.md
+
