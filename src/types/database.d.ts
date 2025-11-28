@@ -14,6 +14,8 @@ export interface UserProfile {
   bmi: number | null
   bmiCategory: string | null
   onboardingCompleted: boolean | null
+  cardioPreference?: boolean
+  stretchingPreference?: boolean
   syncStatus: 'synced' | 'dirty' | 'error' | 'syncing'
   lastModifiedLocally: number
   retryCount?: number

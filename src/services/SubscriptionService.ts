@@ -84,7 +84,7 @@ export const SubscriptionService = {
       this.updateUserSubscriptionStatus(customerInfo)
       return customerInfo
     } catch (e: unknown) {
-      // Verifica se o erro é um objeto e se a propriedade userCancelled é true
+      // Check if error is user cancellation
       if (
         typeof e === 'object' &&
         e !== null &&
@@ -148,7 +148,7 @@ export const SubscriptionService = {
     }
   },
 
-  // Listener para mudanças no status da assinatura
+  // Listen for subscription status changes
   setupPurchasesListener() {
     Purchases.addCustomerInfoUpdateListener((customerInfo) => {
       console.log('RevenueCat customer info updated:', customerInfo)

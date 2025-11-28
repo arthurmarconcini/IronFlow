@@ -8,7 +8,7 @@ const exerciseSchema = z.object({
   target: z.string(),
   gifUrl: z.string().optional(),
   equipment: z.string(),
-  category: z.string(), // Adicionado para determinar o tipo de exercício (força/cardio)
+  category: z.string(), // Added to determine exercise type (strength/cardio)
 })
 
 export type Exercise = z.infer<typeof exerciseSchema>
@@ -21,14 +21,14 @@ const API_KEY = process.env.EXPO_PUBLIC_RAPIDAPI_KEY
 const API_HOST = process.env.EXPO_PUBLIC_RAPIDAPI_HOST
 
 const apiClient = axios.create({
-  baseURL: 'https://exercisedb.p.rapidapi.com', // Correção definitiva
+  baseURL: 'https://exercisedb.p.rapidapi.com',
   headers: {
     'X-RapidAPI-Key': API_KEY,
     'X-RapidAPI-Host': API_HOST,
   },
 })
 
-// Helper para tratamento de erros
+// Error handling helper
 const handleError = (error: unknown, context: string): Error => {
   if (axios.isAxiosError(error)) {
     const errorMessage =

@@ -52,7 +52,7 @@ export default function HomeScreen() {
           setNextScheduledWorkout,
         )
       }
-    }, [fetchLocalWorkouts, user]),
+    }, [fetchLocalWorkouts, user, profile]),
   )
 
   const { splitType, nextWorkout, otherWorkouts } = useMemo(() => {

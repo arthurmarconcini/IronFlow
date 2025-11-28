@@ -76,17 +76,12 @@ export const StatisticsService = {
 
     // Logic to group by week/month if period is long to avoid too many points
     if (period === 'year') {
-      // Group by month
-      // This is a simplification, for a real app we might want better grouping
-      // For now, let's just show daily data but filter labels
+      // TODO: Implement monthly grouping for year view
     }
 
     interval.forEach((date, index) => {
       const dateStr = format(date, 'yyyy-MM-dd')
       const volume = dataMap.get(dateStr) || 0
-
-      // For longer periods, we might want to aggregate or skip points
-      // keeping it simple for now: daily points
 
       // Only add label for some points to avoid clutter
       let label = ''

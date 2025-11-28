@@ -26,11 +26,9 @@ const calculateNextSessionTarget = async (
 
   if (lastPerformance.length === 0) {
     console.log(`Sem desempenho anterior para ${exerciseName}.`)
-    return null // Sem dados para basear a progressão.
+    return null
   }
 
-  // Find the BEST set from the last session (highest weight, then highest reps)
-  // This avoids issues where the last set was a drop set or performed under fatigue
   let bestSet = lastPerformance[0]
   for (const set of lastPerformance) {
     const currentWeight = set.actual_weight_kg ?? 0
@@ -51,9 +49,8 @@ const calculateNextSessionTarget = async (
 
   const maxTargetReps = parseInt(targetRepsRange.split('-')[1], 10)
 
-  // REGRA 1: Progressão de Peso
-  // Se o usuário completou a MELHOR SÉRIE no topo da faixa de repetições
-  // e teve um RIR de 2 ou mais, ele está pronto para mais peso.
+  // Rule 1: Weight Progression
+  // Increase weight if user hit top of rep range with good RIR (>= 2)
   if (lastReps >= maxTargetReps && lastRir !== null && lastRir >= 2) {
     return {
       targetWeight: lastWeight + WEIGHT_INCREMENT_KG,
@@ -64,7 +61,7 @@ const calculateNextSessionTarget = async (
     }
   }
 
-  // REGRA 2: Progressão de Repetições/Manutenção
+  // Rule 2: Rep Progression / Maintenance
   if (lastReps < maxTargetReps || (lastRir !== null && lastRir < 2)) {
     return {
       targetWeight: lastWeight,
@@ -73,7 +70,7 @@ const calculateNextSessionTarget = async (
     }
   }
 
-  // REGRA 3: Caso Padrão (Manter)
+  // Rule 3: Default Maintenance
   return {
     targetWeight: lastWeight,
     targetReps: targetRepsRange,

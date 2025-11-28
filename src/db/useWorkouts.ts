@@ -67,6 +67,7 @@ export function useWorkouts() {
         now,
       )
       await fetchLocalWorkouts()
+      return localId
     } catch (error) {
       console.error('Erro ao criar treino local:', error)
       throw error

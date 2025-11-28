@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { theme } from '../../theme'
 import StyledButton from '../../components/StyledButton'
-import { WorkoutGeneratorService } from '../../services/WorkoutGeneratorService'
+import { TrainingDirectorService } from '../../services/TrainingDirectorService'
 import { UserProfile } from '../../types/database'
 import { useAuth } from '../../hooks/useAuth'
 import { useProfileStore } from '../../state/profileStore'
@@ -181,8 +181,10 @@ const FreeWorkoutOfferScreen = () => {
       currentWeightKg: userProfileData.weightKg,
       bmi: userProfileData.bmi,
       bmiCategory: userProfileData.bmiCategory,
+      // Add new preferences if they exist in onboardingData (assuming they will be added to store)
+      // For now, defaulting to false or undefined as they might not be in store yet
     }
-    return WorkoutGeneratorService.generateWorkoutPlan(tempProfileForGenerator)
+    return TrainingDirectorService.generateWorkoutPlan(tempProfileForGenerator)
   }, [userProfileData, user])
 
   const saveProfileAndFinalize = async () => {
@@ -215,16 +217,42 @@ const FreeWorkoutOfferScreen = () => {
   }
 
   const handleAccept = async () => {
-    if (isSubmitting || !generatedPlan) return
+    if (isSubmitting || !generatedPlan || !user) return
     setIsSubmitting(true)
     try {
+      const workoutIds: string[] = []
+
+      // 1. Create Workouts
       for (const workout of generatedPlan.workouts) {
-        await createWorkout(
+        const id = await createWorkout(
           workout.name,
           workout.muscleGroup,
           workout.exercises,
         )
+        if (id) workoutIds.push(id)
       }
+
+      // 2. Schedule Workouts
+      if (workoutIds.length > 0 && userProfileData?.availability) {
+        const startDate = new Date()
+        const schedule = TrainingDirectorService.schedulePlan(
+          startDate,
+          userProfileData.availability,
+          workoutIds.length,
+        )
+
+        for (const item of schedule) {
+          const workoutId = workoutIds[item.workoutIndex]
+          if (workoutId) {
+            await DatabaseService.scheduleWorkout(
+              user.uid,
+              workoutId,
+              item.date,
+            )
+          }
+        }
+      }
+
       await saveProfileAndFinalize()
     } catch (error) {
       console.error('Erro ao aceitar a oferta de treino:', error)

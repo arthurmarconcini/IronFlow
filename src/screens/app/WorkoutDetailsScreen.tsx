@@ -21,6 +21,7 @@ import { useWorkouts } from '../../db/useWorkouts'
 import { Workout, StrengthExercise, CardioExercise } from '../../types/database'
 import StyledButton from '../../components/StyledButton'
 import { Ionicons } from '@expo/vector-icons'
+import { useWorkoutExecutionStore } from '../../state/workoutExecutionStore'
 
 type WorkoutDetailsScreenRouteProp = RouteProp<
   AppStackParamList,
@@ -35,6 +36,9 @@ export default function WorkoutDetailsScreen() {
   const { getWorkoutById, deleteWorkout } = useWorkouts()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  const activeWorkout = useWorkoutExecutionStore((state) => state.workout)
+  const resetWorkout = useWorkoutExecutionStore((state) => state.reset)
 
   const fetchWorkoutDetails = useCallback(async () => {
     setIsLoading(true)
@@ -86,14 +90,37 @@ export default function WorkoutDetailsScreen() {
   }, [navigation, workout])
 
   const handleStartWorkout = useCallback(() => {
-    // Usa o workoutId diretamente dos parâmetros da rota para garantir que não seja nulo.
-    // A verificação de `workout` ainda é útil para garantir que os dados foram carregados.
-    if (workout) {
-      navigation.navigate('WorkoutExecution', {
-        workoutId: workoutId,
-      })
+    if (!workout) return
+
+    if (activeWorkout && activeWorkout.firestoreId !== workoutId) {
+      Alert.alert(
+        'Treino em Andamento',
+        `Você já tem um treino "${activeWorkout.name}" em andamento. O que deseja fazer?`,
+        [
+          {
+            text: 'Continuar Treino Atual',
+            onPress: () =>
+              navigation.navigate('WorkoutExecution', {
+                workoutId: activeWorkout.firestoreId,
+              }),
+          },
+          {
+            text: 'Abandonar e Iniciar Novo',
+            style: 'destructive',
+            onPress: () => {
+              resetWorkout()
+              navigation.navigate('WorkoutExecution', { workoutId })
+            },
+          },
+          { text: 'Cancelar', style: 'cancel' },
+        ],
+      )
+    } else {
+      navigation.navigate('WorkoutExecution', { workoutId })
     }
-  }, [navigation, workout, workoutId])
+  }, [navigation, workout, workoutId, activeWorkout, resetWorkout])
+
+  const isActive = activeWorkout?.firestoreId === workoutId
 
   if (isLoading) {
     return (
@@ -117,6 +144,11 @@ export default function WorkoutDetailsScreen() {
     <ScreenContainer style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.workoutName}>{workout.name}</Text>
+        {isActive && (
+          <View style={styles.activeBadge}>
+            <Text style={styles.activeBadgeText}>Em andamento</Text>
+          </View>
+        )}
         <Text style={styles.muscleGroup}>{workout.muscleGroup}</Text>
       </View>
 
@@ -131,7 +163,7 @@ export default function WorkoutDetailsScreen() {
             </Text>
             {item.type === 'strength' ? (
               <Text style={styles.exerciseDetails}>
-                {(item as StrengthExercise).sets} séries de
+                {(item as StrengthExercise).sets} séries de{' '}
                 {(item as StrengthExercise).reps} repetições
                 {(item as StrengthExercise).weight
                   ? ` com ${(item as StrengthExercise).weight}kg`
@@ -149,11 +181,11 @@ export default function WorkoutDetailsScreen() {
 
       <View style={styles.actionsContainer}>
         <StyledButton
-          title="Iniciar Treino"
+          title={isActive ? 'Continuar Treino' : 'Iniciar Treino'}
           onPress={handleStartWorkout}
           icon={
             <Ionicons
-              name="play-circle-outline"
+              name={isActive ? 'arrow-forward-circle' : 'play-circle-outline'}
               size={20}
               color={theme.colors.white}
             />
@@ -229,6 +261,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.text,
     textAlign: 'center',
+  },
+  activeBadge: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginVertical: theme.spacing.small,
+  },
+  activeBadgeText: {
+    color: theme.colors.white,
+    fontSize: theme.fontSizes.small,
+    fontWeight: 'bold',
   },
   muscleGroup: {
     fontSize: theme.fontSizes.medium,

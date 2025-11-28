@@ -28,6 +28,8 @@ interface UserProfileFromDB {
   bmi: number | null
   bmi_category: string | null
   onboarding_completed: number | null
+  cardio_preference: number | null
+  stretching_preference: number | null
   sync_status: 'synced' | 'dirty' | 'error' | 'syncing'
   last_modified_locally: number
   retry_count: number | null
@@ -93,6 +95,8 @@ const mapRecordToProfile = (record: UserProfileFromDB): UserProfile => ({
     record.onboarding_completed === null
       ? null
       : record.onboarding_completed === 1,
+  cardioPreference: record.cardio_preference === 1,
+  stretchingPreference: record.stretching_preference === 1,
   syncStatus: record.sync_status,
   lastModifiedLocally: record.last_modified_locally,
   retryCount: record.retry_count ?? undefined,
@@ -159,6 +163,8 @@ const initDB = async (): Promise<void> => {
       bmi REAL,
       bmi_category TEXT,
       onboarding_completed INTEGER,
+      cardio_preference INTEGER DEFAULT 0,
+      stretching_preference INTEGER DEFAULT 0,
       sync_status TEXT NOT NULL,
       last_modified_locally INTEGER NOT NULL,
       retry_count INTEGER DEFAULT 0,
@@ -244,6 +250,33 @@ const initDB = async (): Promise<void> => {
       UNIQUE(user_id, workout_firestore_id, scheduled_date)
     );
   `)
+
+  // --- Migrations ---
+  // Check if columns exist in user_profile and add them if not (for existing installs)
+  const userProfileInfo = await db.getAllAsync<{ name: string }>(
+    'PRAGMA table_info(user_profile)',
+  )
+  const hasCardio = userProfileInfo.some(
+    (col) => col.name === 'cardio_preference',
+  )
+  const hasStretching = userProfileInfo.some(
+    (col) => col.name === 'stretching_preference',
+  )
+
+  if (!hasCardio) {
+    await db.execAsync(
+      'ALTER TABLE user_profile ADD COLUMN cardio_preference INTEGER DEFAULT 0',
+    )
+    console.log('Migrated: Added cardio_preference to user_profile')
+  }
+
+  if (!hasStretching) {
+    await db.execAsync(
+      'ALTER TABLE user_profile ADD COLUMN stretching_preference INTEGER DEFAULT 0',
+    )
+    console.log('Migrated: Added stretching_preference to user_profile')
+  }
+
   console.log('Database singleton initialized with all tables.')
 }
 
@@ -329,14 +362,18 @@ const saveUserProfile = async (
     bmi,
     bmiCategory,
     onboardingCompleted,
+    cardioPreference,
+    stretchingPreference,
     syncStatus,
     lastModifiedLocally,
   } = profile
   const onboardingCompletedInt =
     onboardingCompleted === null ? null : onboardingCompleted ? 1 : 0
+  const cardioPreferenceInt = cardioPreference ? 1 : 0
+  const stretchingPreferenceInt = stretchingPreference ? 1 : 0
   try {
     await db.runAsync(
-      'INSERT INTO user_profile (user_id, plan_type, display_name, dob, sex, experience_level, availability, goal, equipment, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET plan_type=excluded.plan_type, display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, equipment=excluded.equipment, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
+      'INSERT INTO user_profile (user_id, plan_type, display_name, dob, sex, experience_level, availability, goal, equipment, height_cm, current_weight_kg, bmi, bmi_category, onboarding_completed, cardio_preference, stretching_preference, sync_status, last_modified_locally) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET plan_type=excluded.plan_type, display_name=excluded.display_name, dob=excluded.dob, sex=excluded.sex, experience_level=excluded.experience_level, availability=excluded.availability, goal=excluded.goal, equipment=excluded.equipment, height_cm=excluded.height_cm, current_weight_kg=excluded.current_weight_kg, bmi=excluded.bmi, bmi_category=excluded.bmi_category, onboarding_completed=excluded.onboarding_completed, cardio_preference=excluded.cardio_preference, stretching_preference=excluded.stretching_preference, sync_status=excluded.sync_status, last_modified_locally=excluded.last_modified_locally',
       userId,
       planType ?? 'free',
       displayName ?? null,
@@ -351,6 +388,8 @@ const saveUserProfile = async (
       bmi ?? null,
       bmiCategory ?? null,
       onboardingCompletedInt,
+      cardioPreferenceInt,
+      stretchingPreferenceInt,
       syncStatus,
       lastModifiedLocally,
     )
